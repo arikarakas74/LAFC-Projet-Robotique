@@ -51,7 +51,6 @@ class Map:
         y1 = x * self.grid_size
         x2 = x1 + self.grid_size
         y2 = y1 + self.grid_size
-        # Clear existing rectangles by drawing over them
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
     def handle_click(self, event):
@@ -82,7 +81,6 @@ class Map:
         elif self.mode == 'set_obstacles':
             self.toggle_obstacle(position)
         else:
-            # Default mode can be used for viewing or other interactions
             pass
 
     def toggle_obstacle(self, position):
@@ -222,7 +220,7 @@ class RobotSimulator:
 
         for step in path:
             if step == end_position:
-                self.map.update_tile(step, "blue")  # Robot's color at goal
+                self.map.update_tile(step, "blue")
                 self.map.message_label.config(text="Robot reached goal!")
             else:
                 self.map.update_tile(step, "blue")
@@ -237,10 +235,8 @@ class RobotSimulator:
         self.map.keep_open()
 
 if __name__ == "__main__":
-    # Define the size of the grid
-    rows, cols = 15, 15  # Change as needed
+    rows, cols = 15, 15
 
-    # Create the map and start the GUI
     map_instance = Map(rows, cols)
     map_instance.draw_grid()
     map_instance.keep_open()
