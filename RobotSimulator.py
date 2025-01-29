@@ -7,8 +7,7 @@ class RobotSimulator:
         self.map = map_instance
 
     def simulate(self, robot, start_position, end_position):
-        """ Robotun hareketini simüle eder """
-        self.map.simulation_running = True  # Simülasyonun çalıştığını belirle
+        self.map.simulation_running = True
         path = robot.find_path(start_position, end_position, self.rows, self.cols, self.map.obstacles)
 
         if not path:
@@ -16,11 +15,12 @@ class RobotSimulator:
             self.map.message_label.config(text="No path found!")
             self.map.simulation_running = False
             self.map.draw_x()
+            self.map.keep_open()
             return
 
         for step in path:
             if step == end_position:
-                self.map.update_tile(step, "blue")  # Robot'un hedefe ulaştığını göster
+                self.map.update_tile(step, "blue")
                 self.map.message_label.config(text="Robot reached goal!")
             else:
                 self.map.update_tile(step, "blue")
@@ -31,4 +31,5 @@ class RobotSimulator:
                 self.map.wait(500)
 
         print("Path Taken:", path)
-        self.map.simulation_running = False  # Simülasyon bittiğinde sıfırla
+        self.map.simulation_running = False
+        self.map.keep_open()
