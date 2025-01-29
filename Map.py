@@ -1,6 +1,6 @@
 import tkinter as tk
-from Robot import Robot  # Robot sınıfını içe aktar
-from RobotSimulator import RobotSimulator  # RobotSimulator'u içe aktar
+from Robot import Robot  
+from RobotSimulator import RobotSimulator  
 
 class Map:
     def __init__(self, rows, cols, grid_size=50):
@@ -37,8 +37,8 @@ class Map:
         self.obstacles = set()
         self.start_position = None
         self.end_position = None
-        self.mode = None
-        self.simulation_running = False  # Simülasyonun çalışıp çalışmadığını kontrol için
+        self.mode = None  # Modes: 'set_start', 'set_end', 'set_obstacles', None
+        self.simulation_running = False  
 
         self.canvas.bind("<Button-1>", self.handle_click)
 
@@ -56,7 +56,6 @@ class Map:
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
     def run_simulation(self):
-        """ Simülasyonu başlatır """
         if not self.start_position or not self.end_position:
             self.message_label.config(text="Please set both start and end positions.")
             return
@@ -66,12 +65,12 @@ class Map:
         self.message_label.config(text="Simulation running...")
         self.window.update()
 
-        # Robot ve Simülatör nesnelerini oluştur
         robot = Robot(self.start_position)
         simulator = RobotSimulator(self.rows, self.cols, self)
-
-        # Simülasyonu başlat
         simulator.simulate(robot, self.start_position, self.end_position)
+
+    def keep_open(self):
+        self.window.mainloop()
 
 if __name__ == "__main__":
     rows, cols = 15, 15
