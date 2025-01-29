@@ -1,4 +1,3 @@
-import tkinter as tk
 from queue import PriorityQueue
 
 class Robot:
@@ -45,7 +44,5 @@ class Robot:
             if current is None:
                 return []
         path.append(start)
-        path.reverse()
-        return path
         path.reverse()
         return path
