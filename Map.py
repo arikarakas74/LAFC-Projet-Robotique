@@ -51,7 +51,6 @@ class Map:
         y1 = x * self.grid_size
         x2 = x1 + self.grid_size
         y2 = y1 + self.grid_size
-        # Clear existing rectangles by drawing over them
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
     def handle_click(self, event):
