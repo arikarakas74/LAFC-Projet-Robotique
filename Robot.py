@@ -35,6 +35,7 @@ class Robot:
                         frontier.put((priority, next_node))
                         came_from[next_node] = current
 
+        # Reconstruct path
         current = goal
         path = []
         while current != start:
