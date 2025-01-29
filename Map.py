@@ -1,6 +1,6 @@
 import tkinter as tk
-from Robot import Robot  
-from RobotSimulator import RobotSimulator  
+from Robot import Robot
+from RobotSimulator import RobotSimulator
 
 class Map:
     def __init__(self, rows, cols, grid_size=50):
@@ -38,7 +38,6 @@ class Map:
         self.start_position = None
         self.end_position = None
         self.mode = None  # Modes: 'set_start', 'set_end', 'set_obstacles', None
-        self.simulation_running = False  
 
         self.canvas.bind("<Button-1>", self.handle_click)
 
@@ -55,6 +54,92 @@ class Map:
         y2 = y1 + self.grid_size
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
+    def handle_click(self, event):
+        col = event.x // self.grid_size
+        row = event.y // self.grid_size
+        position = (row, col)
+
+        if self.mode == 'set_start':
+            if position in self.obstacles:
+                self.message_label.config(text="Cannot set start on an obstacle.")
+                return
+            if self.start_position:
+                self.draw_tile(self.start_position, "white")
+            self.start_position = position
+            self.draw_tile(position, "yellow")
+            self.mode = None
+            self.message_label.config(text="Start position set.")
+        elif self.mode == 'set_end':
+            if position in self.obstacles:
+                self.message_label.config(text="Cannot set end on an obstacle.")
+                return
+            if self.end_position:
+                self.draw_tile(self.end_position, "white")
+            self.end_position = position
+            self.draw_tile(position, "green")
+            self.mode = None
+            self.message_label.config(text="End position set.")
+        elif self.mode == 'set_obstacles':
+            self.toggle_obstacle(position)
+        else:
+            pass
+
+    def toggle_obstacle(self, position):
+        if position == self.start_position or position == self.end_position:
+            self.message_label.config(text="Cannot place an obstacle on start/end position.")
+            return
+        if position in self.obstacles:
+            self.obstacles.remove(position)
+            self.draw_tile(position, "white")
+            self.message_label.config(text=f"Obstacle removed at {position}.")
+        else:
+            self.obstacles.add(position)
+            self.draw_tile(position, "red")
+            self.message_label.config(text=f"Obstacle added at {position}.")
+
+    def set_start_mode(self):
+        self.mode = 'set_start'
+        self.message_label.config(text="Click on the grid to set the start position.")
+
+    def set_end_mode(self):
+        self.mode = 'set_end'
+        self.message_label.config(text="Click on the grid to set the end position.")
+
+    def set_obstacles_mode(self):
+        self.mode = 'set_obstacles'
+        self.message_label.config(text="Click on the grid to add/remove obstacles.")
+
+    def reset_map(self):
+        if self.simulation_running :
+            self.message_label.config(text="Cannot reset the map during the simulation.")
+            return
+
+        self.obstacles.clear()
+        self.start_position = None
+        self.end_position = None
+        self.message_label.config(text="Map reset.")
+        self.draw_grid()
+
+    def update_tile(self, position, color):
+        self.draw_tile(position, color)
+
+    def draw_x(self):
+        x1 = 0
+        y1 = 0
+        x2 = self.cols * self.grid_size
+        y2 = self.rows * self.grid_size
+        self.canvas.create_line(x1, y1, x2, y2, fill="red", width=2)
+        self.canvas.create_line(x1, y2, x2, y1, fill="red", width=2)
+
+    def refresh(self):
+        self.window.update()
+
+    def wait(self, ms):
+        self.window.after(ms)
+
+    def keep_open(self):
+        self.window.mainloop()
+
     def run_simulation(self):
         if not self.start_position or not self.end_position:
             self.message_label.config(text="Please set both start and end positions.")
@@ -69,11 +154,9 @@ class Map:
         simulator = RobotSimulator(self.rows, self.cols, self)
         simulator.simulate(robot, self.start_position, self.end_position)
 
-    def keep_open(self):
-        self.window.mainloop()
-
 if __name__ == "__main__":
     rows, cols = 15, 15
+
     map_instance = Map(rows, cols)
     map_instance.draw_grid()
     map_instance.keep_open()
