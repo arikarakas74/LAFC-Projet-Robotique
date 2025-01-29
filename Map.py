@@ -1,4 +1,6 @@
 import tkinter as tk
+from Robot import Robot  # Robot sınıfını içe aktar
+from RobotSimulator import RobotSimulator  # RobotSimulator'u içe aktar
 
 class Map:
     def __init__(self, rows, cols, grid_size=50):
@@ -23,7 +25,7 @@ class Map:
         self.set_obstacles_button = tk.Button(self.control_frame, text="Set Obstacles", command=self.set_obstacles_mode)
         self.set_obstacles_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.run_button = tk.Button(self.control_frame, text="Run Simulation")
+        self.run_button = tk.Button(self.control_frame, text="Run Simulation", command=self.run_simulation)
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.reset_button = tk.Button(self.control_frame, text="Reset", command=self.reset_map)
@@ -35,7 +37,8 @@ class Map:
         self.obstacles = set()
         self.start_position = None
         self.end_position = None
-        self.mode = None  # Modes: 'set_start', 'set_end', 'set_obstacles', None
+        self.mode = None
+        self.simulation_running = False  # Simülasyonun çalışıp çalışmadığını kontrol için
 
         self.canvas.bind("<Button-1>", self.handle_click)
 
@@ -52,15 +55,23 @@ class Map:
         y2 = y1 + self.grid_size
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
-    def reset_map(self):
-        self.obstacles.clear()
-        self.start_position = None
-        self.end_position = None
-        self.message_label.config(text="Map reset.")
-        self.draw_grid()
+    def run_simulation(self):
+        """ Simülasyonu başlatır """
+        if not self.start_position or not self.end_position:
+            self.message_label.config(text="Please set both start and end positions.")
+            return
+        if self.start_position == self.end_position:
+            self.message_label.config(text="Start and end positions cannot be the same.")
+            return
+        self.message_label.config(text="Simulation running...")
+        self.window.update()
 
-    def keep_open(self):
-        self.window.mainloop()
+        # Robot ve Simülatör nesnelerini oluştur
+        robot = Robot(self.start_position)
+        simulator = RobotSimulator(self.rows, self.cols, self)
+
+        # Simülasyonu başlat
+        simulator.simulate(robot, self.start_position, self.end_position)
 
 if __name__ == "__main__":
     rows, cols = 15, 15
