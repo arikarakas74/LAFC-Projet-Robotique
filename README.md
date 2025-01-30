@@ -34,7 +34,7 @@ The code is divided into four main files:
 2. Navigate to the project directory:
 
     ```bash
-    cd robot-simulator
+    cd LAFC-Projet-Robotique
     ```
 
 3. Make sure you have Python 3 installed. You can check this by running:
