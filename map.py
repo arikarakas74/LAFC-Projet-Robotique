@@ -46,6 +46,8 @@ class Map:
         self.canvas.bind("<Double-Button-1>", self.finalize_shape)  # Bind double-click to finalize shape
         self.current_shape = None
         self.current_points = []
+        self.window.bind("<w>", self.move_forward)
+        self.window.bind("<s>", self.move_backward)
 
     # Modes for setting start, end, and obstacles
     def set_start_mode(self):
@@ -142,5 +144,14 @@ class Map:
             self.message_label.config(text="Please set both start and end positions.")
             return
         robot = Robot(self.start_position, self)
-        self.simulator = RobotSimulator(self)  # Store simulator reference
-        self.simulator.simulate(robot, self.end_position)
+        self.message_label.config(text="Use W to move forward and S to move backward.")
+        #self.simulator = RobotSimulator(self)  # Store simulator reference
+        #self.simulator.simulate(robot, self.end_position)
+
+    def move_forward(self, event=None):
+        if self.robot :
+            self.robot.manual_move(direction=1) 
+    
+    def move_backward(self, event=None):
+        if self.robot:
+            self.robot.manual_move(direction=-1)
