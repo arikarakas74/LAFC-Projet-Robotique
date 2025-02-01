@@ -145,6 +145,7 @@ class Map:
             return
         robot = Robot(self.start_position, self)
         self.message_label.config(text="Use W to move forward and S to move backward.")
+        self.robot.draw()
         #self.simulator = RobotSimulator(self)  # Store simulator reference
         #self.simulator.simulate(robot, self.end_position)
 
