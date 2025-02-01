@@ -193,8 +193,8 @@ class Map:
             self.message_label.config(text="Please set both start and end positions.")
             return
         self.robot = Robot(self.start_position, self)  # Create robot instance
-        self.simulator = RobotSimulator(self)
-        self.simulator.simulate(self.robot, self.end_position)
+        self.message_label.config(text="Use W to move forward and S to move backward.")
+        self.robot.draw()
 
     def move_forward(self, event=None):
         if self.robot:
