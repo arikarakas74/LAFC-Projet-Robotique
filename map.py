@@ -7,6 +7,7 @@ class Map:
     
     def __init__(self, rows, cols, grid_size=30):
         """Initializes the simulation window, control buttons, and grid parameters."""
+        self.simulator = None  # Add simulator reference
         self.rows = rows
         self.cols = cols
         self.grid_size = grid_size
@@ -59,12 +60,25 @@ class Map:
         self.message_label.config(text="Click on the grid to add/remove obstacles.")
     
     def reset_map(self):
-        """Resets the entire grid, clearing start, end, and obstacle positions."""
+        """Resets both map and simulator states."""
+        # Stop simulator first
+        if self.simulator:
+            self.simulator.stop()
+            self.simulator = None  # Clear simulator reference
+            
+        # Clear canvas and robot
         self.canvas.delete("all")
+        self.robot = None
+        
+        # Reset all variables
         self.start_position = None
         self.end_position = None
         self.obstacles.clear()
+        
+        # Update UI
         self.message_label.config(text="Map reset.")
+        self.canvas.update()
+            
     
     def handle_click(self, event):
         """Handles mouse clicks to set start, end, or obstacles based on active mode."""
@@ -90,6 +104,6 @@ class Map:
             self.message_label.config(text="Please set both start and end positions.")
             return
         robot = Robot(self.start_position, self)
-        simulator = RobotSimulator(self)
-        simulator.simulate(robot, self.end_position)
+        self.simulator = RobotSimulator(self)  # Store simulator reference
+        self.simulator.simulate(robot, self.end_position)
 
