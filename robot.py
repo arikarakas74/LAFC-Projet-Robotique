@@ -7,6 +7,7 @@ class Robot:
         self.x, self.y = start_position
         self.map = map_instance
         self.collision_radius = collision_radius  # Defines the area around obstacles where collisions occur
+        self.speed = 5
     
     def is_collision(self, new_x, new_y):
         """Checks if the new position collides with any obstacle's border."""
@@ -59,3 +60,17 @@ class Robot:
     def stop(self):
         """Stops the robot's movement and removes it from the canvas."""
         self.map.canvas.delete("robot")
+
+    def manual_move(self, direction):
+        angle = 0
+        dx = direction * self.speed * math.cos(angle)
+        dy = direction * self.speed * math.sin(angle)
+
+        new_x = self.x + dx
+        new_y = self.y + dy
+
+        if not self.is_collision(new_x, new_y):
+            self.x = new_x
+            self.y = new_y
+            self.map.canvas.delete("robot")
+            self.map.canvas.create_oval(self.x-5, self.y-5, self.x+5, self.y+5, fill="blue", tags="robot")
