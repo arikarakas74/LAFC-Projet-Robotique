@@ -5,7 +5,7 @@ from simulator import RobotSimulator
 class Map:
     """Handles the grid representation, user interactions, and visualization."""
     
-    def __init__(self, rows, cols, grid_size=30):
+    def __init__(self, rows, cols, grid_size=50):
         """Initializes the simulation window, control buttons, and grid parameters."""
         self.simulator = None  # Add simulator reference
         self.rows = rows
@@ -37,15 +37,22 @@ class Map:
         self.message_label = tk.Label(self.window, text="")
         self.message_label.pack(pady=10)
 
-        self.obstacles = set()
+        self.obstacles = {}  # Store obstacles as {id: (points, polygon_id, line_ids)}
         self.start_position = None
         self.end_position = None
         self.mode = None
-        self.canvas.bind("<Button-1>", self.handle_click)
-        self.canvas.bind("<B1-Motion>", self.handle_drag)  # Bind mouse drag event
-        self.canvas.bind("<Double-Button-1>", self.finalize_shape)  # Bind double-click to finalize shape
         self.current_shape = None
         self.current_points = []
+        self.current_lines = []  # Track lines created during drawing
+        self.dragging_obstacle = None  # Track which obstacle is being dragged
+        self.drag_start = None  # Track the starting point of the drag
+
+        # Bind mouse events
+        self.canvas.bind("<Button-1>", self.handle_click)
+        self.canvas.bind("<B1-Motion>", self.handle_drag)
+        self.canvas.bind("<Double-Button-1>", self.finalize_shape)
+        self.canvas.bind("<Button-3>", self.delete_obstacle)  # Right-click to delete obstacle
+        self.canvas.bind("<ButtonRelease-1>", self.stop_drag)  # Stop dragging on mouse release
 
     # Modes for setting start, end, and obstacles
     def set_start_mode(self):
@@ -63,6 +70,7 @@ class Map:
         self.mode = 'set_obstacles'
         self.message_label.config(text="Click and drag to draw obstacles. Double-click to finish.")
         self.current_points = []
+        self.current_lines = []  # Reset lines when entering obstacle mode
     
     def reset_map(self):
         """Resets both map and simulator states."""
@@ -81,6 +89,9 @@ class Map:
         self.obstacles.clear()
         self.current_points = []
         self.current_shape = None
+        self.current_lines = []
+        self.dragging_obstacle = None
+        self.drag_start = None
         
         # Update UI
         self.message_label.config(text="Map reset.")
@@ -101,18 +112,40 @@ class Map:
             self.canvas.create_rectangle(x-10, y-10, x+10, y+10, fill="green", tags="end")
         elif self.mode == 'set_obstacles':
             if not self.current_shape:
+                # Check if the user clicked on an existing obstacle to start dragging
+                for obstacle_id, (points, polygon_id, line_ids) in self.obstacles.items():
+                    if self.point_in_polygon(x, y, points):
+                        self.dragging_obstacle = polygon_id
+                        self.drag_start = (x, y)
+                        return
+                # Otherwise, start drawing a new obstacle
                 self.current_points = [(x, y)]
                 self.current_shape = self.canvas.create_line(x, y, x, y, fill="red", width=2)
             else:
                 self.current_points.append((x, y))
-                self.canvas.create_line(self.current_points[-2], self.current_points[-1], fill="red", width=2)
+                line_id = self.canvas.create_line(self.current_points[-2], self.current_points[-1], fill="red", width=2)
+                self.current_lines.append(line_id)  # Track the line
     
     def handle_drag(self, event):
-        """Handles mouse drag to draw obstacles."""
+        """Handles mouse drag to draw or move obstacles."""
+        x, y = event.x, event.y
         if self.mode == 'set_obstacles' and self.current_shape:
-            x, y = event.x, event.y
+            # Drawing a new obstacle
             self.current_points.append((x, y))
-            self.canvas.create_line(self.current_points[-2], self.current_points[-1], fill="red", width=2)
+            line_id = self.canvas.create_line(self.current_points[-2], self.current_points[-1], fill="red", width=2)
+            self.current_lines.append(line_id)  # Track the line
+        elif self.dragging_obstacle:
+            # Moving an existing obstacle
+            dx = x - self.drag_start[0]
+            dy = y - self.drag_start[1]
+            self.drag_start = (x, y)
+            self.canvas.move(self.dragging_obstacle, dx, dy)
+            # Update the obstacle's points in the dictionary
+            for obstacle_id, (points, polygon_id, line_ids) in self.obstacles.items():
+                if polygon_id == self.dragging_obstacle:
+                    new_points = [(p[0] + dx, p[1] + dy) for p in points]
+                    self.obstacles[obstacle_id] = (new_points, polygon_id, line_ids)
+                    break
     
     def is_shape_closed(self):
         """Checks if the drawn shape is closed."""
@@ -127,14 +160,55 @@ class Map:
         """Finalizes the drawn shape and adds it as an obstacle."""
         if self.mode == 'set_obstacles' and self.current_shape:
             if self.is_shape_closed():
-                self.canvas.delete(self.current_shape)
-                self.current_shape = None
-                self.obstacles.add(tuple(self.current_points))
-                self.canvas.create_polygon(self.current_points, fill="red", outline="black")
+                # Delete the temporary lines used for drawing
+                for line_id in self.current_lines:
+                    self.canvas.delete(line_id)
+                self.current_lines = []  # Clear the list of lines
+
+                # Create the filled polygon
+                polygon_id = self.canvas.create_polygon(self.current_points, fill="red", outline="black")
+                obstacle_id = f"obstacle_{len(self.obstacles)}"
+                self.obstacles[obstacle_id] = (self.current_points, polygon_id, [])
                 self.current_points = []
+                self.current_shape = None
                 self.message_label.config(text="Obstacle added.")
             else:
                 self.message_label.config(text="Shape is not closed. Please double-click near the starting point.")
+    
+    def delete_obstacle(self, event):
+        """Deletes an obstacle when right-clicked."""
+        x, y = event.x, event.y
+        for obstacle_id, (points, polygon_id, line_ids) in self.obstacles.items():
+            if self.point_in_polygon(x, y, points):
+                # Delete the polygon and any associated lines
+                self.canvas.delete(polygon_id)
+                for line_id in line_ids:
+                    self.canvas.delete(line_id)
+                del self.obstacles[obstacle_id]
+                self.message_label.config(text="Obstacle deleted.")
+                break
+    
+    def point_in_polygon(self, x, y, polygon):
+        """Determines if a point is inside a polygon using the ray casting algorithm."""
+        n = len(polygon)
+        inside = False
+        p1x, p1y = polygon[0]
+        for i in range(n + 1):
+            p2x, p2y = polygon[i % n]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+        return inside
+    
+    def stop_drag(self, event):
+        """Stops dragging an obstacle."""
+        self.dragging_obstacle = None
+        self.drag_start = None
     
     def run_simulation(self):
         """Runs the robot simulation if start and end positions are set."""

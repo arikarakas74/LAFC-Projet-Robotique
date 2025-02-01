@@ -1,22 +1,20 @@
 import math
 
 class Robot:
-    """Represents the robot and its movement logic."""
-    
     def __init__(self, start_position, map_instance, collision_radius=10):
         self.x, self.y = start_position
         self.map = map_instance
-        self.collision_radius = collision_radius  # Defines the area around obstacles where collisions occur
-    
+        self.collision_radius = collision_radius
+
     def is_collision(self, new_x, new_y):
-        """Checks if the new position collides with any obstacle's border."""
-        for obstacle in self.map.obstacles:
-            if self.point_in_polygon(new_x, new_y, obstacle):
+        """Checks if the new position collides with any obstacle."""
+        for obstacle_id, (points, _, _) in self.map.obstacles.items():  # Unpack all three values
+            if self.point_in_polygon(new_x, new_y, points):
                 return True
         return False
 
     def point_in_polygon(self, x, y, polygon):
-        """Determines if a point is inside a polygon using the ray casting algorithm."""
+        """Ray casting algorithm for point in polygon test."""
         n = len(polygon)
         inside = False
         p1x, p1y = polygon[0]
@@ -33,7 +31,7 @@ class Robot:
         return inside
 
     def move_towards(self, target, speed=5):
-        """Moves the robot towards the target position while avoiding obstacles."""
+        """Moves the robot towards the target position."""
         target_x, target_y = target
         dx, dy = target_x - self.x, target_y - self.y
         distance = math.sqrt(dx**2 + dy**2)
@@ -44,17 +42,14 @@ class Robot:
             new_x = self.x + (dx / distance) * speed
             new_y = self.y + (dy / distance) * speed
 
-        # Check for collision before moving
         if self.is_collision(new_x, new_y):
-            return False  # Stop movement if an obstacle is detected
+            return False
 
         self.x, self.y = new_x, new_y
-
-        # Correctly tag robot so it can be removed
         self.map.canvas.delete("robot")
-        self.map.canvas.create_oval(self.x-5, self.y-5, self.x+5, self.y+5, fill="blue", tags="robot")
-
-        return distance < speed  # Return True if the robot has reached the target
+        self.map.canvas.create_oval(self.x-5, self.y-5, self.x+5, self.y+5, 
+                                  fill="blue", tags="robot")
+        return distance < speed
 
     def stop(self):
         """Stops the robot's movement and removes it from the canvas."""
