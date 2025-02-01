@@ -47,6 +47,9 @@ class Map:
         self.dragging_obstacle = None  # Track which obstacle is being dragged
         self.drag_start = None  # Track the starting point of the drag
 
+        self.window.bind("<w>", self.move_forward)
+        self.window.bind("<s>", self.move_backward)
+
         # Bind mouse events
         self.canvas.bind("<Button-1>", self.handle_click)
         self.canvas.bind("<B1-Motion>", self.handle_drag)
@@ -71,31 +74,6 @@ class Map:
         self.message_label.config(text="Click and drag to draw obstacles. Double-click to finish.")
         self.current_points = []
         self.current_lines = []  # Reset lines when entering obstacle mode
-    
-    def reset_map(self):
-        """Resets both map and simulator states."""
-        # Stop simulator first
-        if self.simulator:
-            self.simulator.stop()
-            self.simulator = None  # Clear simulator reference
-            
-        # Clear canvas and robot
-        self.canvas.delete("all")
-        self.robot = None
-        
-        # Reset all variables
-        self.start_position = None
-        self.end_position = None
-        self.obstacles.clear()
-        self.current_points = []
-        self.current_shape = None
-        self.current_lines = []
-        self.dragging_obstacle = None
-        self.drag_start = None
-        
-        # Update UI
-        self.message_label.config(text="Map reset.")
-        self.canvas.update()
     
     def handle_click(self, event):
         """Handles mouse clicks to set start, end, or obstacles based on active mode."""
@@ -211,10 +189,41 @@ class Map:
         self.drag_start = None
     
     def run_simulation(self):
-        """Runs the robot simulation if start and end positions are set."""
         if not self.start_position or not self.end_position:
             self.message_label.config(text="Please set both start and end positions.")
             return
-        robot = Robot(self.start_position, self)
-        self.simulator = RobotSimulator(self)  # Store simulator reference
-        self.simulator.simulate(robot, self.end_position)
+        self.robot = Robot(self.start_position, self)  # Create robot instance
+        self.simulator = RobotSimulator(self)
+        self.simulator.simulate(self.robot, self.end_position)
+
+    def move_forward(self, event=None):
+        if self.robot:
+            self.robot.manual_move(1)
+
+    def move_backward(self, event=None):
+        if self.robot:
+            self.robot.manual_move(-1)
+
+    def reset_map(self):
+        if self.simulator:
+            self.simulator.stop()
+            self.simulator = None
+        
+        if self.robot:
+            self.robot.stop()
+            self.robot = None
+            
+        self.canvas.delete("all")
+        self.start_position = None
+        self.end_position = None
+        self.obstacles.clear()
+        self.current_points = []
+        self.current_shape = None
+        self.current_lines = []
+        self.dragging_obstacle = None
+        self.drag_start = None
+        self.message_label.config(text="Map reset.")
+        self.canvas.update()
+
+
+        
