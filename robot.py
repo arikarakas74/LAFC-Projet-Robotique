@@ -58,14 +58,14 @@ class Robot:
 
     def turn_left(self):
         """Turns to the right (counterclockwise)"""
-        self.direction_angle -= 90
+        self.direction_angle -= 10
         self.direction_angle %= 360
         self.draw()
         print(f"Turned left: New angle = {self.direction_angle}°")
 
     def turn_right(self):
         """Turns left (clockwise)"""
-        self.direction_angle += 90
+        self.direction_angle += 10
         self.direction_angle %= 360
         self.draw()
         print(f"Turned right: New angle = {self.direction_angle}°")
