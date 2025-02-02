@@ -5,6 +5,7 @@ class Robot:
         self.x, self.y = start_position
         self.map = map_instance
         self.collision_radius = collision_radius  # Defines the area around obstacles where collisions occur
+        self.direction_angle = 0
         self.speed = 5
         self.draw()
 
@@ -54,10 +55,18 @@ class Robot:
         self.direction_angle %= 360
         print(f"Turned right: New angle = {self.direction_angle}°")
 
+    def move_forward(self, event=None):
+        if self:
+            self.manual_move(1)
+
+    def move_backward(self, event=None):
+        if self:
+            self.manual_move(-1)
+
     def manual_move(self, direction):
-        angle = 0
-        dx = direction * self.speed * math.cos(angle)
-        dy = direction * self.speed * math.sin(angle)
+        angle_rad = math.radians(self.direction_angle)
+        dx = direction * self.speed * math.cos(angle_rad)
+        dy = direction * self.speed * math.sin(angle_rad)
 
         new_x = self.x + dx
         new_y = self.y + dy
