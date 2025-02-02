@@ -12,7 +12,15 @@ class Robot:
     def draw(self):
         """Dessine le robot à l'écran dans sa position actuelle."""
         self.map.canvas.delete("robot")
-        self.map.canvas.create_oval(self.x-5, self.y-5, self.x+5, self.y+5, fill="blue", tags="robot")
+        cx, cy = self.x, self.y
+        size = 15
+        angle = math.radians(self.direction_angle)
+
+        p1 = (cx + size * math.cos(angle), cy + size * math.sin(angle))
+        p2 = (cx + size * math.cos(angle + 2.5), cy + size * math.sin(angle + 2.5))
+        p3 = (cx + size * math.cos(angle - 2.5), cy + size * math.sin(angle - 2.5))
+
+        self.map.canvas.create_polygon(p1, p2, p3, fill="blue", tags="robot")
     
     def is_collision(self, new_x, new_y):
         """Checks if the new position collides with any obstacle."""
@@ -47,12 +55,14 @@ class Robot:
         """Turns to the right (counterclockwise)"""
         self.direction_angle -= 90
         self.direction_angle %= 360
+        self.draw()
         print(f"Turned left: New angle = {self.direction_angle}°")
 
     def turn_right(self):
         """Turns left (clockwise)"""
         self.direction_angle += 90
         self.direction_angle %= 360
+        self.draw()
         print(f"Turned right: New angle = {self.direction_angle}°")
 
     def move_forward(self, event=None):
