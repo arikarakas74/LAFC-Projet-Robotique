@@ -6,8 +6,11 @@ class Robot:
         self.map = map_instance
         self.collision_radius = collision_radius  # Defines the area around obstacles where collisions occur
         self.direction_angle = 0
-        self.speed = 5
-        self.draw()
+        self.velocity = 0
+        self.acceleration = 0
+        self.max_speed = 8
+        self.friction = 0.1
+        self.acceleration_rate = 0.2
 
     def draw(self):
         """Dessine le robot à l'écran dans sa position actuelle."""
@@ -66,12 +69,16 @@ class Robot:
         print(f"Turned right: New angle = {self.direction_angle}°")
 
     def move_forward(self, event=None):
-        if self:
-            self.manual_move(1)
+        self.apply_acceleration(1)
 
     def move_backward(self, event=None):
-        if self:
-            self.manual_move(-1)
+        self.apply_acceleration(-1)
+            
+    def apply_acceleration(self, direction):
+        self.acceleration = direction * self.acceleration_rate
+    
+    def stop_acceleration(self, event=None):
+        self.apply_acceleration(0)
 
     def manual_move(self, direction):
         angle_rad = math.radians(self.direction_angle)
