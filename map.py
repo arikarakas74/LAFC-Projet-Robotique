@@ -47,8 +47,10 @@ class Map:
         self.dragging_obstacle = None  # Track which obstacle is being dragged
         self.drag_start = None  # Track the starting point of the drag
 
-        self.window.bind("<w>", self.move_forward)
-        self.window.bind("<s>", self.move_backward)
+        self.window.bind("<w>", lambda event: self.robot.move_forward())
+        self.window.bind("<s>", lambda event: self.robot.move_backward())
+        self.window.bind("<a>", lambda event: self.robot.turn_left())
+        self.window.bind("<d>", lambda event: self.robot.turn_right())
 
         # Bind mouse events
         self.canvas.bind("<Button-1>", self.handle_click)
@@ -193,16 +195,9 @@ class Map:
             self.message_label.config(text="Please set both start and end positions.")
             return
         self.robot = Robot(self.start_position, self)  # Create robot instance
-        self.message_label.config(text="Use W to move forward and S to move backward.")
+        self.message_label.config(text="Use W/S to move forward/backward and A/D to turn left/right.")
         self.robot.draw()
 
-    def move_forward(self, event=None):
-        if self.robot:
-            self.robot.manual_move(1)
-
-    def move_backward(self, event=None):
-        if self.robot:
-            self.robot.manual_move(-1)
 
     def reset_map(self):
         if self.simulator:
