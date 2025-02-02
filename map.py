@@ -49,6 +49,8 @@ class Map:
 
         self.window.bind("<w>", lambda event: self.robot.move_forward())
         self.window.bind("<s>", lambda event: self.robot.move_backward())
+        self.window.bind("<KeyRelease-w>", lambda event: self.robot.stop_acceleration())
+        self.window.bind("<KeyRelease-s>", lambda event: self.robot.stop_acceleration())
         self.window.bind("<a>", lambda event: self.robot.turn_left())
         self.window.bind("<d>", lambda event: self.robot.turn_right())
 
@@ -191,12 +193,17 @@ class Map:
         self.drag_start = None
     
     def run_simulation(self):
+        if self.simulation_running:
+            self.message_label.config(text="Simulation already running.")
+            return
+    
         if not self.start_position or not self.end_position:
             self.message_label.config(text="Please set both start and end positions.")
             return
         self.robot = Robot(self.start_position, self)  # Create robot instance
         self.message_label.config(text="Use W/S to move forward/backward and A/D to turn left/right.")
         self.robot.draw()
+        self.simulation_running = True
 
 
     def reset_map(self):
@@ -205,9 +212,14 @@ class Map:
             self.simulator = None
         
         if self.robot:
-            self.robot.stop()
+            if self.robot.current_after:
+                self.window.after_cancel(self.robot.current_after) 
+            self.robot.acceleration = 0  
+            self.robot.velocity = 0  
+            self.canvas.delete("robot")  
             self.robot = None
-            
+
+        self.simulation_running = False
         self.canvas.delete("all")
         self.start_position = None
         self.end_position = None
