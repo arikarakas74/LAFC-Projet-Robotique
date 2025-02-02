@@ -42,6 +42,18 @@ class Robot:
         """Stops the robot's movement and removes it from the canvas."""
         self.map.canvas.delete("robot")
 
+    def turn_left(self):
+        """Turns to the right (counterclockwise)"""
+        self.direction_angle -= 90
+        self.direction_angle %= 360
+        print(f"Turned left: New angle = {self.direction_angle}°")
+
+    def turn_right(self):
+        """Turns left (clockwise)"""
+        self.direction_angle += 90
+        self.direction_angle %= 360
+        print(f"Turned right: New angle = {self.direction_angle}°")
+
     def manual_move(self, direction):
         angle = 0
         dx = direction * self.speed * math.cos(angle)
