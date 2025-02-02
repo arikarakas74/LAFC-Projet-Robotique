@@ -11,6 +11,8 @@ class Robot:
         self.max_speed = 8
         self.friction = 0.1
         self.acceleration_rate = 0.2
+        self.current_after = None
+        self.update_motion()
 
     def draw(self):
         """Dessine le robot à l'écran dans sa position actuelle."""
@@ -80,15 +82,35 @@ class Robot:
     def stop_acceleration(self, event=None):
         self.apply_acceleration(0)
 
-    def manual_move(self, direction):
-        angle_rad = math.radians(self.direction_angle)
-        dx = direction * self.speed * math.cos(angle_rad)
-        dy = direction * self.speed * math.sin(angle_rad)
+    def update_motion(self):
+        """Update the speed and execute the movement."""
+        self.velocity += self.acceleration
 
-        new_x = self.x + dx
-        new_y = self.y + dy
+        
+        if self.velocity > self.max_speed:
+            self.velocity = self.max_speed
+        elif self.velocity < -self.max_speed:
+            self.velocity = -self.max_speed
+
+        
+        if self.acceleration == 0:
+            if self.velocity > 0:
+                self.velocity -= self.friction
+                if self.velocity < 0:
+                    self.velocity = 0
+            elif self.velocity < 0:
+                self.velocity += self.friction
+                if self.velocity > 0:
+                    self.velocity = 0
+
+        
+        angle_rad = math.radians(self.direction_angle)
+        new_x = self.x + self.velocity * math.cos(angle_rad)
+        new_y = self.y + self.velocity * math.sin(angle_rad)
 
         if not self.is_collision(new_x, new_y):
             self.x = new_x
             self.y = new_y
             self.draw()
+
+        self.current_after = self.map.window.after(20, self.update_motion)
