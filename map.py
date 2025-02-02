@@ -17,6 +17,7 @@ class Map:
         self.canvas.pack()
         self.control_frame = tk.Frame(self.window)
         self.control_frame.pack()
+        self.simulation_running = False
 
         # Buttons for user interaction
         self.set_start_button = tk.Button(self.control_frame, text="Set Start", command=self.set_start_mode)
