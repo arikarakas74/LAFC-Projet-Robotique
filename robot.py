@@ -114,3 +114,37 @@ class Robot:
             self.draw()
 
         self.current_after = self.map.window.after(20, self.update_motion)
+
+    def draw_square(self, side_length=200, step_size=5):
+        """Makes the robot to draw a square step by step."""
+        self.acceleration = 0
+        self.velocity = 0
+
+        self.square_steps = side_length // step_size
+        self.current_side = 0
+        self.steps_moved = 0
+
+        def move_step():
+            if self.current_side < 4:
+                angle_rad = math.radians(self.direction_angle)
+                new_x = self.x + step_size * math.cos(angle_rad)
+                new_y = self.y + step_size * math.sin(angle_rad)
+
+                if not self.is_collision(new_x, new_y):
+                    self.x = new_x
+                    self.y = new_y
+                    self.draw()
+                    self.steps_moved += 1
+
+                if self.steps_moved >= self.square_steps:
+                    self.steps_moved = 0
+                    self.current_side += 1
+                    self.turn_right90()
+
+                self.current_after = self.map.window.after(20, move_step)
+            else:
+                self.acceleration=0
+                self.velocity=0
+                return
+
+        move_step()
