@@ -35,6 +35,9 @@ class Map:
         self.reset_button = tk.Button(self.control_frame, text="Reset", command=self.reset_map)
         self.reset_button.pack(side=tk.LEFT, padx=5, pady=5)
 
+        self.draw_square_button = tk.Button(self.control_frame, text="Draw Square", command=self.draw_square)
+        self.draw_square_button.pack(side=tk.LEFT, padx=5, pady=5)
+
         self.message_label = tk.Label(self.window, text="")
         self.message_label.pack(pady=10)
 
@@ -192,6 +195,13 @@ class Map:
         """Stops dragging an obstacle."""
         self.dragging_obstacle = None
         self.drag_start = None
+
+    def draw_square(self):
+        """Starts the robot drawing a square."""
+        if not self.robot:
+            self.message_label.config(text="Start the simulation first.")
+            return
+        self.robot.draw_square()
     
     def run_simulation(self):
         if self.simulation_running:
