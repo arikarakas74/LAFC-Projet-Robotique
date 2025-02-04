@@ -5,7 +5,7 @@ from simulator import RobotSimulator
 class Map:
     """Handles the grid representation, user interactions, and visualization."""
     
-    def __init__(self, rows, cols, grid_size=50):
+    def __init__(self, rows, cols, grid_size=30):
         """Initializes the simulation window, control buttons, and grid parameters."""
         self.simulator = None  # Add simulator reference
         self.rows = rows
@@ -18,6 +18,9 @@ class Map:
         self.control_frame = tk.Frame(self.window)
         self.control_frame.pack()
         self.simulation_running = False
+        self.width = cols * grid_size 
+        self.height = rows * grid_size
+        self.robot = None
 
         # Buttons for user interaction
         self.set_start_button = tk.Button(self.control_frame, text="Set Start", command=self.set_start_mode)
@@ -35,11 +38,11 @@ class Map:
         self.reset_button = tk.Button(self.control_frame, text="Reset", command=self.reset_map)
         self.reset_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.draw_square_button = tk.Button(self.control_frame, text="Draw Square", command=self.draw_square)
-        self.draw_square_button.pack(side=tk.LEFT, padx=5, pady=5)
-
         self.message_label = tk.Label(self.window, text="")
         self.message_label.pack(pady=10)
+
+        self.draw_square_button = tk.Button(self.control_frame, text="Draw Square", command=self.draw_square)
+        self.draw_square_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.obstacles = {}  # Store obstacles as {id: (points, polygon_id, line_ids)}
         self.start_position = None
@@ -242,6 +245,5 @@ class Map:
         self.drag_start = None
         self.message_label.config(text="Map reset.")
         self.canvas.update()
-
 
         
