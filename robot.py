@@ -138,7 +138,7 @@ class Robot:
 
         if self.is_at_goal():
             self.stop()
-            self.map.message_label.config(text="u es arrivé à la destination.")
+            self.map.message_label.config(text="Robot est arrivé à la destination.")
             return 
 
         self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
