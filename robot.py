@@ -145,6 +145,16 @@ class Robot:
 
         self.current_after = self.map.window.after(16, self.update_motion)
 
+    def is_at_goal(self):
+        "Vérifier si le robot est arrivé à la destination."
+        if not self.map.end_position:
+            return False 
+
+        goal_x, goal_y = self.map.end_position
+        distance = math.sqrt((self.x - goal_x) ** 2 + (self.y - goal_y) ** 2)
+
+        return distance < 10
+
     def turn_right90(self):
         self.direction_angle += 90
         self.direction_angle %= 360 
