@@ -228,6 +228,8 @@ class Map:
         if self.robot:
             if self.robot.current_after:
                 self.window.after_cancel(self.robot.current_after) 
+            self.robot.speed_label.destroy()
+            self.robot.speed_label = None
             self.robot.acceleration = 0  
             self.robot.velocity = 0  
             self.canvas.delete("robot")  
