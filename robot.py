@@ -175,7 +175,7 @@ class Robot:
                 if self.steps_moved >= self.square_steps:
                     self.steps_moved = 0
                     self.current_side += 1
-                    self.turn_right90()  # ✅ 调用修正后的 `turn_right90()`
+                    self.turn_right90() 
 
                 self.current_after = self.map.window.after(20, move_step)
             else:
