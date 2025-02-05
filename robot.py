@@ -137,6 +137,9 @@ class Robot:
             self.draw()
 
         if self.is_at_goal():
+            self.map.simulation_running = False
+            self.speed_label.destroy()
+            self.speed_label = None
             self.stop()
             self.map.message_label.config(text="Robot est arrivé à la destination.")
             return 
