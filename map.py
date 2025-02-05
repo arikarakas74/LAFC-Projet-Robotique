@@ -60,6 +60,10 @@ class Map:
         self.window.bind("<KeyRelease-s>", lambda event: self.robot.stop_acceleration())
         self.window.bind("<a>", lambda event: self.robot.turn_left())
         self.window.bind("<d>", lambda event: self.robot.turn_right())
+        self.window.bind("<Up>", lambda event: self.robot.move_forward())
+        self.window.bind("<Down>", lambda event: self.robot.move_backward())
+        self.window.bind("<Left>", lambda event: self.robot.turn_left())
+        self.window.bind("<Right>", lambda event: self.robot.turn_right())
 
         # Bind mouse events
         self.canvas.bind("<Button-1>", self.handle_click)
