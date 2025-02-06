@@ -25,9 +25,7 @@ class Map:
         # Buttons for user interaction
         self.set_start_button = tk.Button(self.control_frame, text="Set Start", command=self.set_start_mode)
         self.set_start_button.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        self.set_end_button = tk.Button(self.control_frame, text="Set End", command=self.set_end_mode)
-        self.set_end_button.pack(side=tk.LEFT, padx=5, pady=5)
+
         
         self.set_obstacles_button = tk.Button(self.control_frame, text="Set Obstacles", command=self.set_obstacles_mode)
         self.set_obstacles_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -46,7 +44,6 @@ class Map:
 
         self.obstacles = {}  # Store obstacles as {id: (points, polygon_id, line_ids)}
         self.start_position = None
-        self.end_position = None
         self.mode = None
         self.current_shape = None
         self.current_points = []
@@ -80,11 +77,6 @@ class Map:
         self.mode = 'set_start'
         self.message_label.config(text="Click on the grid to set the start position.")
     
-    def set_end_mode(self):
-        """Activates end position setting mode."""
-        self.mode = 'set_end'
-        self.message_label.config(text="Click on the grid to set the end position.")
-    
     def set_obstacles_mode(self):
         """Activates obstacle placement mode."""
         self.mode = 'set_obstacles'
@@ -100,11 +92,7 @@ class Map:
                 self.canvas.delete("start")
             self.start_position = (x, y)
             self.canvas.create_rectangle(x-10, y-10, x+10, y+10, fill="yellow", tags="start")
-        elif self.mode == 'set_end':
-            if self.end_position:
-                self.canvas.delete("end")
-            self.end_position = (x, y)
-            self.canvas.create_rectangle(x-10, y-10, x+10, y+10, fill="green", tags="end")
+
         elif self.mode == 'set_obstacles':
             if not self.current_shape:
                 # Check if the user clicked on an existing obstacle to start dragging
@@ -217,8 +205,8 @@ class Map:
             self.message_label.config(text="Simulation already running.")
             return
     
-        if not self.start_position or not self.end_position:
-            self.message_label.config(text="Please set both start and end positions.")
+        if not self.start_position :
+            self.message_label.config(text="Please set start positions.")
             return
         self.robot = Robot(self.start_position, self)  # Create robot instance
         self.message_label.config(text="Use W/S to move forward/backward and A/D to turn left/right.")
@@ -245,7 +233,7 @@ class Map:
         self.simulation_running = False
         self.canvas.delete("all")
         self.start_position = None
-        self.end_position = None
+     
         self.obstacles.clear()
         self.current_points = []
         self.current_shape = None

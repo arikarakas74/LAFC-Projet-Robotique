@@ -17,7 +17,6 @@ class Robot:
         self.speed_label.pack()    
         self.update_motion()
 
-
     def draw(self):
         """Dessine le robot à l'écran dans sa position actuelle."""
         self.map.canvas.delete("robot")  
@@ -30,11 +29,10 @@ class Robot:
         p3 = (cx + size * math.cos(angle - 2.5), cy + size * math.sin(angle - 2.5))
 
         self.map.canvas.create_polygon(p1, p2, p3, fill="blue", tags="robot")
-
     
     def is_collision(self, new_x, new_y):
         """Checks if the new position collides with any obstacle."""
-        for obstacle_id, (points, _, _) in self.map.obstacles.items():  # Unpack all three values
+        for obstacle_id, (points, _, _) in self.map.obstacles.items():
             if self.point_in_polygon(new_x, new_y, points):
                 return True
         return False
@@ -56,7 +54,6 @@ class Robot:
             p1x, p1y = p2x, p2y
         return inside
 
-    
     def stop(self):
         """Stops the robot's movement and removes it from the canvas."""
         if self.current_after:
@@ -65,23 +62,17 @@ class Robot:
         self.velocity = 0
         self.map.canvas.delete("robot")  
 
-
     def turn_left(self):
-        """Turns to the right (counterclockwise)"""
         self.direction_angle -= 10
         self.direction_angle %= 360
         self.draw()
         self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
-        print(f"turn_left: new_angle = {self.direction_angle}°")
 
     def turn_right(self):
-        """Turns left (clockwise)"""
         self.direction_angle += 10
         self.direction_angle %= 360
         self.draw()
         self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
-        print(f"turn_right: new_angle = {self.direction_angle}°")
-
 
     def move_forward(self, event=None):
         self.apply_acceleration(1)
@@ -136,33 +127,13 @@ class Robot:
             self.y = new_y
             self.draw()
 
-        if self.is_at_goal():
-            self.map.simulation_running = False
-            self.speed_label.destroy()
-            self.speed_label = None
-            self.stop()
-            self.map.message_label.config(text="Robot est arrivé à la destination.")
-            return 
-
         self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
-
         self.current_after = self.map.window.after(16, self.update_motion)
-
-    def is_at_goal(self):
-        "Vérifier si le robot est arrivé à la destination."
-        if not self.map.end_position:
-            return False 
-
-        goal_x, goal_y = self.map.end_position
-        distance = math.sqrt((self.x - goal_x) ** 2 + (self.y - goal_y) ** 2)
-
-        return distance < 10
 
     def turn_right90(self):
         self.direction_angle += 90
         self.direction_angle %= 360 
         self.draw()
-        print(f"turn_right 90°: new_angle = {self.direction_angle}°")
 
     def draw_square(self, side_length=200, step_size=5):
         """Makes the robot to draw a square step by step."""

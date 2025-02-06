@@ -38,7 +38,6 @@ class RobotSimulator:
         self.map.canvas.delete("all")
         self.map.obstacles.clear()
         self.map.start_position = None
-        self.map.end_position = None
         self.map.robot = None
         self.map.message_label.config(text="")
         self.map.window.update()
