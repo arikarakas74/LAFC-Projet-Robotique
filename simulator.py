@@ -14,10 +14,6 @@ class RobotSimulator:
         if not self.running or robot is None:
             return
             
-        if robot.move_towards(end_position):
-            self.map.message_label.config(text="Robot reached goal!")
-            self.running = False
-            return
         
         if self.running:
             if self.current_after:
