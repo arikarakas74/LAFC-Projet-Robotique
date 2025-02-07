@@ -15,8 +15,8 @@ class SimulationController:
             self.map.map_view.update_message_label(text="Simulation already running.") # Access map_view
             return
 
-        if not self.map.map_model.start_position or not self.map.map_model.end_position: # Access map_model
-            self.map.map_view.update_message_label(text="Please set both start and end positions.") # Access map_view
+        if not self.map.map_model.start_position: # Access map_model
+            self.map.map_view.update_message_label(text="Please set the start position.") # Access map_view
             return
 
         self.map.robot = Robot(self.map.map_model.start_position, self.map)  # Create robot instance, access map_model

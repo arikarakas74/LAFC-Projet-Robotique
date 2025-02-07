@@ -14,9 +14,6 @@ class ControlPanel:
         self.set_start_button = tk.Button(self.control_frame, text="Set Start", command=self.map_controller.set_start_mode)
         self.set_start_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.set_end_button = tk.Button(self.control_frame, text="Set End", command=self.map_controller.set_end_mode)
-        self.set_end_button.pack(side=tk.LEFT, padx=5, pady=5)
-
         self.set_obstacles_button = tk.Button(self.control_frame, text="Set Obstacles", command=self.map_controller.set_obstacles_mode)
         self.set_obstacles_button.pack(side=tk.LEFT, padx=5, pady=5)
 
