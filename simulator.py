@@ -5,12 +5,12 @@ class RobotSimulator:
         self.robot = None
         self.current_after = None
 
-    def simulate(self, robot, end_position):
+    def simulate(self, robot):
         self.running = True
         self.map.robot = robot
-        self.move_step(robot, end_position)
+        self.move_step(robot)
 
-    def move_step(self, robot, end_position):
+    def move_step(self, robot):
         if not self.running or robot is None:
             return
             
