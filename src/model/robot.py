@@ -1,5 +1,5 @@
-import tkinter as tk
 import math
+from view.robot_view import RobotView
 
 class Robot:
     def __init__(self, start_position, map_instance, collision_radius=10):
@@ -13,28 +13,15 @@ class Robot:
         self.friction = 0.1
         self.acceleration_rate = 0.2
         self.current_after = None
-        self.speed_label = None # Will be created in view
-        # self.speed_label = tk.Label(self.map.window, text="velocity: 0.00 | direction_angle: 0°") # Removed from here
-        # self.speed_label.pack() # Removed from here
-        # self.update_motion() # Motion update needs to be started by controller
+        self.view = RobotView(map_instance)  # Use RobotView for visual representation
 
     def set_speed_label(self, label):
         """Sets the speed label created in view."""
-        self.speed_label = label
+        self.view.set_speed_label(label)
 
     def draw(self):
-        """Dessine le robot à l'écran dans sa position actuelle."""
-        self.map.map_view.canvas.delete("robot")
-        cx, cy = round(self.x), round(self.y)
-        size = 15
-        angle = math.radians(self.direction_angle)
-
-        p1 = (cx + size * math.cos(angle), cy + size * math.sin(angle))
-        p2 = (cx + size * math.cos(angle + 2.5), cy + size * math.sin(angle + 2.5))
-        p3 = (cx + size * math.cos(angle - 2.5), cy + size * math.sin(angle - 2.5))
-
-        self.map.map_view.canvas.create_polygon(p1, p2, p3, fill="blue", tags="robot")
-
+        """Draws the robot on the canvas at the current position."""
+        self.view.draw(self.x, self.y, self.direction_angle)
 
     def is_collision(self, new_x, new_y):
         """Checks if the new position collides with any obstacle."""
@@ -60,7 +47,6 @@ class Robot:
             p1x, p1y = p2x, p2y
         return inside
 
-
     def stop(self):
         """Stops the robot's movement and removes it from the canvas."""
         if self.current_after:
@@ -69,14 +55,12 @@ class Robot:
         self.velocity = 0
         self.map.map_view.canvas.delete("robot")
 
-
     def turn_left(self):
         """Turns to the right (counterclockwise)"""
         self.direction_angle -= 10
         self.direction_angle %= 360
         self.draw()
-        if self.speed_label:
-            self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
+        self.view.update_speed_label(self.velocity, self.direction_angle)
         print(f"turn_left: new_angle = {self.direction_angle}°")
 
     def turn_right(self):
@@ -84,10 +68,8 @@ class Robot:
         self.direction_angle += 10
         self.direction_angle %= 360
         self.draw()
-        if self.speed_label:
-            self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
+        self.view.update_speed_label(self.velocity, self.direction_angle)
         print(f"turn_right: new_angle = {self.direction_angle}°")
-
 
     def move_forward(self, event=None):
         self.apply_acceleration(1)
@@ -144,15 +126,14 @@ class Robot:
 
         if self.is_at_goal():
             self.map.simulation_controller.simulation_running = False # Access simulation_controller
-            if self.speed_label:
-                self.speed_label.destroy()
-                self.speed_label = None
+            if self.view.speed_label:
+                self.view.speed_label.destroy()
+                self.view.speed_label = None
             self.stop()
             self.map.map_view.message_label.config(text="Robot est arrivé à la destination.") # Access map_view
             return
 
-        if self.speed_label:
-            self.speed_label.config(text=f"velocity: {self.velocity:.2f} | direction_angle: {self.direction_angle}°")
+        self.view.update_speed_label(self.velocity, self.direction_angle)
 
         self.current_after = self.map.window.after(16, self.update_motion)
 

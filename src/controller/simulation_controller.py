@@ -1,4 +1,3 @@
-import tkinter as tk  # Import tkinter module
 from model.robot import Robot  # Adjusted the import path
 
 class SimulationController:
