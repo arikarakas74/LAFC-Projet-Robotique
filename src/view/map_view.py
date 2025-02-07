@@ -14,6 +14,7 @@ class MapView:
         self.height = rows * grid_size
         self.message_label = tk.Label(parent.window, text="")
         self.message_label.pack(pady=10)
+        self.speed_label = None
 
     def draw_grid(self): # Example, grid drawing might not be needed based on original code.
         """Draws the grid lines on the canvas."""
@@ -69,3 +70,8 @@ class MapView:
     def update_message_label(self, text):
         """Updates the message label text."""
         self.message_label.config(text=text)
+
+    def create_speed_label(self):
+        """Creates the speed label."""
+        self.speed_label = tk.Label(self.parent.window, text="velocity: 0.00 | direction_angle: 0°")
+        self.speed_label.pack()

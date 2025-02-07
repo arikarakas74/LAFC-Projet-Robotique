@@ -20,9 +20,8 @@ class SimulationController:
             return
 
         self.map.robot = Robot(self.map.map_model.start_position, self.map)  # Create robot instance, access map_model
-        speed_label = tk.Label(self.map.window, text="velocity: 0.00 | direction_angle: 0°") # Create speed label here
-        speed_label.pack()
-        self.map.robot.set_speed_label(speed_label) # Set the speed label to robot
+        self.map.map_view.create_speed_label()  # Create speed label in the view
+        self.map.robot.set_speed_label(self.map.map_view.speed_label)  # Set the speed label to robot
         self.map.map_view.update_message_label(text="Use W/S to move forward/backward and A/D to turn left/right.") # Access map_view
         self.map.robot.draw()
         self.map.robot.update_motion() # Start motion update
@@ -37,10 +36,10 @@ class SimulationController:
         if self.map.robot:
             if self.map.robot.current_after:
                 self.map.window.after_cancel(self.map.robot.current_after)
-            if self.simulation_running == True :
-                if self.map.robot.speed_label:
-                    self.map.robot.speed_label.destroy()
-                    self.map.robot.speed_label = None
+            if self.simulation_running:
+                if self.map.map_view.speed_label:
+                    self.map.map_view.speed_label.destroy()
+                    self.map.map_view.speed_label = None
             self.map.robot.acceleration = 0
             self.map.robot.velocity = 0
             self.map.map_view.delete_item("robot") # Access map_view
