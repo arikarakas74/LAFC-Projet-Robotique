@@ -40,6 +40,11 @@ class MapModel:
         self.start_position = position
         self.notify_event_listeners("start_position_changed", position=position)
 
+    def set_end_position(self, position):
+        """Sets the end position and notifies listeners."""
+        self.end_position = position
+        self.notify_event_listeners("end_position_changed", position=position)
+
     def add_obstacle(self, obstacle_id, points, polygon_id, line_ids):
         """Adds an obstacle and notifies listeners."""
         self.obstacles[obstacle_id] = (points, polygon_id, line_ids)
