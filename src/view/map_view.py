@@ -19,9 +19,9 @@ class MapView:
         self.robot_view = RobotView(self)  # Initialize robot_view
 
         # Register as a listener to the map model
-        self.parent.map_model.add_event_listener(self.handle_map_event)
+        self.parent.map_model.add_event_listener(self.on_map_update)
 
-    def handle_map_event(self, event_type, **kwargs):
+    def on_map_update(self, event_type, **kwargs):
         """Handles events from the map model."""
         if event_type == "start_position_changed":
             self.draw_start(kwargs["position"])
@@ -32,7 +32,7 @@ class MapView:
         elif event_type == "obstacle_removed":
             self.delete_item(kwargs["obstacle_id"])
         elif event_type == "map_reset":
-            self.delete_all()
+            self.clear_all()
 
     def draw_grid(self):
         """Draws the grid lines on the canvas."""

@@ -23,10 +23,8 @@ class MapController:
         """Handles mouse clicks based on active mode."""
         x, y = event.x, event.y
         if self.mode == 'set_start':
-            if self.map.map_model.start_position: # Access map_model
-                self.map.map_view.delete_item("start") # Access map_view
-            self.map.map_model.start_position = (x, y) # Access map_model
-            self.map.map_view.draw_start(self.map.map_model.start_position) # Access map_view, map_model
+            self.map.map_model.set_start_position((x, y))  # Call set_start_position on the map model
+            self.map.map_view.draw_start((x, y))  # Draw the start position on the map view
         elif self.mode == 'set_obstacles':
             if not self.map.map_model.current_shape: # Access map_model
                 # Check if the user clicked on an existing obstacle to start dragging
@@ -42,6 +40,17 @@ class MapController:
                 self.map.map_model.current_points.append((x, y)) # Access map_model
                 line_id = self.map.map_view.create_line(self.map.map_model.current_points[-2], (x, y), fill="red", width=2) # Access map_view, map_model
                 self.map.map_model.current_lines.append(line_id) # Access map_model
+
+    def add_obstacle(self):
+        """Adds an obstacle to the map model."""
+        if self.map.map_model.current_points:
+            points = self.map.map_model.current_points
+            polygon_id = self.map.map_view.create_polygon(points, fill="red", outline="black")  # Access map_view
+            obstacle_id = f"obstacle_{len(self.map.map_model.obstacles)}"  # Access map_model
+            self.map.map_model.add_obstacle(obstacle_id, points, polygon_id, [])  # Call add_obstacle on the map model
+            self.map.map_model.current_points = []  # Clear current points
+            self.map.map_model.current_shape = None  # Clear current shape
+            self.map.map_view.update_message_label(text="Obstacle added.")  # Access map_view
 
     def handle_drag(self, event):
         """Handles mouse drag to draw or move obstacles."""
@@ -83,12 +92,7 @@ class MapController:
                 self.map.map_model.current_lines = [] # Access map_model
 
                 # Create the filled polygon
-                polygon_id = self.map.map_view.create_polygon(self.map.map_model.current_points, fill="red", outline="black") # Access map_view, map_model
-                obstacle_id = f"obstacle_{len(self.map.map_model.obstacles)}" # Access map_model
-                self.map.map_model.obstacles[obstacle_id] = (self.map.map_model.current_points, polygon_id, []) # Access map_model
-                self.map.map_model.current_points = [] # Access map_model
-                self.map.map_model.current_shape = None # Access map_model
-                self.map.map_view.update_message_label(text="Obstacle added.") # Access map_view
+                self.add_obstacle()  # Call add_obstacle method
             else:
                 self.map.map_view.update_message_label(text="Shape is not closed. Please double-click near the starting point.") # Access map_view
 
