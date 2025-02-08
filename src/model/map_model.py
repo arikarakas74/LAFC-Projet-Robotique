@@ -55,3 +55,9 @@ class MapModel:
         if obstacle_id in self.obstacles:
             del self.obstacles[obstacle_id]
             self.notify_event_listeners("obstacle_deleted", obstacle_id=obstacle_id)
+
+    def remove_obstacle(self, obstacle_id):
+        """Removes an obstacle and notifies listeners."""
+        if obstacle_id in self.obstacles:
+            del self.obstacles[obstacle_id]
+            self.notify_event_listeners("obstacle_removed", obstacle_id=obstacle_id)
