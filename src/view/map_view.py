@@ -1,4 +1,5 @@
 import tkinter as tk
+from view.robot_view import RobotView
 
 class MapView:
     """Handles the visual representation of the map."""
@@ -15,6 +16,7 @@ class MapView:
         self.message_label = tk.Label(parent.window, text="")
         self.message_label.pack(pady=10)
         self.speed_label = None
+        self.robot_view = RobotView(self)  # Initialize robot_view
 
     def draw_grid(self): # Example, grid drawing might not be needed based on original code.
         """Draws the grid lines on the canvas."""
@@ -66,6 +68,9 @@ class MapView:
     def delete_all(self):
         """Deletes all items on the canvas."""
         self.canvas.delete("all")
+        if self.speed_label:
+            self.speed_label.config(text="")
+        self.robot_view.clear_robot()  # Clear the robot from the canvas
 
     def update_message_label(self, text):
         """Updates the message label text."""
