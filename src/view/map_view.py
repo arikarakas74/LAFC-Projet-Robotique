@@ -5,7 +5,7 @@ class MapView:
     """Handles the visual representation of the map."""
 
     def __init__(self, parent, rows, cols, grid_size):
-        self.parent = parent # 'parent' is now the Map class instance
+        self.parent = parent  # 'parent' is now the Map class instance
         self.rows = rows
         self.cols = cols
         self.grid_size = grid_size
@@ -18,7 +18,23 @@ class MapView:
         self.speed_label = None
         self.robot_view = RobotView(self)  # Initialize robot_view
 
-    def draw_grid(self): # Example, grid drawing might not be needed based on original code.
+        # Register as a listener to the map model
+        self.parent.map_model.add_event_listener(self.handle_map_event)
+
+    def handle_map_event(self, event_type, **kwargs):
+        """Handles events from the map model."""
+        if event_type == "start_position_changed":
+            self.draw_start(kwargs["position"])
+        elif event_type == "end_position_changed":
+            self.draw_end(kwargs["position"])
+        elif event_type == "obstacle_added":
+            self.draw_obstacle(kwargs["points"])
+        elif event_type == "obstacle_removed":
+            self.delete_item(kwargs["obstacle_id"])
+        elif event_type == "map_reset":
+            self.delete_all()
+
+    def draw_grid(self):
         """Draws the grid lines on the canvas."""
         for i in range(self.rows + 1):
             self.canvas.create_line(0, i * self.grid_size, self.width, i * self.grid_size, fill="lightgrey")
@@ -40,8 +56,8 @@ class MapView:
             self.canvas.create_rectangle(x-10, y-10, x+10, y+10, fill="green", tags="end")
 
     def draw_obstacle(self, points):
-         """Draws an obstacle polygon."""
-         return self.canvas.create_polygon(points, fill="red", outline="black")
+        """Draws an obstacle polygon."""
+        return self.canvas.create_polygon(points, fill="red", outline="black")
 
     def delete_item(self, tag_or_id):
         """Deletes an item from the canvas by tag or ID."""
