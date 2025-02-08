@@ -14,7 +14,7 @@ class AppView:
 
         self.map_model = MapModel(rows, cols)
         self.map_view = MapView(self, rows, cols, grid_size)
-        self.map_controller = MapController(self)
+        self.map_controller = MapController(self.map_model, self.map_view, self.window)  # Pass map_model, map_view, and window to MapController
         self.simulation_controller = SimulationController(self, None)  # Initialize SimulationController without control_panel
         self.control_panel = ControlPanel(self.window, self.map_controller, self.simulation_controller)  # Create ControlPanel with simulation_controller
         self.simulation_controller.control_panel = self.control_panel  # Set control_panel in SimulationController

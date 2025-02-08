@@ -145,7 +145,7 @@ class Robot:
         self.current_side = 0
         self.steps_moved = 0
 
-        def move_step():
+        def move_step(*args):
             if self.current_side < 4:
                 angle_rad = math.radians(self.direction_angle)
                 new_x = self.x + step_size * math.cos(angle_rad)
@@ -162,7 +162,7 @@ class Robot:
                     self.current_side += 1
                     self.turn_right90()
 
-                self.current_after = self.notify_event_listeners("after", delay=20, callback=move_step)
+                self.current_after = self.notify_event_listeners("after", delay=20, callback=move_step, obstacles=obstacles, goal_position=None)
             else:
                 self.acceleration = 0
                 self.velocity = 0
