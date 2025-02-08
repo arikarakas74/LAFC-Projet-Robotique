@@ -96,3 +96,10 @@ class MapView:
         """Creates the speed label."""
         self.speed_label = tk.Label(self.parent.window, text="velocity: 0.00 | direction_angle: 0°")
         self.speed_label.pack()
+
+    def clear_all(self):
+        """Clears all items on the canvas and resets UI components."""
+        self.delete_all()
+        self.update_message_label("")
+        if self.speed_label:
+            self.speed_label.config(text="")
