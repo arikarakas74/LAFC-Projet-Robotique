@@ -15,9 +15,9 @@ class MapController:
     def set_obstacles_mode(self):
         """Activates obstacle placement mode."""
         self.mode = 'set_obstacles'
-        self.map.map_view.update_message_label(text="Click and drag to draw obstacles. Double-click to finish.") # Access map_view
-        self.map.map_model.current_points = [] # Access map_model
-        self.map.map_model.current_lines = [] # Access map_model
+        self.map.map_model.current_points = []  # Clear current obstacle points
+        self.map.map_model.current_lines = []  # Clear current obstacle lines
+        self.map.map_view.update_message_label(text="Click and drag to draw obstacles. Double-click to finish.")  # Access map_view
 
     def handle_click(self, event):
         """Handles mouse clicks based on active mode."""
