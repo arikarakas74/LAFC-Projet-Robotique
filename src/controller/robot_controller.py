@@ -16,16 +16,21 @@ class RobotController:
         if event_type == "update_view":
             self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
         elif event_type == "update_speed_label":
-            self.control_panel.update_speed_label(kwargs["velocity"], kwargs["direction_angle"])
+            velocity = kwargs.get("velocity", 0)
+            direction_angle = kwargs.get("direction_angle", 0)
+            self.control_panel.update_speed_label(velocity, direction_angle)
         elif event_type == "robot_stopped":
+            self.robot.stop_simulation()
             self.robot_view.clear_robot()
+            self.control_panel.update_message_label("Robot stopped")
         elif event_type == "goal_reached":
+            self.robot.stop_simulation()
             self.control_panel.destroy_speed_label()
             self.robot_view.update_message_label(text="Goal reached!")
-        elif event_type == "cancel_after":
-            self.window.after_cancel(kwargs["after_id"])
         elif event_type == "after":
-            return self.window.after(kwargs["delay"], kwargs["callback"], kwargs["obstacles"], kwargs["goal_position"])
+            callback = kwargs.get("callback")
+            if callable(callback):
+                return self.window.after(kwargs["delay"], callback, kwargs.get("obstacles", []), kwargs.get("goal_position", None))
 
 
     def start_robot_movement(self, speed_left, speed_right):
