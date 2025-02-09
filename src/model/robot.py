@@ -76,8 +76,9 @@ class Robot:
             self.y += radius * (-math.cos(self.theta + delta_theta) + math.cos(self.theta))
             self.theta += delta_theta  # Update orientation
         
-        # Keep angle within -pi to pi range
-        self.theta = (self.theta + math.pi) % (2 * math.pi) - math.pi
+        # Normalize angle
+        self.theta = self.normalize_angle(self.theta)  # <-- Applied normalization function
+
         
         # Update motor positions
         self.update_motors(self.TICK_DURATION)
