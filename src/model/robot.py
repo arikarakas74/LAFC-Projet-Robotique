@@ -41,6 +41,10 @@ class Robot:
         for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
             new_position = self.motor_positions[motor] + self.motor_speeds[motor] * tick
             self.motor_positions[motor] = max(-360, min(360, new_position))  # Clamping values within realistic bounds
+
+    def normalize_angle(self, angle):
+        """ Normalizes an angle to the range [-pi, pi] """
+        return (angle + math.pi) % (2 * math.pi) - math.pi
     
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
