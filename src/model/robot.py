@@ -19,6 +19,8 @@ class Robot:
         self.theta = 0  # Robot's orientation (in radians)
         self.event_listeners = []  # List of event listeners
         self.stop_event = threading.Event()
+        self.moving = False  # Movement status
+
     
     def add_event_listener(self, listener):
         """ Adds an event listener to the robot """
@@ -39,6 +41,12 @@ class Robot:
         elif port == self.MOTOR_LEFT + self.MOTOR_RIGHT:
             self.motor_speeds[self.MOTOR_LEFT] = dps
             self.motor_speeds[self.MOTOR_RIGHT] = dps
+        # Start movement if speed is set
+        if dps != 0:
+            self.start_movement()
+        else:
+            self.moving = False  # Stop movement if speed is zero
+
         self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
     
     def update_motors(self, tick):
