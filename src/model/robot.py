@@ -90,6 +90,10 @@ class Robot:
             
             # Use non-blocking event waiting instead of time.sleep
             self.stop_event.wait(self.TICK_DURATION)
+
+    def stop_simulation(self):
+    """ Stops the simulation loop """
+    self.stop_event.set()
     
     def get_position(self):
         """ Returns the current position of the robot """
