@@ -48,6 +48,13 @@ class Robot:
             self.moving = False  # Stop movement if speed is zero
 
         self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
+
+    def start_movement(self):
+    """ Starts the simulation loop if not already running """
+    if not self.moving:
+        self.moving = True
+        threading.Thread(target=self.update_simulation, daemon=True).start()
+
     
     def update_motors(self, tick):
         """ Updates the motor positions based on speed and tick duration with bounds checking """
