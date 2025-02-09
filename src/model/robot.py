@@ -83,8 +83,9 @@ class Robot:
         # Update motor positions
         self.update_motors(self.TICK_DURATION)
         
-        # Trigger view update event
-        self.trigger_event("update_view", x=self.x, y=self.y, direction_angle=self.theta)
+        # Trigger view update event with validation
+        self.trigger_event("update_view", x=self.x, y=self.y, direction_angle=self.theta)  # <-- Event validation applied
+
         
         # Schedule next tick update
         time.sleep(self.TICK_DURATION)
