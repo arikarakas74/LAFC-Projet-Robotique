@@ -37,9 +37,10 @@ class Robot:
         self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
     
     def update_motors(self, tick):
-        """ Updates the motor positions based on speed and tick duration """
+        """ Updates the motor positions based on speed and tick duration with bounds checking """
         for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
-            self.motor_positions[motor] += self.motor_speeds[motor] * tick
+            new_position = self.motor_positions[motor] + self.motor_speeds[motor] * tick
+            self.motor_positions[motor] = max(-360, min(360, new_position))  # Clamping values within realistic bounds
     
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
