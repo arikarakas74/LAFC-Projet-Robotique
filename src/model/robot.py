@@ -1,0 +1,95 @@
+import time
+import math
+
+class Robot:
+    WHEEL_BASE_WIDTH = 10.0  # cm (Distance between the wheels)
+    WHEEL_DIAMETER = 5.0  # cm (Wheel diameter)
+    WHEEL_RADIUS = WHEEL_DIAMETER / 2  # cm (Wheel radius)
+    
+    MOTOR_LEFT = "left"
+    MOTOR_RIGHT = "right"
+    TICK_DURATION = 0.05  # 50 ms tick duration (matching simulation tick)
+    
+    def __init__(self):
+        self.motor_speeds = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}  # Motor speeds (dps)
+        self.motor_positions = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}  # Motor angles (degrees)
+        self.x = 0  # Robot's X position
+        self.y = 0  # Robot's Y position
+        self.theta = 0  # Robot's orientation (in radians)
+        self.event_listeners = []  # List of event listeners
+    
+    def add_event_listener(self, listener):
+        """ Adds an event listener to the robot """
+        self.event_listeners.append(listener)
+    
+    def trigger_event(self, event_type, **kwargs):
+        """ Triggers an event and notifies all listeners """
+        for listener in self.event_listeners:
+            listener(event_type, **kwargs)
+    
+    def set_motor_dps(self, port, dps):
+        """ Set the speed (degrees per second) for the specified motor(s) """
+        if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
+            self.motor_speeds[port] = dps
+        elif port == self.MOTOR_LEFT + self.MOTOR_RIGHT:
+            self.motor_speeds[self.MOTOR_LEFT] = dps
+            self.motor_speeds[self.MOTOR_RIGHT] = dps
+        self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
+    
+    def update_motors(self, tick):
+        """ Updates the motor positions based on speed and tick duration """
+        for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
+            self.motor_positions[motor] += self.motor_speeds[motor] * tick
+    
+    def update_simulation(self):
+        """ Updates robot movement in the simulation loop """
+        left_speed = self.motor_speeds[self.MOTOR_LEFT]  # Left motor speed (dps)
+        right_speed = self.motor_speeds[self.MOTOR_RIGHT]  # Right motor speed (dps)
+        
+        # Compute wheel linear velocities (cm/s)
+        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        
+        # Compute linear and angular velocity
+        linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
+        angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
+        
+        # Update position using kinematic model
+        if angular_velocity == 0:
+            # Moving straight
+            self.x += linear_velocity * math.cos(self.theta) * self.TICK_DURATION
+            self.y += linear_velocity * math.sin(self.theta) * self.TICK_DURATION
+        else:
+            # Moving in an arc
+            radius = linear_velocity / angular_velocity
+            delta_theta = angular_velocity * self.TICK_DURATION
+            
+            self.x += radius * (math.sin(self.theta + delta_theta) - math.sin(self.theta))
+            self.y += radius * (-math.cos(self.theta + delta_theta) + math.cos(self.theta))
+            self.theta += delta_theta  # Update orientation
+        
+        # Keep angle within -pi to pi range
+        self.theta = (self.theta + math.pi) % (2 * math.pi) - math.pi
+        
+        # Update motor positions
+        self.update_motors(self.TICK_DURATION)
+        
+        # Trigger view update event
+        self.trigger_event("update_view", x=self.x, y=self.y, direction_angle=self.theta)
+        
+        # Schedule next tick update
+        time.sleep(self.TICK_DURATION)
+        self.update_simulation()
+    
+    def get_position(self):
+        """ Returns the current position of the robot """
+        return self.x, self.y
+    
+    def get_motor_position(self):
+        """ Returns the current motor positions (degrees) """
+        return self.motor_positions[self.MOTOR_LEFT], self.motor_positions[self.MOTOR_RIGHT]
+    
+    def offset_motor_encoder(self, port, offset):
+        """ Resets the motor encoder by subtracting the given offset """
+        if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
+            self.motor_positions[port] -= offset
