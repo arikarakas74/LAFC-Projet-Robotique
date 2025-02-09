@@ -26,3 +26,15 @@ class RobotController:
             self.window.after_cancel(kwargs["after_id"])
         elif event_type == "after":
             return self.window.after(kwargs["delay"], kwargs["callback"], kwargs["obstacles"], kwargs["goal_position"])
+
+
+    def start_robot_movement(self, speed_left, speed_right):
+        """Starts the robot's movement with given motor speeds."""
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, speed_left)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, speed_right)
+    
+    def stop_robot(self):
+        """Stops the robot and updates the UI."""
+        self.robot.stop_simulation()
+        self.robot_view.clear_robot()
+        self.control_panel.update_message_label("Robot stopped")
