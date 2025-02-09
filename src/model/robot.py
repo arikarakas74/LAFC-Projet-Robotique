@@ -68,7 +68,7 @@ class Robot:
     
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
-        while not self.stop_event.is_set():
+        while self.moving and not self.stop_event.is_set():
             left_speed = self.motor_speeds[self.MOTOR_LEFT]  # Left motor speed (dps)
             right_speed = self.motor_speeds[self.MOTOR_RIGHT]  # Right motor speed (dps)
             
