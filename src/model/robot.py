@@ -1,5 +1,6 @@
 import time
 import math
+import threading
 
 class Robot:
     WHEEL_BASE_WIDTH = 10.0  # cm (Distance between the wheels)
@@ -17,6 +18,7 @@ class Robot:
         self.y = 0  # Robot's Y position
         self.theta = 0  # Robot's orientation (in radians)
         self.event_listeners = []  # List of event listeners
+        self.stop_event = threading.Event()
     
     def add_event_listener(self, listener):
         """ Adds an event listener to the robot """
@@ -51,45 +53,43 @@ class Robot:
     
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
-        left_speed = self.motor_speeds[self.MOTOR_LEFT]  # Left motor speed (dps)
-        right_speed = self.motor_speeds[self.MOTOR_RIGHT]  # Right motor speed (dps)
-        
-        # Compute wheel linear velocities (cm/s)
-        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        
-        # Compute linear and angular velocity
-        linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
-        angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
-        
-        # Update position using kinematic model
-        if angular_velocity == 0:
-            # Moving straight
-            self.x += linear_velocity * math.cos(self.theta) * self.TICK_DURATION
-            self.y += linear_velocity * math.sin(self.theta) * self.TICK_DURATION
-        else:
-            # Moving in an arc
-            radius = linear_velocity / angular_velocity
-            delta_theta = angular_velocity * self.TICK_DURATION
+        while not self.stop_event.is_set():
+            left_speed = self.motor_speeds[self.MOTOR_LEFT]  # Left motor speed (dps)
+            right_speed = self.motor_speeds[self.MOTOR_RIGHT]  # Right motor speed (dps)
             
-            self.x += radius * (math.sin(self.theta + delta_theta) - math.sin(self.theta))
-            self.y += radius * (-math.cos(self.theta + delta_theta) + math.cos(self.theta))
-            self.theta += delta_theta  # Update orientation
-        
-        # Normalize angle
-        self.theta = self.normalize_angle(self.theta)  # <-- Applied normalization function
-
-        
-        # Update motor positions
-        self.update_motors(self.TICK_DURATION)
-        
-        # Trigger view update event with validation
-        self.trigger_event("update_view", x=self.x, y=self.y, direction_angle=self.theta)  # <-- Event validation applied
-
-        
-        # Schedule next tick update
-        time.sleep(self.TICK_DURATION)
-        self.update_simulation()
+            # Compute wheel linear velocities (cm/s)
+            left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+            right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+            
+            # Compute linear and angular velocity
+            linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
+            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
+            
+            # Update position using kinematic model
+            if angular_velocity == 0:
+                # Moving straight
+                self.x += linear_velocity * math.cos(self.theta) * self.TICK_DURATION
+                self.y += linear_velocity * math.sin(self.theta) * self.TICK_DURATION
+            else:
+                # Moving in an arc
+                radius = linear_velocity / angular_velocity
+                delta_theta = angular_velocity * self.TICK_DURATION
+                
+                self.x += radius * (math.sin(self.theta + delta_theta) - math.sin(self.theta))
+                self.y += radius * (-math.cos(self.theta + delta_theta) + math.cos(self.theta))
+                self.theta += delta_theta  # Update orientation
+            
+            # Normalize angle
+            self.theta = self.normalize_angle(self.theta)
+            
+            # Update motor positions
+            self.update_motors(self.TICK_DURATION)
+            
+            # Trigger view update event with validation
+            self.trigger_event("update_view", x=self.x, y=self.y, direction_angle=self.theta)
+            
+            # Use non-blocking event waiting instead of time.sleep
+            self.stop_event.wait(self.TICK_DURATION)
     
     def get_position(self):
         """ Returns the current position of the robot """
