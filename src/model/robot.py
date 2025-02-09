@@ -23,7 +23,10 @@ class Robot:
         self.event_listeners.append(listener)
     
     def trigger_event(self, event_type, **kwargs):
-        """ Triggers an event and notifies all listeners """
+        """ Triggers an event and notifies all listeners with validation """
+        valid_events = {"update_view", "update_speed_label"}
+        if event_type not in valid_events:
+            raise ValueError(f"Invalid event type: {event_type}")
         for listener in self.event_listeners:
             listener(event_type, **kwargs)
     
