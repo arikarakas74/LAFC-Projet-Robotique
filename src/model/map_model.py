@@ -41,6 +41,7 @@ class MapModel:
     def set_start_position(self, position):
         """Sets the start position and notifies listeners."""
         self.start_position = position
+        self.robot_x, self.robot_y = position
         self.notify_event_listeners("start_position_changed", position=position)
 
     def set_end_position(self, position):
@@ -52,12 +53,6 @@ class MapModel:
         """Adds an obstacle and notifies listeners."""
         self.obstacles[obstacle_id] = (points, polygon_id, line_ids)
         self.notify_event_listeners("obstacle_added", obstacle_id=obstacle_id, points=points, polygon_id=polygon_id, line_ids=line_ids)
-
-    def delete_obstacle(self, obstacle_id):
-        """Deletes an obstacle and notifies listeners."""
-        if obstacle_id in self.obstacles:
-            del self.obstacles[obstacle_id]
-            self.notify_event_listeners("obstacle_deleted", obstacle_id=obstacle_id)
 
     def remove_obstacle(self, obstacle_id):
         """Removes an obstacle and notifies listeners."""
