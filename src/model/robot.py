@@ -1,6 +1,6 @@
 import math
 import threading
-from src.model.map_model import MapModel
+from model.map_model import MapModel
 
 class Robot:
     WHEEL_BASE_WIDTH = 10.0  # cm (Distance between the wheels)
@@ -13,7 +13,6 @@ class Robot:
     
     def __init__(self, map_model):
         self.map_model = map_model
-        self.map_model.robot_theta = self.theta  # Robot's orientation (in radians)
         self.motor_speeds = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}  # Motor speeds (dps)
         self.motor_positions = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}  # Motor angles (degrees)
         self.event_listeners = []  # List of event listeners
@@ -46,7 +45,7 @@ class Robot:
         else:
             self.moving = False  # Stop movement if speed is zero
 
-        self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
+        self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.map_model.robot_theta)
 
     def start_movement(self):
         """ Starts the simulation loop if not already running """
@@ -82,25 +81,25 @@ class Robot:
             # Update position using kinematic model
             if angular_velocity == 0:
                 # Moving straight
-                self.map_model.robot_x += linear_velocity * math.cos(self.theta) * self.TICK_DURATION
-                self.map_model.robot_y += linear_velocity * math.sin(self.theta) * self.TICK_DURATION
+                self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta) * self.TICK_DURATION
+                self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta) * self.TICK_DURATION
             else:
                 # Moving in an arc
                 radius = linear_velocity / angular_velocity
                 delta_theta = angular_velocity * self.TICK_DURATION
                 
-                self.map_model.robot_x += radius * (math.sin(self.theta + delta_theta) - math.sin(self.theta))
-                self.map_model.robot_y += radius * (-math.cos(self.theta + delta_theta) + math.cos(self.theta))
-                self.theta += delta_theta  # Update orientation
+                self.map_model.robot_x += radius * (math.sin(self.map_model.robot_theta + delta_theta) - math.sin(self.map_model.robot_theta))
+                self.map_model.robot_y += radius * (-math.cos(self.map_model.robot_theta + delta_theta) + math.cos(self.map_model.robot_theta))
+                self.map_model.robot_theta += delta_theta  # Update orientation
             
             # Normalize angle
-            self.theta = self.normalize_angle(self.theta)
+            self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
             
             # Update motor positions
             self.update_motors(self.TICK_DURATION)
             
             # Trigger view update event with validation
-            self.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.theta)
+            self.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
             
             # Use non-blocking event waiting instead of time.sleep
             self.stop_event.wait(self.TICK_DURATION)
@@ -112,7 +111,7 @@ class Robot:
     
     def get_position(self):
         """ Returns the current position of the robot """
-        return self.map_model.robot_x, self.map_model.robot_y, self.theta
+        return self.map_model.robot_x, self.map_model.robot_y, self.map_model.robot_theta
     
     def get_motor_position(self):
         """ Returns the current motor positions (degrees) """
