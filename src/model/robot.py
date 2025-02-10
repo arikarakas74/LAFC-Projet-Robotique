@@ -50,10 +50,10 @@ class Robot:
         self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.theta)
 
     def start_movement(self):
-    """ Starts the simulation loop if not already running """
-    if not self.moving:
-        self.moving = True
-        threading.Thread(target=self.update_simulation, daemon=True).start()
+        """ Starts the simulation loop if not already running """
+        if not self.moving:
+            self.moving = True
+            threading.Thread(target=self.update_simulation, daemon=True).start()
 
     
     def update_motors(self, tick):
@@ -107,8 +107,8 @@ class Robot:
             self.stop_event.wait(self.TICK_DURATION)
 
     def stop_simulation(self):
-    """ Stops the simulation loop """
-    self.stop_event.set()
+        """ Stops the simulation loop """
+        self.stop_event.set()
     
     def get_position(self):
         """ Returns the current position of the robot """
