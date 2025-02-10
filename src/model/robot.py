@@ -81,8 +81,8 @@ class Robot:
             # Update position using kinematic model
             if angular_velocity == 0:
                 # Moving straight
-                self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta) * self.TICK_DURATION
-                self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta) * self.TICK_DURATION
+                self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta)
+                self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta)
             else:
                 # Moving in an arc
                 radius = linear_velocity / angular_velocity
