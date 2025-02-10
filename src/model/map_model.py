@@ -4,6 +4,9 @@ class MapModel:
     def __init__(self, rows, cols):
         self.rows = rows
         self.cols = cols
+        self.robot_x = 0
+        self.robot_y = 0
+        self.robot_theta = 0
         self.obstacles = {}  # Store obstacles as {id: (points, polygon_id, line_ids)}
         self.start_position = None
         self.end_position = None
