@@ -13,6 +13,7 @@ class SimulationController:
         self.robot_view = robot_view
         self.map = map_instance
         self.simulation_running = False
+        self.robot = None
         self.robot_controller = None
         self.map_controller = MapController(self.map.map_model, self.map.map_view, self.map.window)  # Initialize map_controller with required arguments
         self.control_panel = control_panel  # Use the provided control_panel
