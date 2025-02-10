@@ -4,6 +4,7 @@ from view.map_view import MapView
 from view.control_panel import ControlPanel
 from controller.map_controller import MapController
 from controller.simulation_controller import SimulationController
+from view.robot_view import RobotView
 
 class AppView:
     """Main application class to orchestrate MVC components."""
@@ -14,12 +15,11 @@ class AppView:
 
         self.map_model = MapModel(rows, cols)
         self.map_view = MapView(self, rows, cols, grid_size)
+        self.robot_view = RobotView(self.map_view)
         self.map_controller = MapController(self.map_model, self.map_view, self.window)  # Pass map_model, map_view, and window to MapController
-        self.simulation_controller = SimulationController(self, None)  # Initialize SimulationController without control_panel
+        self.simulation_controller = SimulationController(self, self.map_model, self.robot_view, None)  # Initialize SimulationController without control_panel
         self.control_panel = ControlPanel(self.window, self.map_controller, self.simulation_controller)  # Create ControlPanel with simulation_controller
         self.simulation_controller.control_panel = self.control_panel  # Set control_panel in SimulationController
-
-        self.robot = None  # Robot instance is managed by simulation controller
 
         # Bind events - these should mostly call controller methods
         self.map_view.canvas.bind("<Button-1>", self.map_controller.handle_click)
@@ -28,18 +28,12 @@ class AppView:
         self.map_view.canvas.bind("<Button-3>", self.map_controller.delete_obstacle)
         self.map_view.canvas.bind("<ButtonRelease-1>", self.map_controller.stop_drag)
 
-        self.window.bind("<w>", lambda event: self.robot.move_forward() if self.robot else None)
-        self.window.bind("<s>", lambda event: self.robot.move_backward() if self.robot else None)
-        self.window.bind("<KeyRelease-w>", lambda event: self.robot.stop_acceleration() if self.robot else None)
-        self.window.bind("<KeyRelease-s>", lambda event: self.robot.stop_acceleration() if self.robot else None)
-        self.window.bind("<a>", lambda event: self.robot.turn_left() if self.robot else None)
-        self.window.bind("<d>", lambda event: self.robot.turn_right() if self.robot else None)
-        self.window.bind("<Up>", lambda event: self.robot.move_forward() if self.robot else None)
-        self.window.bind("<Down>", lambda event: self.robot.move_backward() if self.robot else None)
-        self.window.bind("<Left>", lambda event: self.robot.turn_left() if self.robot else None)
-        self.window.bind("<Right>", lambda event: self.robot.turn_right() if self.robot else None)
-        self.window.bind("<KeyRelease-Up>", lambda event: self.robot.stop_acceleration() if self.robot else None)
-        self.window.bind("<KeyRelease-Down>", lambda event: self.robot.stop_acceleration() if self.robot else None)
+        self.window.bind("<w>", lambda event: self.simulation_controller.robot_controller.increase_speed())
+        self.window.bind("<s>", lambda event: self.simulation_controller.robot_controller.decrease_speed())
+        self.window.bind("<q>", lambda event: self.simulation_controller.robot_controller.increase_left_speed())
+        self.window.bind("<a>", lambda event: self.simulation_controller.robot_controller.decrease_left_speed())
+        self.window.bind("<e>", lambda event: self.simulation_controller.robot_controller.increase_right_speed())
+        self.window.bind("<d>", lambda event: self.simulation_controller.robot_controller.decrease_right_speed())
 
     def run(self):
         """Runs the main application loop."""
