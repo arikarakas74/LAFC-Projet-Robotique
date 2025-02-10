@@ -19,27 +19,36 @@ class RobotController:
             velocity = kwargs.get("velocity", 0)
             direction_angle = kwargs.get("direction_angle", 0)
             self.control_panel.update_speed_label(velocity, direction_angle)
-        elif event_type == "robot_stopped":
-            self.robot.stop_simulation()
-            self.robot_view.clear_robot()
-            self.control_panel.update_message_label("Robot stopped")
-        elif event_type == "goal_reached":
-            self.robot.stop_simulation()
-            self.control_panel.destroy_speed_label()
-            self.robot_view.update_message_label(text="Goal reached!")
         elif event_type == "after":
             callback = kwargs.get("callback")
             if callable(callback):
                 return self.window.after(kwargs["delay"], callback, kwargs.get("obstacles", []), kwargs.get("goal_position", None))
 
+    SPEED_STEP = 30  # How much speed to add/remove per key press
 
-    def start_robot_movement(self, speed_left, speed_right):
-        """Starts the robot's movement with given motor speeds."""
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, speed_left)
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, speed_right)
-    
-    def stop_robot(self):
-        """Stops the robot and updates the UI."""
-        self.robot.stop_simulation()
-        self.robot_view.clear_robot()
-        self.control_panel.update_message_label("Robot stopped")
+    def increase_speed(self):
+        """ Increases speed for both wheels """
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+
+    def decrease_speed(self):
+        """ Decreases speed for both wheels """
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+
+    def increase_left_speed(self):
+        """ Increases speed for left wheel """
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+
+    def decrease_left_speed(self):
+        """ Decreases speed for left wheel """
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+
+    def increase_right_speed(self):
+        """ Increases speed for right wheel """
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+
+    def decrease_right_speed(self):
+        """ Decreases speed for right wheel """
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+
