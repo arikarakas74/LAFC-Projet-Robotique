@@ -78,20 +78,7 @@ class MapController:
             self.map_model.current_points.append((x, y))  # Access map_model
             line_id = self.map_view.create_line(self.map_model.current_points[-2], self.map_model.current_points[-1], fill="red", width=2)  # Access map_view, map_model
             self.map_model.current_lines.append(line_id)  # Access map_model
-        elif self.map_model.dragging_obstacle:  # Access map_model
-            # Moving an existing obstacle
-            dx = x - self.map_model.drag_start[0]  # Access map_model
-            dy = y - self.map_model.drag_start[1]  # Access map_model
-            self.map_model.drag_start = (x, y)  # Access map_model
-            obstacle_id = self.map_model.dragging_obstacle  # Get the correct obstacle ID
-            points, polygon_id, line_ids = self.map_model.obstacles[obstacle_id]
-            self.map_view.delete_item(polygon_id)  # Delete the original obstacle
-            for line_id in line_ids:
-                self.map_view.delete_item(line_id)  # Delete the original lines
-            new_points = [(p[0] + dx, p[1] + dy) for p in points]
-            new_polygon_id = self.map_view.create_polygon(new_points, fill="red", outline="black")  # Create the moved obstacle
-            new_line_ids = [self.map_view.create_line(new_points[i], new_points[(i + 1) % len(new_points)], fill="red", width=2) for i in range(len(new_points))]
-            self.map_model.obstacles[obstacle_id] = (new_points, new_polygon_id, new_line_ids)  # Update the obstacle's points in the dictionary
+
 
     def is_shape_closed(self):
         """Checks if the drawn shape is closed."""
