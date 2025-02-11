@@ -15,7 +15,7 @@ class RobotController:
     def handle_robot_event(self, event_type, **kwargs):
         """Handles events from the robot."""
         if event_type == "update_view":
-            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"],kwargs.get("left_speed", 0), kwargs.get("right_speed", 0))
+            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
         elif event_type == "update_speed_label":
             left_speed = kwargs.get("left_speed", 0)
             right_speed = kwargs.get("right_speed", 0)
