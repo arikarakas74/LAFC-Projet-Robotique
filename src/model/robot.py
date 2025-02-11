@@ -44,8 +44,8 @@ class Robot:
             self.start_movement()
         else:
             self.moving = False  # Stop movement if speed is zero
-
-        self.trigger_event("update_speed_label", velocity=dps, direction_angle=self.map_model.robot_theta)
+        
+        self.trigger_event("update_speed_label", left_speed=self.motor_speeds[self.MOTOR_LEFT], right_speed=self.motor_speeds[self.MOTOR_RIGHT], direction_angle=self.map_model.robot_theta)
 
     def start_movement(self):
         """ Starts the simulation loop if not already running """
@@ -74,26 +74,31 @@ class Robot:
             left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
             right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
             
-            # Compute linear and angular velocity
-            linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
-            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
             
-            # Update position using kinematic model
-            if angular_velocity == 0:
+            if left_velocity == right_velocity:
                 # Moving straight
+                angular_velocity = 0
+                linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
                 self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta)
                 self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta)
             else:
                 # Moving in an arc
-                radius = linear_velocity / angular_velocity
+                R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (right_velocity - left_velocity)
+                angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
                 delta_theta = angular_velocity * self.TICK_DURATION
+
+                # Calculate center of rotation
+                Cx = self.map_model.robot_x - R * math.sin(self.map_model.robot_theta)
+                Cy = self.map_model.robot_y + R * math.cos(self.map_model.robot_theta)
                 
-                self.map_model.robot_x += radius * (math.sin(self.map_model.robot_theta + delta_theta) - math.sin(self.map_model.robot_theta))
-                self.map_model.robot_y += radius * (-math.cos(self.map_model.robot_theta + delta_theta) + math.cos(self.map_model.robot_theta))
+                self.map_model.robot_x = Cx + R * math.sin(self.map_model.robot_theta + delta_theta)
+                self.map_model.robot_y = Cy - R * math.cos(self.map_model.robot_theta + delta_theta)
                 self.map_model.robot_theta += delta_theta  # Update orientation
             
             # Normalize angle
             self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
+
+            self.trigger_event("update_speed_label", left_speed=self.motor_speeds[self.MOTOR_LEFT], right_speed=self.motor_speeds[self.MOTOR_RIGHT], direction_angle=self.map_model.robot_theta)
             
             # Update motor positions
             self.update_motors(self.TICK_DURATION)
@@ -116,6 +121,10 @@ class Robot:
     def get_motor_position(self):
         """ Returns the current motor positions (degrees) """
         return self.motor_positions[self.MOTOR_LEFT], self.motor_positions[self.MOTOR_RIGHT]
+
+    def get_motor_speed(self):
+        """ Returns the current motor positions (degrees per second) """
+        return self.motor_speeds[self.MOTOR_LEFT], self.motor_speeds[self.MOTOR_RIGHT]
     
     def offset_motor_encoder(self, port, offset):
         """ Resets the motor encoder by subtracting the given offset """
