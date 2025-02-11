@@ -1,6 +1,7 @@
 from model.robot import Robot
 from view.robot_view import RobotView
 from view.control_panel import ControlPanel
+SPEED_STEP = 30  # How much speed to add/remove per key press
 
 class RobotController:
     def __init__(self, robot: Robot, robot_view: RobotView, control_panel: ControlPanel, window):
@@ -23,8 +24,6 @@ class RobotController:
             callback = kwargs.get("callback")
             if callable(callback):
                 return self.window.after(kwargs["delay"], callback, kwargs.get("obstacles", []), kwargs.get("goal_position", None))
-
-    SPEED_STEP = 30  # How much speed to add/remove per key press
 
     def increase_speed(self):
         """ Increases speed for both wheels """
