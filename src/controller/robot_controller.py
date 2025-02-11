@@ -15,15 +15,17 @@ class RobotController:
     def handle_robot_event(self, event_type, **kwargs):
         """Handles events from the robot."""
         if event_type == "update_view":
-            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
+            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"],kwargs.get("left_speed", 0), kwargs.get("right_speed", 0))
         elif event_type == "update_speed_label":
-            velocity = kwargs.get("velocity", 0)
+            left_speed = kwargs.get("left_speed", 0)
+            right_speed = kwargs.get("right_speed", 0)
             direction_angle = kwargs.get("direction_angle", 0)
-            self.control_panel.update_speed_label(velocity, direction_angle)
+            self.control_panel.update_speed_label(left_speed, right_speed, direction_angle)
         elif event_type == "after":
             callback = kwargs.get("callback")
             if callable(callback):
                 return self.window.after(kwargs["delay"], callback, kwargs.get("obstacles", []), kwargs.get("goal_position", None))
+
 
     def increase_speed(self):
         """ Increases speed for both wheels """
