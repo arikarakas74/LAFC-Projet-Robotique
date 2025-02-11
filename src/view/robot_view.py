@@ -5,24 +5,12 @@ class RobotView:
         """Initializes the RobotView with a reference to the MapView."""
         self.map_view = map_view
 
-    def draw(self, x, y, direction_angle, left_speed, right_speed):
+    def draw(self, x, y, direction_angle):
         """Draws the robot on the canvas at the current position."""
         self.map_view.canvas.delete("robot")
         cx, cy = x, y
         size = 15
         angle = math.radians(direction_angle)
-
-        if left_speed == right_speed:
-            R = float('inf')
-            Cx, Cy = None, None
-        else:
-            # Dönüş yarıçapını hesapla
-            WHEEL_BASE_WIDTH = 10.0  # cm (İki tekerlek arası mesafe)
-            R = (WHEEL_BASE_WIDTH / 2) * (left_speed + right_speed) / (right_speed - left_speed)
-
-            # Dönüş merkezini hesapla
-            Cx = cx - R * math.sin(angle)
-            Cy = cy + R * math.cos(angle)
 
         # Calculate the points of the triangle representing the robot
         front = (cx + size * math.cos(angle), cy + size * math.sin(angle))
