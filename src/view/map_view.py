@@ -94,7 +94,7 @@ class MapView:
 
     def create_speed_label(self):
         """Creates the speed label."""
-        self.speed_label = tk.Label(self.parent.window, text="velocity: 0.00 | direction_angle: 0°")
+        self.speed_label = tk.Label(self.parent.window, text="left wheel speed: 0.00 - right wheel speed: 0.00 | direction_angle: 0°")
         self.speed_label.pack()
 
     def clear_all(self):
