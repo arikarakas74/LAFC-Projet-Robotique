@@ -20,8 +20,7 @@ class SimulationController:
     
     def update_view(self):
         x, y, theta = self.map.robot.get_position()
-        left_speed, right_speed = self.map.robot.get_motor_speed()
-        self.map.robot_view.draw(x, y, theta, left_speed, right_speed)
+        self.map.robot_view.draw(x, y, theta)
 
     def run_simulation(self):
         """Starts the robot simulation."""
