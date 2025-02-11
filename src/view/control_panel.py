@@ -1,4 +1,5 @@
 import tkinter as tk
+import math
 
 class ControlPanel:
     """Handles the control buttons for user interaction."""
@@ -31,10 +32,10 @@ class ControlPanel:
         """Sets the speed label created in view."""
         self.speed_label = label
 
-    def update_speed_label(self, velocity, direction_angle):
+    def update_speed_label(self, left_speed, right_speed, direction_angle):
         """Updates the speed label text."""
         if self.speed_label and self.speed_label.winfo_exists():
-            self.speed_label.config(text=f"velocity: {velocity:.2f} | direction_angle: {direction_angle}°")
+            self.speed_label.config(text=f"left wheel speed: {left_speed:.2f} - right wheel speed: {right_speed:.2f} | direction_angle: {math.degrees(direction_angle):.2f}°")
 
     def reset_all(self):
         """Resets the entire map including the robot."""
