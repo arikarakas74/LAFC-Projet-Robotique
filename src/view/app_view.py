@@ -35,6 +35,18 @@ class AppView:
         self.window.bind("<e>", lambda event: self.simulation_controller.robot_controller.increase_right_speed())
         self.window.bind("<d>", lambda event: self.simulation_controller.robot_controller.decrease_right_speed())
 
+        self.window.bind("<KeyRelease-a>", lambda event: self.stop_rotation())
+        self.window.bind("<KeyRelease-d>", lambda event: self.stop_rotation())
+        self.window.bind("<KeyRelease-q>", lambda event: self.stop_rotation()) 
+        self.window.bind("<KeyRelease-e>", lambda event: self.stop_rotation()) 
+
     def run(self):
         """Runs the main application loop."""
         self.window.mainloop()
+
+    def stop_rotation(self):
+        "Stop rotating immediately after releasing the rotation button."
+        if self.simulation_controller.robot_controller:
+            self.simulation_controller.robot_controller.stop_rotation()
+    
+

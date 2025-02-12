@@ -20,7 +20,8 @@ class SimulationController:
     
     def update_view(self):
         x, y, theta = self.map.robot.get_position()
-        self.map.robot_view.draw(x, y, theta)
+        self.map.robot_view.draw(x, y, theta)  # 只传 x, y, 方向角
+
 
     def run_simulation(self):
         """Starts the robot simulation."""
@@ -61,7 +62,7 @@ class SimulationController:
     def reset_robot(self):
         """Resets the robot to its initial state."""
         if self.map.robot:
-            self.map.robot.stop()
+            self.map.robot.stop_simulation()
             self.map.robot = None
         self.map.map_view.robot_view.clear_robot()  # Clear the robot from the canvas
 

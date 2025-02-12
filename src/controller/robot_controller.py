@@ -38,18 +38,23 @@ class RobotController:
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
 
     def increase_left_speed(self):
-        """ Increases speed for left wheel """
+        """ 增加左轮速度 """
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
 
     def decrease_left_speed(self):
-        """ Decreases speed for left wheel """
+        """ 减少左轮速度 """
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
 
     def increase_right_speed(self):
-        """ Increases speed for right wheel """
+        """ 增加右轮速度 """
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
 
     def decrease_right_speed(self):
-        """ Decreases speed for right wheel """
+        """ 减少右轮速度 """
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+    
+    def stop_rotation(self):
+        """ 松开旋转按键后，立即停止旋转，但仿真继续运行 """
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 0)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 0)
 

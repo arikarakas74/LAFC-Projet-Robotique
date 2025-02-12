@@ -10,7 +10,7 @@ class RobotView:
         self.map_view.canvas.delete("robot")
         cx, cy = x, y
         size = 15
-        angle = math.radians(direction_angle)
+        angle = direction_angle 
 
         # Calculate the points of the triangle representing the robot
         front = (cx + size * math.cos(angle), cy + size * math.sin(angle))

@@ -39,21 +39,19 @@ class Robot:
         elif port == self.MOTOR_LEFT + self.MOTOR_RIGHT:
             self.motor_speeds[self.MOTOR_LEFT] = dps
             self.motor_speeds[self.MOTOR_RIGHT] = dps
-        # Start movement if speed is set
-        if dps != 0:
-            self.start_movement()
+
+        left_speed = self.motor_speeds[self.MOTOR_LEFT]
+        right_speed = self.motor_speeds[self.MOTOR_RIGHT]
+
+
+        if left_speed == 0 and right_speed == 0:
+            self.moving = False  
         else:
-            self.moving = False  # Stop movement if speed is zero
-        
-        self.trigger_event("update_speed_label", left_speed=self.motor_speeds[self.MOTOR_LEFT], right_speed=self.motor_speeds[self.MOTOR_RIGHT], direction_angle=self.map_model.robot_theta)
-
-    def start_movement(self):
-        """ Starts the simulation loop if not already running """
-        if not self.moving:
             self.moving = True
-            threading.Thread(target=self.update_simulation, daemon=True).start()
+            self.start_movement() 
 
-    
+        self.trigger_event("update_speed_label", left_speed=left_speed, right_speed=right_speed, direction_angle=self.map_model.robot_theta)
+
     def update_motors(self, tick):
         """ Updates the motor positions based on speed and tick duration with bounds checking """
         for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
@@ -61,40 +59,47 @@ class Robot:
             self.motor_positions[motor] = max(-360, min(360, new_position))  # Clamping values within realistic bounds
 
     def normalize_angle(self, angle):
-        """ Normalizes an angle to the range [-pi, pi] """
-        return (angle + math.pi) % (2 * math.pi) - math.pi
-    
+        """确保角度始终在 [-π, π] 之间"""
+        while angle > math.pi:
+            angle -= 2 * math.pi
+        while angle < -math.pi:
+            angle += 2 * math.pi
+        return angle
+
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
-        while self.moving and not self.stop_event.is_set():
-            left_speed = self.motor_speeds[self.MOTOR_LEFT]  # Left motor speed (dps)
-            right_speed = self.motor_speeds[self.MOTOR_RIGHT]  # Right motor speed (dps)
-            
+        while True: 
+            left_speed = self.motor_speeds[self.MOTOR_LEFT]
+            right_speed = self.motor_speeds[self.MOTOR_RIGHT]
+
+            if left_speed == 0 and right_speed == 0 and not self.moving:
+                continue 
+
             # Compute wheel linear velocities (cm/s)
             left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
             right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-            
-            
-            if left_velocity == right_velocity:
+
+            linear_velocity = (left_velocity + right_velocity) / 2
+            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
+
+            if angular_velocity == 0:
                 # Moving straight
-                angular_velocity = 0
-                linear_velocity = (left_velocity + right_velocity) / 2  # cm/s
                 self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta)
                 self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta)
             else:
                 # Moving in an arc
-                R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (right_velocity - left_velocity)
-                angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH  # rad/s
+                radius = max(0.1, linear_velocity / (angular_velocity + 1e-6))
                 delta_theta = angular_velocity * self.TICK_DURATION
 
                 # Calculate center of rotation
-                Cx = self.map_model.robot_x - R * math.sin(self.map_model.robot_theta)
-                Cy = self.map_model.robot_y + R * math.cos(self.map_model.robot_theta)
-                
-                self.map_model.robot_x = Cx + R * math.sin(self.map_model.robot_theta + delta_theta)
-                self.map_model.robot_y = Cy - R * math.cos(self.map_model.robot_theta + delta_theta)
-                self.map_model.robot_theta += delta_theta  # Update orientation
-            
+                cx = self.map_model.robot_x - radius * math.sin(self.map_model.robot_theta)
+                cy = self.map_model.robot_y + radius * math.cos(self.map_model.robot_theta)
+
+                self.map_model.robot_x = cx + radius * math.sin(self.map_model.robot_theta + delta_theta)
+                self.map_model.robot_y = cy - radius * math.cos(self.map_model.robot_theta + delta_theta)
+                self.map_model.robot_theta += delta_theta
+                self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
+
             # Normalize angle
             self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
 
@@ -102,10 +107,10 @@ class Robot:
             
             # Update motor positions
             self.update_motors(self.TICK_DURATION)
-            
+
             # Trigger view update event with validation
             self.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
-            
+
             # Use non-blocking event waiting instead of time.sleep
             self.stop_event.wait(self.TICK_DURATION)
 
@@ -121,12 +126,22 @@ class Robot:
     def get_motor_position(self):
         """ Returns the current motor positions (degrees) """
         return self.motor_positions[self.MOTOR_LEFT], self.motor_positions[self.MOTOR_RIGHT]
-
-    def get_motor_speed(self):
-        """ Returns the current motor positions (degrees per second) """
-        return self.motor_speeds[self.MOTOR_LEFT], self.motor_speeds[self.MOTOR_RIGHT]
     
     def offset_motor_encoder(self, port, offset):
         """ Resets the motor encoder by subtracting the given offset """
         if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
             self.motor_positions[port] -= offset
+
+    def get_motor_speed(self):
+        """Returns the current motor speeds (degrees per second)"""
+        return self.motor_speeds[self.MOTOR_LEFT], self.motor_speeds[self.MOTOR_RIGHT]
+
+    def start_movement(self):
+        """Start the robot simulation and let it begin moving."""
+        if not self.moving:
+            self.moving = True
+            self.stop_event.clear()
+            threading.Thread(target=self.update_simulation, daemon=True).start()
+
+
+
