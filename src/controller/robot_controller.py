@@ -38,23 +38,26 @@ class RobotController:
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
 
     def increase_left_speed(self):
-        """ 增加左轮速度 """
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        """Reduce the left wheel speed (turn right)"""
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)  
 
     def decrease_left_speed(self):
-        """ 减少左轮速度 """
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        """Increase the left wheel speed (turn left)"""
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP) 
 
     def increase_right_speed(self):
-        """ 增加右轮速度 """
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
-
-    def decrease_right_speed(self):
-        """ 减少右轮速度 """
+        """Reduce the right wheel speed (turn left)"""
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)  
+    def decrease_right_speed(self):
+        """Increase the right wheel speed (turn right)"""
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)  
     
     def stop_rotation(self):
-        """ 松开旋转按键后，立即停止旋转，但仿真继续运行 """
+        """Release the rotation key to immediately stop rotating, but the simulation continues running."""
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 0)
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 0)
 

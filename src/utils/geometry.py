@@ -1,5 +1,5 @@
 def point_in_polygon(x, y, polygon):
-    """Ray casting algorithm for point in polygon test."""
+    """ 使用射线投射算法检测点是否在多边形内 """
     n = len(polygon)
     inside = False
     p1x, p1y = polygon[0]

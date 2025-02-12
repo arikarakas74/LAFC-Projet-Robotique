@@ -1,3 +1,5 @@
+from utils.geometry import point_in_polygon
+
 class MapModel:
     """Stores the map data: obstacles, start/end positions."""
 
@@ -59,3 +61,27 @@ class MapModel:
         if obstacle_id in self.obstacles:
             del self.obstacles[obstacle_id]
             self.notify_event_listeners("obstacle_removed", obstacle_id=obstacle_id)
+    
+    def is_collision(self, x, y):
+        """Only check whether it affects translation, without affecting rotation."""
+        for obstacle_id, (points, _, _) in self.obstacles.items():
+            if point_in_polygon(x, y, points):
+                return True  
+        return False  
+    
+    def is_out_of_bounds(self, x, y):
+        """Check whether the robot exceeds the map boundaries."""
+        MAP_WIDTH = 800  
+        MAP_HEIGHT = 600  
+        ROBOT_RADIUS = 10 
+
+        if x - ROBOT_RADIUS < 0:
+            return "LEFT" 
+        if x + ROBOT_RADIUS > MAP_WIDTH:
+            return "RIGHT" 
+
+        if y - ROBOT_RADIUS < 0:
+            return "TOP" 
+        if y + ROBOT_RADIUS > MAP_HEIGHT:
+            return "BOTTOM" 
+

@@ -59,7 +59,7 @@ class Robot:
             self.motor_positions[motor] = max(-360, min(360, new_position))  # Clamping values within realistic bounds
 
     def normalize_angle(self, angle):
-        """确保角度始终在 [-π, π] 之间"""
+        """ Normalizes an angle to the range [-pi, pi] """
         while angle > math.pi:
             angle -= 2 * math.pi
         while angle < -math.pi:
@@ -68,51 +68,42 @@ class Robot:
 
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
-        while True: 
-            left_speed = self.motor_speeds[self.MOTOR_LEFT]
-            right_speed = self.motor_speeds[self.MOTOR_RIGHT]
+        while True:
+            left_speed = self.motor_speeds.get(self.MOTOR_LEFT, 0) 
+            right_speed = self.motor_speeds.get(self.MOTOR_RIGHT, 0)
 
-            if left_speed == 0 and right_speed == 0 and not self.moving:
+            if left_speed == 0 and right_speed == 0:
+                self.stop_event.wait(self.TICK_DURATION)
                 continue 
 
-            # Compute wheel linear velocities (cm/s)
             left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
             right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
 
             linear_velocity = (left_velocity + right_velocity) / 2
             angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
-
-            if angular_velocity == 0:
-                # Moving straight
-                self.map_model.robot_x += linear_velocity * math.cos(self.map_model.robot_theta)
-                self.map_model.robot_y += linear_velocity * math.sin(self.map_model.robot_theta)
+            
+            if left_speed == -right_speed and left_speed != 0:
+                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                linear_velocity = 0  
             else:
-                # Moving in an arc
-                radius = max(0.1, linear_velocity / (angular_velocity + 1e-6))
-                delta_theta = angular_velocity * self.TICK_DURATION
+                new_x = self.map_model.robot_x + linear_velocity * math.cos(self.map_model.robot_theta)
+                new_y = self.map_model.robot_y + linear_velocity * math.sin(self.map_model.robot_theta)
 
-                # Calculate center of rotation
-                cx = self.map_model.robot_x - radius * math.sin(self.map_model.robot_theta)
-                cy = self.map_model.robot_y + radius * math.cos(self.map_model.robot_theta)
+                if self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y):
+                    self.motor_speeds[self.MOTOR_LEFT] = 0
+                    self.motor_speeds[self.MOTOR_RIGHT] = 0
+                else:
+                    self.map_model.robot_x = new_x
+                    self.map_model.robot_y = new_y
 
-                self.map_model.robot_x = cx + radius * math.sin(self.map_model.robot_theta + delta_theta)
-                self.map_model.robot_y = cy - radius * math.cos(self.map_model.robot_theta + delta_theta)
-                self.map_model.robot_theta += delta_theta
-                self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
-
-            # Normalize angle
+                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                    
             self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
 
-            self.trigger_event("update_speed_label", left_speed=self.motor_speeds[self.MOTOR_LEFT], right_speed=self.motor_speeds[self.MOTOR_RIGHT], direction_angle=self.map_model.robot_theta)
-            
-            # Update motor positions
-            self.update_motors(self.TICK_DURATION)
-
-            # Trigger view update event with validation
             self.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
 
-            # Use non-blocking event waiting instead of time.sleep
             self.stop_event.wait(self.TICK_DURATION)
+
 
     def stop_simulation(self):
         """ Stops the simulation loop """

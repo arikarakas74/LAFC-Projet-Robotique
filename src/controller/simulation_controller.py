@@ -20,8 +20,7 @@ class SimulationController:
     
     def update_view(self):
         x, y, theta = self.map.robot.get_position()
-        self.map.robot_view.draw(x, y, theta)  # 只传 x, y, 方向角
-
+        self.map.robot_view.draw(x, y, theta)  
 
     def run_simulation(self):
         """Starts the robot simulation."""
