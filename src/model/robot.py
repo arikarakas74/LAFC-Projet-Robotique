@@ -85,6 +85,16 @@ class Robot:
             if left_speed == -right_speed and left_speed != 0:
                 self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
                 linear_velocity = 0  
+
+            if (left_speed == 0 and right_speed != 0) or (left_speed != 0 and right_speed == 0):
+                if left_speed == 0:
+                    angular_velocity = right_velocity / (self.WHEEL_BASE_WIDTH / 2)
+                else:
+                    angular_velocity = -left_velocity / (self.WHEEL_BASE_WIDTH / 2)
+
+                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                linear_velocity = 0  # Pas de déplacement linéaire
+   
             else:
                 new_x = self.map_model.robot_x + linear_velocity * math.cos(self.map_model.robot_theta)
                 new_y = self.map_model.robot_y + linear_velocity * math.sin(self.map_model.robot_theta)
