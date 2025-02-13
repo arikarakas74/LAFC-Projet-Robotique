@@ -28,17 +28,11 @@ class AppView:
         self.map_view.canvas.bind("<Button-3>", self.map_controller.delete_obstacle)
         self.map_view.canvas.bind("<ButtonRelease-1>", self.map_controller.stop_drag)
 
-        self.window.bind("<w>", lambda event: self.simulation_controller.robot_controller.increase_speed())
-        self.window.bind("<s>", lambda event: self.simulation_controller.robot_controller.decrease_speed())
         self.window.bind("<q>", lambda event: self.simulation_controller.robot_controller.increase_left_speed())
         self.window.bind("<a>", lambda event: self.simulation_controller.robot_controller.decrease_left_speed())
         self.window.bind("<e>", lambda event: self.simulation_controller.robot_controller.increase_right_speed())
         self.window.bind("<d>", lambda event: self.simulation_controller.robot_controller.decrease_right_speed())
 
-        self.window.bind("<KeyRelease-a>", lambda event: self.stop_rotation())
-        self.window.bind("<KeyRelease-d>", lambda event: self.stop_rotation())
-        self.window.bind("<KeyRelease-q>", lambda event: self.stop_rotation()) 
-        self.window.bind("<KeyRelease-e>", lambda event: self.stop_rotation()) 
 
     def run(self):
         """Runs the main application loop."""
