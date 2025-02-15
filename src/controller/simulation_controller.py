@@ -38,7 +38,7 @@ class SimulationController:
         self.map.robot.start_movement()
         self.map.map_view.create_speed_label()  # Create speed label in the view
         self.control_panel.set_speed_label(self.map.map_view.speed_label)  # Set the speed label to control panel
-        self.robot_controller = RobotController(self.map.robot, self.map.map_view.robot_view, self.control_panel, self.map.window)  # Pass window to RobotController
+        self.robot_controller = RobotController(self.map.robot, self.map.map_view.robot_view, self.control_panel, self.map.window,self.map_model)  # Pass window to RobotController
         self.map.map_view.update_message_label(text="Use W/S to move forward/backward and A/D to turn left/right.") # Access map_view
         self.simulation_running = True
 

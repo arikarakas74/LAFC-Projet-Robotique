@@ -66,53 +66,7 @@ class Robot:
             angle += 2 * math.pi
         return angle
 
-    def update_simulation(self):
-        """ Updates robot movement in the simulation loop """
-        while True:
-            left_speed = self.motor_speeds.get(self.MOTOR_LEFT, 0) 
-            right_speed = self.motor_speeds.get(self.MOTOR_RIGHT, 0)
 
-            if left_speed == 0 and right_speed == 0:
-                self.stop_event.wait(self.TICK_DURATION)
-                continue 
-
-            left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-            right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-
-            linear_velocity = (left_velocity + right_velocity) / 2
-            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
-            
-            if left_speed == -right_speed and left_speed != 0:
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
-                linear_velocity = 0  
-
-            if (left_speed == 0 and right_speed != 0) or (left_speed != 0 and right_speed == 0):
-                if left_speed == 0:
-                    angular_velocity = right_velocity / (self.WHEEL_BASE_WIDTH / 2)
-                else:
-                    angular_velocity = -left_velocity / (self.WHEEL_BASE_WIDTH / 2)
-
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
-                linear_velocity = 0  # Pas de déplacement linéaire
-   
-            else:
-                new_x = self.map_model.robot_x + linear_velocity * math.cos(self.map_model.robot_theta)
-                new_y = self.map_model.robot_y + linear_velocity * math.sin(self.map_model.robot_theta)
-
-                if self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y):
-                    self.motor_speeds[self.MOTOR_LEFT] = 0
-                    self.motor_speeds[self.MOTOR_RIGHT] = 0
-                else:
-                    self.map_model.robot_x = new_x
-                    self.map_model.robot_y = new_y
-
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
-                    
-            self.map_model.robot_theta = self.normalize_angle(self.map_model.robot_theta)
-
-            self.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
-
-            self.stop_event.wait(self.TICK_DURATION)
 
 
     def stop_simulation(self):
@@ -136,7 +90,6 @@ class Robot:
     def get_motor_speed(self):
         """Returns the current motor speeds (degrees per second)"""
         return self.motor_speeds[self.MOTOR_LEFT], self.motor_speeds[self.MOTOR_RIGHT]
-
     def start_movement(self):
         """Start the robot simulation and let it begin moving."""
         if not self.moving:
@@ -144,5 +97,12 @@ class Robot:
             self.stop_event.clear()
             threading.Thread(target=self.update_simulation, daemon=True).start()
 
+    def update_simulation(self):
+        """Simulation loop to update the robot's state."""
+        while not self.stop_event.is_set():
+            self.update_motors(self.TICK_DURATION)
+            # Simulate other behaviors (e.g., collision detection, position tracking)
+            threading.Event().wait(self.TICK_DURATION)  # Wait for the next tick
+    
 
 
