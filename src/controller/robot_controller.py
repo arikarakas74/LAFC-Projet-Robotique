@@ -6,6 +6,8 @@ SPEED_STEP = 30  # How much speed to add/remove per key press
 import math
 import threading
 from utils.geometry import normalize_angle
+# En haut du fichier
+from model.clock import Clock  # Nouvelle classe d'horloge
 
 class RobotController:
     WHEEL_BASE_WIDTH = 10.0  # cm (Distance between the wheels)
@@ -24,8 +26,13 @@ class RobotController:
         self.running = True
         self.robot.add_event_listener(self.handle_robot_event)
         self.map_model=map_model
-        self._start_observer_thread()
-        
+        self.clock = Clock(self.TICK_DURATION)  # Initialiser l'horloge
+        self.clock.add_subscriber(self.update_simulation)  # Abonner la méthode
+        self.clock.start()
+    def schedule_update(self):
+        """Planifie les mises à jour via l'horloge de Tkinter"""
+        self.update_simulation()
+        self.window.after(int(self.TICK_DURATION * 1000), self.schedule_update)       
 
     def handle_robot_event(self, event_type, **kwargs):
         """Handles events from the robot."""
@@ -47,63 +54,70 @@ class RobotController:
                 return self.window.after(kwargs["delay"], callback, kwargs.get("obstacles", []), kwargs.get("goal_position", None))
 
 
-    def _start_observer_thread(self):
-        def observer_loop():
-            while self.running:
-                self.update_simulation()
-                threading.Event().wait(self.TICK_DURATION)
-        threading.Thread(target=observer_loop, daemon=True).start()
+
     def update_simulation(self):
-        """ Updates robot movement in the simulation loop """
-        while True:
-            print(self.robot_view.x)
-                
-            left_speed = self.robot.motor_speeds.get(self.MOTOR_LEFT, 0) 
-            right_speed = self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0)
+        """Appelée automatiquement à chaque tick d'horloge"""
+        # Récupérer les vitesses actuelles
+        left_speed = self.robot.motor_speeds.get(self.MOTOR_LEFT, 0)
+        right_speed = self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0)
 
-            if left_speed == 0 and right_speed == 0:
-                self.robot.stop_event.wait(self.TICK_DURATION)
-                continue 
-            
+        if left_speed == 0 and right_speed == 0:
+            return
 
-            left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-            right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        # 1. Mettre à jour les encodeurs
+        self.robot.update_motors(self.TICK_DURATION)
 
-            linear_velocity = (left_velocity + right_velocity) / 2
-            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
-            
-            if left_speed == -right_speed and left_speed != 0:
-                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
-                linear_velocity = 0  
+        # 2. Calculer la cinématique
+        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        linear_velocity = (left_velocity + right_velocity) / 2
+        angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
 
-            if (left_speed == 0 and right_speed != 0) or (left_speed != 0 and right_speed == 0):
-                if left_speed == 0:
-                    angular_velocity = right_velocity / (self.WHEEL_BASE_WIDTH / 2)
-                else:
-                    angular_velocity = -left_velocity / (self.WHEEL_BASE_WIDTH / 2)
+        # 3. Calculer la nouvelle position
+        new_x = self.robot_view.x
+        new_y = self.robot_view.y
+        
+        # Cas spécial : rotation sur place
+        if left_speed == -right_speed and left_speed != 0:
+            self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
+            linear_velocity = 0
 
-                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
-                linear_velocity = 0  # Pas de déplacement linéaire
-   
-            else:
-                new_x = self.robot_view.x + linear_velocity * math.cos(self.robot_view.direction_angle)
+        # Cas spécial : pivotement sur une roue
+        elif left_speed == 0 or right_speed == 0:
+            pivot_radius = self.WHEEL_BASE_WIDTH / 2
+            angular_velocity = (right_velocity if left_speed == 0 else -left_velocity) / pivot_radius
+            self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
+            linear_velocity = 0
 
-                new_y = self.robot_view.y + linear_velocity * math.sin(self.robot_view.direction_angle)
+        # Mouvement linéaire normal
+        else:
+            new_x = self.robot_view.x + linear_velocity * math.cos(self.robot_view.direction_angle) * self.TICK_DURATION
+            new_y = self.robot_view.y + linear_velocity * math.sin(self.robot_view.direction_angle) * self.TICK_DURATION
 
-                if self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y):
-                    self.robot.motor_speeds[self.MOTOR_LEFT] = 0
-                    self.robot.motor_speeds[self.MOTOR_RIGHT] = 0
-                else:
-                    self.robot_view.x = new_x
-                    self.robot_view.y = new_y
+        # 4. Vérifier les collisions et les limites
+        if not (self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y)):
+            self.robot_view.x = new_x
+            self.robot_view.y = new_y
+            self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
 
-                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
-                    
-            self.robot_view.direction_angle = normalize_angle(self.robot_view.direction_angle)
-            
-            self.robot.trigger_event("update_view", x=self.robot_view.x, y=self.robot_view.y, direction_angle=self.robot_view.direction_angle)
+        # 5. Normaliser l'angle
+        self.robot_view.direction_angle = normalize_angle(self.robot_view.direction_angle)
 
-            self.robot.stop_event.wait(self.TICK_DURATION)
+        # 6. Synchroniser la vue
+        self.window.after(0, self._sync_view)
+
+    def _sync_view(self):
+        """Met à jour l'interface depuis le thread principal"""
+        # Mettre à jour la position du robot
+        self.robot.trigger_event("update_view", 
+                                x=self.robot_view.x,
+                                y=self.robot_view.y,
+                                direction_angle=self.robot_view.direction_angle)
+        
+        # Mettre à jour les labels de vitesse
+        left_speed = self.robot.motor_speeds.get(self.MOTOR_LEFT, 0)
+        right_speed = self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0)
+        self.control_panel.update_speed_label(left_speed, right_speed, math.degrees(self.robot_view.direction_angle))
 
 
     def increase_left_speed(self):
