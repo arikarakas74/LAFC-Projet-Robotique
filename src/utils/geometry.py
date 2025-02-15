@@ -1,3 +1,4 @@
+import math
 def point_in_polygon(x, y, polygon):
     """ 使用射线投射算法检测点是否在多边形内 """
     n = len(polygon)
@@ -14,3 +15,11 @@ def point_in_polygon(x, y, polygon):
                         inside = not inside
         p1x, p1y = p2x, p2y
     return inside
+
+def normalize_angle( angle):
+    """ Normalizes an angle to the range [-pi, pi] """
+    while angle > math.pi:
+        angle -= 2 * math.pi
+    while angle < -math.pi:
+        angle += 2 * math.pi
+    return angle

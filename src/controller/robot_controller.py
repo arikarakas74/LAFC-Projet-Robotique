@@ -5,6 +5,7 @@ from model.map_model import MapModel
 SPEED_STEP = 30  # How much speed to add/remove per key press
 import math
 import threading
+from utils.geometry import normalize_angle
 
 class RobotController:
     WHEEL_BASE_WIDTH = 10.0  # cm (Distance between the wheels)
@@ -89,7 +90,7 @@ class RobotController:
 
                 self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
                     
-            self.map_model.robot_theta = self.robot.normalize_angle(self.map_model.robot_theta)
+            self.map_model.robot_theta = normalize_angle(self.map_model.robot_theta)
 
             self.robot.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
 
