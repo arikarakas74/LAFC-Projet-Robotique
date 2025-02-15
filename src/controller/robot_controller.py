@@ -30,6 +30,11 @@ class RobotController:
     def handle_robot_event(self, event_type, **kwargs):
         """Handles events from the robot."""
         if event_type == "update_view":
+            # Utiliser les valeurs de RobotView
+            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
+            # Utiliser les valeurs de RobotView
+            self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
+        if event_type == "update_view":
             self.robot_view.draw(kwargs["x"], kwargs["y"], kwargs["direction_angle"])
         elif event_type == "update_speed_label":
             left_speed = kwargs.get("left_speed", 0)
@@ -51,12 +56,15 @@ class RobotController:
     def update_simulation(self):
         """ Updates robot movement in the simulation loop """
         while True:
+            print(self.robot_view.x)
+                
             left_speed = self.robot.motor_speeds.get(self.MOTOR_LEFT, 0) 
             right_speed = self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0)
 
             if left_speed == 0 and right_speed == 0:
                 self.robot.stop_event.wait(self.TICK_DURATION)
                 continue 
+            
 
             left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
             right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
@@ -65,7 +73,7 @@ class RobotController:
             angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
             
             if left_speed == -right_speed and left_speed != 0:
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
                 linear_velocity = 0  
 
             if (left_speed == 0 and right_speed != 0) or (left_speed != 0 and right_speed == 0):
@@ -74,25 +82,26 @@ class RobotController:
                 else:
                     angular_velocity = -left_velocity / (self.WHEEL_BASE_WIDTH / 2)
 
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
                 linear_velocity = 0  # Pas de déplacement linéaire
    
             else:
-                new_x = self.map_model.robot_x + linear_velocity * math.cos(self.map_model.robot_theta)
-                new_y = self.map_model.robot_y + linear_velocity * math.sin(self.map_model.robot_theta)
+                new_x = self.robot_view.x + linear_velocity * math.cos(self.robot_view.direction_angle)
+
+                new_y = self.robot_view.y + linear_velocity * math.sin(self.robot_view.direction_angle)
 
                 if self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y):
                     self.robot.motor_speeds[self.MOTOR_LEFT] = 0
                     self.robot.motor_speeds[self.MOTOR_RIGHT] = 0
                 else:
-                    self.map_model.robot_x = new_x
-                    self.map_model.robot_y = new_y
+                    self.robot_view.x = new_x
+                    self.robot_view.y = new_y
 
-                self.map_model.robot_theta += angular_velocity * self.TICK_DURATION
+                self.robot_view.direction_angle += angular_velocity * self.TICK_DURATION
                     
-            self.map_model.robot_theta = normalize_angle(self.map_model.robot_theta)
-
-            self.robot.trigger_event("update_view", x=self.map_model.robot_x, y=self.map_model.robot_y, direction_angle=self.map_model.robot_theta)
+            self.robot_view.direction_angle = normalize_angle(self.robot_view.direction_angle)
+            
+            self.robot.trigger_event("update_view", x=self.robot_view.x, y=self.robot_view.y, direction_angle=self.robot_view.direction_angle)
 
             self.robot.stop_event.wait(self.TICK_DURATION)
 

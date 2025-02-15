@@ -50,7 +50,7 @@ class Robot:
             self.moving = True
             self.start_movement() 
 
-        self.trigger_event("update_speed_label", left_speed=left_speed, right_speed=right_speed, direction_angle=self.map_model.robot_theta)
+        self.trigger_event("update_speed_label", left_speed=left_speed, right_speed=right_speed, direction_angle=0)
 
     def update_motors(self, tick):
         """ Updates the motor positions based on speed and tick duration with bounds checking """

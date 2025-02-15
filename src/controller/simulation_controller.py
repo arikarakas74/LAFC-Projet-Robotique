@@ -19,11 +19,15 @@ class SimulationController:
         self.control_panel = control_panel  # Use the provided control_panel
     
     def update_view(self):
-        x, y, theta = self.map.robot.get_position()
-        self.map.robot_view.draw(x, y, theta)  
+        x, y, theta = self.robot_view.get_position()
+        self.robot_view.draw(x, y, theta)  
 
     def run_simulation(self):
         """Starts the robot simulation."""
+        if self.map_model.start_position:
+            start_x, start_y = self.map_model.start_position
+            self.robot_view.x = start_x
+            self.robot_view.y = start_y
         if self.simulation_running:
             self.map.map_view.update_message_label(text="Simulation already running.") # Access map_view
             return

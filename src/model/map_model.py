@@ -6,9 +6,6 @@ class MapModel:
     def __init__(self, rows, cols):
         self.rows = rows
         self.cols = cols
-        self.robot_x = 0
-        self.robot_y = 0
-        self.robot_theta = 0
         self.obstacles = {}  # Store obstacles as {id: (points, polygon_id, line_ids)}
         self.start_position = None
         self.end_position = None
@@ -18,6 +15,8 @@ class MapModel:
         self.dragging_obstacle = None  # Track which obstacle is being dragged
         self.drag_start = None  # Track the starting point of the drag
         self.event_listeners = []  # List to store event listeners
+
+
 
     def add_event_listener(self, listener):
         """Adds an event listener to the map model."""
@@ -71,8 +70,8 @@ class MapModel:
     
     def is_out_of_bounds(self, x, y):
         """Check whether the robot exceeds the map boundaries."""
-        MAP_WIDTH = self.cols*30  
-        MAP_HEIGHT = self.rows*30  
+        MAP_WIDTH = 800  
+        MAP_HEIGHT = 600  
         ROBOT_RADIUS = 10 
 
         if x - ROBOT_RADIUS < 0:
@@ -85,3 +84,15 @@ class MapModel:
         if y + ROBOT_RADIUS > MAP_HEIGHT:
             return "BOTTOM" 
 
+    """def is_out_of_bounds(self, x, y):
+        #Check whether the robot exceeds the map boundaries.
+        ROBOT_RADIUS = 10  
+        if x - ROBOT_RADIUS < 0:
+            return "LEFT" 
+        if x + ROBOT_RADIUS > self.cols:
+            return "RIGHT" 
+        if y - ROBOT_RADIUS < 0:
+            return "TOP" 
+        if y + ROBOT_RADIUS > self.rows:
+            return "BOTTOM" 
+        return None  # ✅ Retourne None si pas hors limites"""

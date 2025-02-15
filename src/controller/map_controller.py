@@ -15,6 +15,9 @@ class MapController:
     def handle_map_event(self, event_type, **kwargs):
         """Handles events from the map model."""
         if event_type == "start_position_changed":
+            start_x, start_y = self.map_model.start_position
+            self.map_view.robot_view.x = start_x
+            self.map_view.robot_view.y = start_y
             self.map_view.draw_start(kwargs["position"])
         elif event_type == "end_position_changed":
             self.map_view.draw_end(kwargs["position"])
