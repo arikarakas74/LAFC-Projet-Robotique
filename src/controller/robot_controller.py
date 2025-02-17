@@ -65,7 +65,7 @@ class RobotController:
         right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
         
         linear_velocity = (left_velocity + right_velocity) / 2
-        angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
+        angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
         if left_velocity == right_velocity:
             linear_velocity = (left_velocity + right_velocity) / 2
@@ -73,8 +73,7 @@ class RobotController:
             new_y = self.robot.y + linear_velocity * math.sin(self.robot.direction_angle) * delta_time
             new_angle = self.robot.direction_angle
         else:
-            R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (right_velocity - left_velocity)
-            angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
+            R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
             delta_theta = angular_velocity * delta_time
             
             Cx = self.robot.x - R * math.sin(self.robot.direction_angle)
