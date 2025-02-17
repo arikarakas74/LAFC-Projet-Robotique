@@ -62,7 +62,7 @@ class SimulationController:
         if include_robot:
             self.reset_robot()
 
-     def reset_robot(self):
+    def reset_robot(self):
         """Resets the robot to its initial state."""
         if self.map.robot:
             self.map.robot.stop_simulation()
