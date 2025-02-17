@@ -62,12 +62,18 @@ class SimulationController:
         if include_robot:
             self.reset_robot()
 
-    def reset_robot(self):
+     def reset_robot(self):
         """Resets the robot to its initial state."""
         if self.map.robot:
             self.map.robot.stop_simulation()
             self.map.robot = None
-        self.map.map_view.robot_view.clear_robot()  # Clear the robot from the canvas
+
+        if self.robot_controller:
+            self.robot_controller.cleanup()
+            self.robot_controller = None
+
+        self.map.map_view.robot_view.clear_robot()
+        self.map.map_view.canvas.delete("robot")
 
     def draw_square(self):
         """Starts the robot drawing a square."""
