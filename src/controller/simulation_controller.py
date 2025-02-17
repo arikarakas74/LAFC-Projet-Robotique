@@ -19,12 +19,12 @@ class SimulationController:
         self.control_panel = control_panel  # Use the provided control_panel
     
     def update_view(self):
-        x, y, theta = self.robot_view.get_position()
-        self.robot_view.draw(x, y, theta)  
+        pass 
 
     def run_simulation(self):
         """Starts the robot simulation."""
         if self.map_model.start_position:
+            print("Simulation started")
             start_x, start_y = self.map_model.start_position
             self.robot_view.x = start_x
             self.robot_view.y = start_y

@@ -70,15 +70,15 @@ class RobotController:
         self.robot.update_motors(delta_time)
 
         # Calcul de la nouvelle position
-        new_x = self.robot_view.x + linear_velocity * math.cos(self.robot_view.direction_angle) * delta_time
-        new_y = self.robot_view.y + linear_velocity * math.sin(self.robot_view.direction_angle) * delta_time
-        new_angle = self.robot_view.direction_angle + angular_velocity * delta_time
+        new_x = self.robot.x + linear_velocity * math.cos(self.robot.direction_angle) * delta_time
+        new_y = self.robot.y + linear_velocity * math.sin(self.robot.direction_angle) * delta_time
+        new_angle = self.robot.direction_angle + angular_velocity * delta_time
 
         # Vérification des collisions
         if not (self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y)):
-            self.robot_view.x = new_x
-            self.robot_view.y = new_y
-            self.robot_view.direction_angle = normalize_angle(new_angle)
+            self.robot.x = new_x
+            self.robot.y = new_y
+            self.robot.direction_angle = normalize_angle(new_angle)
 
         # Synchronisation avec l'interface
         self.window.after(0, self._sync_view)
@@ -86,14 +86,14 @@ class RobotController:
     def _sync_view(self):
         """Synchronise la vue avec le thread principal"""
         self.robot.trigger_event("update_view", 
-                               x=self.robot_view.x,
-                               y=self.robot_view.y,
-                               direction_angle=self.robot_view.direction_angle)
+                               x=self.robot.x,
+                               y=self.robot.y,
+                               direction_angle=self.robot.direction_angle)
         
         self.control_panel.update_speed_label(
             self.robot.motor_speeds.get(self.MOTOR_LEFT, 0),
             self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0),
-            math.degrees(self.robot_view.direction_angle)
+            math.degrees(self.robot.direction_angle)
         )
 
     # Commandes de contrôle

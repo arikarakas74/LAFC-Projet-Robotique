@@ -84,15 +84,3 @@ class MapModel:
         if y + ROBOT_RADIUS > MAP_HEIGHT:
             return "BOTTOM" 
 
-    """def is_out_of_bounds(self, x, y):
-        #Check whether the robot exceeds the map boundaries.
-        ROBOT_RADIUS = 10  
-        if x - ROBOT_RADIUS < 0:
-            return "LEFT" 
-        if x + ROBOT_RADIUS > self.cols:
-            return "RIGHT" 
-        if y - ROBOT_RADIUS < 0:
-            return "TOP" 
-        if y + ROBOT_RADIUS > self.rows:
-            return "BOTTOM" 
-        return None  # ✅ Retourne None si pas hors limites"""

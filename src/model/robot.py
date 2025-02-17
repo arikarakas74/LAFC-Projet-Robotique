@@ -11,10 +11,20 @@ class Robot:
     
     def __init__(self, map_model: MapModel):
         self.map_model = map_model
+        self.x, self.y = map_model.start_position  # Position stockée dans le modèle
+        self.direction_angle = 0.0
         self.motor_speeds = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}
         self.motor_positions = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}
         self.event_listeners = []
         self.moving = False
+    
+    def update_position(self, new_x, new_y, new_angle):
+        """Met à jour la position dans le modèle"""
+        if not self.map_model.is_collision(new_x, new_y):
+            self.x = new_x
+            self.y = new_y
+            self.direction_angle = new_angle
+            self.trigger_event("position_updated")
 
     def add_event_listener(self, listener):
         """Ajoute un écouteur d'événements"""
@@ -69,7 +79,8 @@ class Robot:
         """Réinitialise l'encodeur du moteur"""
         if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
             self.motor_positions[port] -= offset
-    
+    def get_position(self):
+        return self.x, self.y ,self.direction_angle
     @staticmethod
     def normalize_angle(angle):
         """Normalise l'angle entre -π et π"""
