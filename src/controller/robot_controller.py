@@ -10,7 +10,7 @@ from utils.geometry import normalize_angle
 SPEED_STEP = 30  # Incrément/décrément de vitesse
 
 class RobotController:
-    WHEEL_BASE_WIDTH = 10.0  # Distance entre les roues (cm)
+    WHEEL_BASE_WIDTH = 20.0  # Distance entre les roues (cm)
     WHEEL_DIAMETER = 5.0     # Diamètre des roues (cm)
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
     
@@ -66,19 +66,31 @@ class RobotController:
         linear_velocity = (left_velocity + right_velocity) / 2
         angular_velocity = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
 
-        # Mise à jour des encodeurs
-        self.robot.update_motors(delta_time)
+        if left_velocity == right_velocity:
+            linear_velocity = (left_velocity + right_velocity) / 2
+            new_x = self.robot.x + linear_velocity * math.cos(self.robot.direction_angle) * delta_time
+            new_y = self.robot.y + linear_velocity * math.sin(self.robot.direction_angle) * delta_time
+            new_angle = self.robot.direction_angle
+        else:
+            R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (right_velocity - left_velocity)
+            angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
+            delta_theta = angular_velocity * delta_time
+            
+            Cx = self.robot.x - R * math.sin(self.robot.direction_angle)
+            Cy = self.robot.y + R * math.cos(self.robot.direction_angle)
 
-        # Calcul de la nouvelle position
-        new_x = self.robot.x + linear_velocity * math.cos(self.robot.direction_angle) * delta_time
-        new_y = self.robot.y + linear_velocity * math.sin(self.robot.direction_angle) * delta_time
-        new_angle = self.robot.direction_angle + angular_velocity * delta_time
+            new_x = Cx + R * math.sin(self.robot.direction_angle + delta_theta)
+            new_y = Cy - R * math.cos(self.robot.direction_angle + delta_theta)
+            new_angle = self.robot.direction_angle + delta_theta
 
         # Vérification des collisions
         if not (self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y)):
             self.robot.x = new_x
             self.robot.y = new_y
             self.robot.direction_angle = normalize_angle(new_angle)
+        
+        # Mise à jour des encodeurs
+        self.robot.update_motors(delta_time)
 
         # Synchronisation avec l'interface
         self.window.after(0, self._sync_view)
