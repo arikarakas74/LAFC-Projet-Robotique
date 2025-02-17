@@ -30,6 +30,7 @@ class RobotController:
         self.clock.add_subscriber(self.update_simulation)
         self.clock_thread = threading.Thread(target=self.clock.start)
         self.clock_thread.daemon = True
+        self.last_printed_position = (self.robot.x, self.robot.y)
         self.clock_thread.start()
         
         # Événements robot
@@ -88,6 +89,14 @@ class RobotController:
             self.robot.x = new_x
             self.robot.y = new_y
             self.robot.direction_angle = normalize_angle(new_angle)
+
+            # contrôle à distance basé sur le nouvel emplacement
+            last_x, last_y = self.last_printed_position
+            distance_moved = math.sqrt((self.robot.x - last_x)**2 + (self.robot.y - last_y)**2)
+
+            if distance_moved >= 0.1:
+                print(f"Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={math.degrees(self.robot.direction_angle):.2f}°")
+                self.last_printed_position = (self.robot.x, self.robot.y)
         
         # Mise à jour des encodeurs
         self.robot.update_motors(delta_time)
