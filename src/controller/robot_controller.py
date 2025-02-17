@@ -8,6 +8,7 @@ import threading
 from utils.geometry import normalize_angle
 
 SPEED_STEP = 30  # Incrément/décrément de vitesse
+SPEED_MULTIPLIER = 8.0  # Pour augmenter la vitesse du robot
 
 class RobotController:
     WHEEL_BASE_WIDTH = 20.0  # Distance entre les roues (cm)
@@ -68,13 +69,12 @@ class RobotController:
         angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
         if left_velocity == right_velocity:
-            linear_velocity = (left_velocity + right_velocity) / 2
-            new_x = self.robot.x + linear_velocity * math.cos(self.robot.direction_angle) * delta_time
-            new_y = self.robot.y + linear_velocity * math.sin(self.robot.direction_angle) * delta_time
+            new_x = self.robot.x + SPEED_MULTIPLIER * linear_velocity * math.cos(self.robot.direction_angle) * delta_time
+            new_y = self.robot.y + SPEED_MULTIPLIER * linear_velocity * math.sin(self.robot.direction_angle) * delta_time
             new_angle = self.robot.direction_angle
         else:
             R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
-            delta_theta = angular_velocity * delta_time
+            delta_theta = angular_velocity * delta_time * SPEED_MULTIPLIER/2
             
             Cx = self.robot.x - R * math.sin(self.robot.direction_angle)
             Cy = self.robot.y + R * math.cos(self.robot.direction_angle)
@@ -113,7 +113,7 @@ class RobotController:
         self.control_panel.update_speed_label(
             self.robot.motor_speeds.get(self.MOTOR_LEFT, 0),
             self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0),
-            math.degrees(self.robot.direction_angle)
+            math.degrees(normalize_angle(self.robot.direction_angle))
         )
 
     # Commandes de contrôle
