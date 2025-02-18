@@ -154,3 +154,9 @@ class RobotController:
         """Nettoyage des ressources"""
         self.clock.stop()
         self.clock_thread.join()
+    
+    def start_draw_square(self):
+        """Lance le dessin du carré dans un thread séparé"""
+        draw_thread = threading.Thread(target=self.robot.draw_square)
+        draw_thread.daemon = True
+        draw_thread.start()
