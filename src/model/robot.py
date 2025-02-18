@@ -1,5 +1,6 @@
 import math
 from model.map_model import MapModel
+import time
 
 class Robot:
     WHEEL_BASE_WIDTH = 10.0  # Distance entre les roues (cm)
@@ -19,7 +20,7 @@ class Robot:
         self.moving = False
     
     def update_position(self, new_x, new_y, new_angle):
-        """更新机器人位置，并打印调试信息"""
+        """Met à jour la position du robot"""
         print(f"Before update: x={self.x}, y={self.y}, angle={self.direction_angle}")
         
         self.x = new_x
@@ -63,7 +64,6 @@ class Robot:
             self.motor_positions[motor] %= 360  # Normalisation à 360°
     
     def move_motors(self, delta_time):
-        """Met à jour les positions des moteurs avec le temps écoulé"""
         left_speed = self.motor_speeds[self.MOTOR_LEFT]
         right_speed = self.motor_speeds[self.MOTOR_RIGHT]
 
@@ -99,8 +99,51 @@ class Robot:
         """Réinitialise l'encodeur du moteur"""
         if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
             self.motor_positions[port] -= offset
+    
     def get_position(self):
         return self.x, self.y ,self.direction_angle
+    
+    def draw_square(self):
+        """Fait avancer le robot en dessinant un carré"""
+        print("Démarrage du dessin du carré...")  
+
+        for x in range(4):
+            start_left_pos = self.motor_positions[self.MOTOR_LEFT]
+            start_right_pos = self.motor_positions[self.MOTOR_RIGHT]
+
+            self.set_motor_dps(self.MOTOR_LEFT, 60)
+            self.set_motor_dps(self.MOTOR_RIGHT, 60)  
+
+            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) < 359:
+                time.sleep(0.05)
+
+            self.offset_motor_encoder(self.MOTOR_LEFT, self.motor_positions[self.MOTOR_LEFT])
+            self.offset_motor_encoder(self.MOTOR_RIGHT, self.motor_positions[self.MOTOR_RIGHT])
+
+            self.set_motor_dps(self.MOTOR_LEFT, 0)
+            self.set_motor_dps(self.MOTOR_RIGHT, 0)
+
+            time.sleep(0.2)
+
+            start_left_pos = self.motor_positions[self.MOTOR_LEFT]
+            start_right_pos = self.motor_positions[self.MOTOR_RIGHT]
+
+            self.set_motor_dps(self.MOTOR_LEFT, 30)
+            self.set_motor_dps(self.MOTOR_RIGHT, -30)
+
+            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) <= 90:
+                time.sleep(0.05)
+
+            self.offset_motor_encoder(self.MOTOR_LEFT, self.motor_positions[self.MOTOR_LEFT])
+            self.offset_motor_encoder(self.MOTOR_RIGHT, self.motor_positions[self.MOTOR_RIGHT])
+
+            self.set_motor_dps(self.MOTOR_LEFT, 0)
+            self.set_motor_dps(self.MOTOR_RIGHT, 0)
+
+            time.sleep(0.2)
+            
+        print("Carré complété !")
+
     @staticmethod
     def normalize_angle(angle):
         """Normalise l'angle entre -π et π"""
