@@ -58,6 +58,12 @@ class Robot:
 
     def update_motors(self, delta_time):
         """Met à jour les positions des moteurs avec le temps écoulé"""
+        for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
+            self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
+            self.motor_positions[motor] %= 360  # Normalisation à 360°
+    
+    def move_motors(self, delta_time):
+        """Met à jour les positions des moteurs avec le temps écoulé"""
         left_speed = self.motor_speeds[self.MOTOR_LEFT]
         right_speed = self.motor_speeds[self.MOTOR_RIGHT]
 
