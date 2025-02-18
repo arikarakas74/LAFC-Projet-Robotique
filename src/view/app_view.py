@@ -33,6 +33,10 @@ class AppView:
         self.window.bind("<e>", lambda event: self.simulation_controller.robot_controller.increase_right_speed())
         self.window.bind("<d>", lambda event: self.simulation_controller.robot_controller.decrease_right_speed())
 
+        self.window.bind("<w>", lambda event: print("W pressed") or self.simulation_controller.robot_controller.move_forward())
+        self.window.bind("<s>", lambda event: print("S pressed") or self.simulation_controller.robot_controller.move_backward())
+
+
 
     def run(self):
         """Runs the main application loop."""

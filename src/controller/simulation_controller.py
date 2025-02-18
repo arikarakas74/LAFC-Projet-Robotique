@@ -4,23 +4,76 @@ from controller.map_controller import MapController  # Import MapController
 from controller.robot_controller import RobotController  # Import RobotController
 from model.map_model import MapModel
 from view.robot_view import RobotView
+import time
+import threading
+from model.robot import Robot
+from model.clock import Clock
 
 class SimulationController:
     """Handles the simulation flow and interactions between model and view."""
 
-    def __init__(self, map_instance, map_model, robot_view, control_panel=None):
+    def __init__(self, map_instance, map_model, robot_view, control_panel=None,cli_mode=False):
         self.map_model = map_model
         self.robot_view = robot_view
         self.map = map_instance
         self.simulation_running = False
         self.robot = None
         self.robot_controller = None
-        self.map_controller = MapController(self.map.map_model, self.map.map_view, self.map.window)  # Initialize map_controller with required arguments
+
+        if not cli_mode:  
+            self.map = map_instance
+            self.map_controller = MapController(self.map.map_model, self.map.map_view, self.map.window)
+            self.robot_controller = None
+
         self.control_panel = control_panel  # Use the provided control_panel
+        self.cli_mode = cli_mode
     
     def update_view(self):
         pass 
 
+    import time  
+
+    def run_simulation_cli(self, robot):
+        """CLI 模式运行仿真，每次移动后更新位置"""
+        self.robot = robot
+        self.simulation_running = True
+
+        print("Simulation started in CLI mode.")
+        print("Use 'w' to move forward, 's' to move backward, 'a' to turn left, 'd' to turn right, 'q' to quit.")
+
+        last_time = time.time()
+
+        while self.simulation_running:
+            command = input("Enter command: ").strip().lower()
+            
+            current_time = time.time()
+            delta_time = current_time - last_time
+            last_time = current_time
+
+            if command == 'w':
+                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 50)
+                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 50)
+            elif command == 's':
+                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, -50)
+                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, -50)
+            elif command == 'a':
+                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, -30)
+                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 30)
+            elif command == 'd':
+                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 30)
+                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, -30)
+            elif command == 'q':
+                print("Stopping simulation.")
+                self.simulation_running = False
+                break
+            else:
+                print("Invalid command! Use w/s/a/d/q.")
+                continue  
+            
+            self.robot.update_motors(delta_time)
+            print(f" Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
+
+    
     def run_simulation(self):
         """Starts the robot simulation."""
         if self.map_model.start_position:
@@ -81,3 +134,16 @@ class SimulationController:
             self.map.map_view.update_message_label(text="Start the simulation first.") # Access map_view
             return
         self.map.robot.draw_square(obstacles=self.map.map_model.obstacles)  # Pass obstacles to draw_square
+
+    def update_simulation_cli(self, delta_time):
+        """CLI 模式更新仿真，仅在移动时更新"""
+        if not self.simulation_running:
+            return
+
+        last_x, last_y = self.robot.x, self.robot.y
+        self.robot.update_motors(delta_time)
+
+        if (self.robot.x, self.robot.y) != (last_x, last_y):
+            print(f"Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
+
+

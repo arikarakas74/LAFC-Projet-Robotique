@@ -119,23 +119,36 @@ class RobotController:
     # Commandes de contrôle
     def increase_left_speed(self):
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 
-                               self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
 
     def decrease_left_speed(self):
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 
-                               self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
 
     def increase_right_speed(self):
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 
-                               self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+        self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
 
     def decrease_right_speed(self):
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 
-                               self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+        self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
 
     def stop_rotation(self):
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 0)
         self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 0)
+
+    def move_forward(self):
+        """Increase both motor speeds to move forward."""
+        print("Moving forward") 
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+
+    def move_backward(self):
+        """Decrease both motor speeds to move backward."""
+        print("Moving backward")
+        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
+
 
     def cleanup(self):
         """Nettoyage des ressources"""
