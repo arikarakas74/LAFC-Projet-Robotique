@@ -34,7 +34,7 @@ class SimulationController:
     import time  
 
     def run_simulation_cli(self, robot):
-        """CLI 模式运行仿真，每次移动后更新位置"""
+        """Mode CLI pour exécuter la simulation et mettre à jour la position après chaque mouvement"""
         self.robot = robot
         self.simulation_running = True
 
@@ -133,15 +133,15 @@ class SimulationController:
         if not self.map.robot:
             self.map.map_view.update_message_label(text="Start the simulation first.") # Access map_view
             return
-        self.map.robot.draw_square(obstacles=self.map.map_model.obstacles)  # Pass obstacles to draw_square
+        self.robot_controller.start_draw_square()
 
     def update_simulation_cli(self, delta_time):
-        """CLI 模式更新仿真，仅在移动时更新"""
+        """Mode CLI met à jour l'émulation"""
         if not self.simulation_running:
             return
 
         last_x, last_y = self.robot.x, self.robot.y
-        self.robot.update_motors(delta_time)
+        self.robot.move_motors(delta_time)
 
         if (self.robot.x, self.robot.y) != (last_x, last_y):
             print(f"Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
