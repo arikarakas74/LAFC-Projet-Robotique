@@ -70,7 +70,7 @@ class SimulationController:
                 print("Invalid command! Use w/s/a/d/q.")
                 continue  
             
-            self.robot.update_motors(delta_time)
+            self.robot.move_motors(delta_time)
             print(f" Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
 
     
