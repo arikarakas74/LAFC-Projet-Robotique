@@ -5,19 +5,19 @@ from model.map_model import MapModel
 from model.robot import Robot
 
 def run_cli():
-    """运行 CLI 模式"""
+    """Lancer le mode CLI"""
     print("Starting Robot Simulation in CLI mode...")
 
-    # 初始化地图模型
+    #Initialiser le modèle de carte
     map_model = MapModel(20, 20)
 
-    # 让用户输入起点坐标
+    # Demander à l'utilisateur d'entrer les coordonnées du point de départ
     while True:
         try:
             x = int(input("Enter start position X (0-800): "))
             y = int(input("Enter start position Y (0-600): "))
             
-            # 检查输入是否在地图范围内
+            # Vérifier si l'entrée est dans les limites de la carte
             if 0 <= x <= 800 and 0 <= y <= 600:
                 map_model.start_position = (x, y)
                 break
@@ -28,10 +28,10 @@ def run_cli():
 
     print(f"Start position set to: ({x}, {y})")
 
-    # 创建机器人
+    # creater robot
     robot = Robot(map_model)
 
-    # 运行仿真（CLI 模式下传入 cli_mode=True）
+    # Exécuter la simulation
     sim_controller = SimulationController(None, map_model, None, None, cli_mode=True)
     sim_controller.run_simulation_cli(robot)
 
