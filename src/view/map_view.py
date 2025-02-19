@@ -1,28 +1,21 @@
 import tkinter as tk
-from view.robot_view import RobotView
 
 class MapView:
-    """Handles the visual representation of the map."""
+    """Gère l'affichage graphique de la carte."""
 
-    def __init__(self, parent, rows, cols, grid_size):
-        self.parent = parent  # 'parent' is now the Map class instance
+    def __init__(self, parent, rows, cols, grid_size, robot_view):
+        self.parent = parent
         self.rows = rows
         self.cols = cols
         self.grid_size = grid_size
-        self.canvas = tk.Canvas(parent.window, width=cols * grid_size, height=rows * grid_size)
-        self.canvas.pack()
-        self.width = cols * grid_size
-        self.height = rows * grid_size
-        self.message_label = tk.Label(parent.window, text="")
-        self.message_label.pack(pady=10)
-        self.speed_label = None
-        self.robot_view = RobotView(self)  # Initialize robot_view
+        self.robot_view = robot_view
+        
+        # Création du canvas
+        self.canvas = robot_view.canvas
 
-        # Register as a listener to the map model
-        self.parent.map_model.add_event_listener(self.on_map_update)
 
     def on_map_update(self, event_type, **kwargs):
-        """Handles events from the map model."""
+        """Gère les événements du modèle."""
         if event_type == "start_position_changed":
             self.draw_start(kwargs["position"])
         elif event_type == "end_position_changed":
@@ -34,6 +27,8 @@ class MapView:
         elif event_type == "map_reset":
             self.clear_all()
 
+    # Méthodes draw_*, delete_*, etc. (identiques à votre code original)
+
     def draw_grid(self):
         """Draws the grid lines on the canvas."""
         for i in range(self.rows + 1):
@@ -43,6 +38,7 @@ class MapView:
 
     def draw_start(self, position):
         """Draws the start position marker."""
+        print("Drawing")
         if position:
             x, y = position
             self.canvas.delete("start")
@@ -90,7 +86,7 @@ class MapView:
 
     def update_message_label(self, text):
         """Updates the message label text."""
-        self.message_label.config(text=text)
+        pass
 
     def create_speed_label(self):
         """Creates the speed label."""

@@ -11,6 +11,11 @@ class MapController:
         self.map_view = map_view
         self.window = window  # Store the window object
         self.map_model.add_event_listener(self.handle_map_event)
+        self.map_view.canvas.bind("<Button-1>", self.handle_click)
+        self.map_view.canvas.bind("<B1-Motion>", self.handle_drag)
+        self.map_view.canvas.bind("<Double-Button-1>", self.finalize_shape)
+        self.map_view.canvas.bind("<Button-3>", self.delete_obstacle)
+        self.map_view.canvas.bind("<ButtonRelease-1>", self.stop_drag)
 
     def handle_map_event(self, event_type, **kwargs):
         """Handles events from the map model."""
