@@ -21,14 +21,13 @@ class Robot:
     
     def update_position(self, new_x, new_y, new_angle):
         """Met à jour la position du robot"""
-        if self.map_model.is_collision(new_x, new_y):
-            self.stop_movement()
-            return
+        print(f"Before update: x={self.x}, y={self.y}, angle={self.direction_angle}")
 
         self.x = new_x
         self.y = new_y
         self.direction_angle = new_angle
 
+        print(f"After update: x={self.x}, y={self.y}, angle={self.direction_angle}")
 
     def add_event_listener(self, listener):
         """Ajoute un écouteur d'événements"""
@@ -60,24 +59,9 @@ class Robot:
 
     def update_motors(self, delta_time):
         """Met à jour les positions des moteurs avec le temps écoulé"""
-        if not self.moving: 
-            return  
-
-        left_speed = self.motor_speeds[self.MOTOR_LEFT]
-        right_speed = self.motor_speeds[self.MOTOR_RIGHT]
-
-        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-
-        v = (left_velocity + right_velocity) / 2
-        omega = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
-
-        new_x = self.x + v * math.cos(self.direction_angle) * delta_time
-        new_y = self.y + v * math.sin(self.direction_angle) * delta_time
-        new_angle = self.direction_angle + omega * delta_time
-
-        self.update_position(new_x, new_y, new_angle)
-
+        for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
+            self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
+            self.motor_positions[motor] %= 360  # Normalisation à 
     
     def move_motors(self, delta_time):
         left_speed = self.motor_speeds[self.MOTOR_LEFT]
@@ -130,7 +114,7 @@ class Robot:
             self.set_motor_dps(self.MOTOR_LEFT, 60)
             self.set_motor_dps(self.MOTOR_RIGHT, 60)  
 
-            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) < 359:
+            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) < 300:
                 time.sleep(0.05)
 
             self.offset_motor_encoder(self.MOTOR_LEFT, self.motor_positions[self.MOTOR_LEFT])
@@ -146,6 +130,7 @@ class Robot:
 
             self.set_motor_dps(self.MOTOR_LEFT, 30)
             self.set_motor_dps(self.MOTOR_RIGHT, -30)
+            
 
             while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) <= 90:
                 time.sleep(0.05)
@@ -159,14 +144,6 @@ class Robot:
             time.sleep(0.2)
             
         print("Carré complété !")
-
-    def stop_movement(self):
-        """Arrêter le mouvement du robot"""
-        self.motor_speeds[self.MOTOR_LEFT] = 0
-        self.motor_speeds[self.MOTOR_RIGHT] = 0
-        self.moving = False
-
-
 
     @staticmethod
     def normalize_angle(angle):
