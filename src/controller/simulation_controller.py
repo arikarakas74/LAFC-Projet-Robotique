@@ -15,10 +15,8 @@ class SimulationController:
     def __init__(self, map_instance, map_model, robot_view, control_panel=None,cli_mode=False):
         self.map_model = map_model
         self.robot_view = robot_view
-        self.map = map_instance
         self.simulation_running = False
         self.robot = None
-        self.robot_controller = None
 
         if not cli_mode:  
             self.map = map_instance
@@ -30,8 +28,6 @@ class SimulationController:
     
     def update_view(self):
         pass 
-
-    import time  
 
     def run_simulation_cli(self, robot):
         """Mode CLI pour exécuter la simulation et mettre à jour la position après chaque mouvement"""
