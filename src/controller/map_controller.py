@@ -1,6 +1,7 @@
 from model.map_model import MapModel
 from view.map_view import MapView
 from utils.geometry import point_in_polygon  # Import point_in_polygon
+from model.robot import RobotModel
 
 class MapController:
     """Handles user input and updates the map model and view."""
@@ -126,3 +127,6 @@ class MapController:
         """Stops dragging an obstacle."""
         self.map_model.dragging_obstacle = None  # Access map_model
         self.map_model.drag_start = None  # Access map_model
+
+    def reset(self):
+        self.map_view.delete_all()

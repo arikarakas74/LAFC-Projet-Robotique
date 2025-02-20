@@ -25,12 +25,15 @@ class SimulationController:
         if self.simulation_running:
             return
 
+        if self.robot_model.x != self.map_model.start_position[0] or self.robot_model.y != self.map_model.start_position[1]:
+            self.robot_model.x, self.robot_model.y = self.map_model.start_position
+
         self.simulation_running = True
-        self.thread = threading.Thread(target=self._run_loop)
+        self.thread = threading.Thread(target=self.run_loop)
         self.thread.daemon = True
         self.thread.start()
 
-    def _run_loop(self):
+    def run_loop(self):
         last_time = time.time()
         while self.simulation_running:
             current_time = time.time()
@@ -51,4 +54,3 @@ class SimulationController:
         self.stop_simulation()
         self.robot_model.x, self.robot_model.y = self.map_model.start_position
         self.robot_model.direction_angle = 0.0
-        self._notify_listeners()

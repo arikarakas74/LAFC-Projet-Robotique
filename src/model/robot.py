@@ -7,8 +7,9 @@ class RobotModel:
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
 
     def __init__(self, map_model: MapModel):
+        print("init robot")
         self.map_model = map_model
-        self.x, self.y = map_model.start_position
+        self.x, self.y = map_model.start_position 
         self.direction_angle = 0.0
         self.motor_speeds = {"left": 0, "right": 0}
 

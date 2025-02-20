@@ -2,7 +2,7 @@ import math
 from utils.geometry import normalize_angle
 from model.robot import RobotModel  # Modèle robot
 from model.map_model import MapModel      # Modèle carte
-import keyboard 
+import keyboard
 
 
 class RobotController:
@@ -19,9 +19,11 @@ class RobotController:
     def _setup_key_bindings(self):
         """Lie les touches aux actions."""
         keyboard.add_hotkey('q', self.increase_left_speed)
-        keyboard.add_hotkey('a', self.decrease_left_speed)
+        keyboard.add_hotkey('a', self.increase_left_speed)
         keyboard.add_hotkey('e', self.increase_right_speed)
         keyboard.add_hotkey('d', self.decrease_right_speed)
+        keyboard.add_hotkey('w', self.move_forward)
+        keyboard.add_hotkey('s', self.move_backward)
 
     def update_physics(self, delta_time):
         if delta_time <= 0:
@@ -49,24 +51,31 @@ class RobotController:
     def stop(self):
         self.set_motor_speed("left", 0)
         self.set_motor_speed("right", 0)
+
     # Commandes de contrôle
     def increase_left_speed(self):
-        self.robot_model.set_motor_speed("left", 
-                                    self.robot_model.motor_speeds["left"] + self.SPEED_STEP)
-        print(self.robot_model.motor_speeds["left"])
+        self.robot_model.set_motor_speed("left", self.robot_model.motor_speeds["left"] + self.SPEED_STEP)
 
     def decrease_left_speed(self):
-        self.robot_model.set_motor_speed("left", 
-                                    self.robot_model.motor_speeds["left"] - self.SPEED_STEP)
+        self.robot_model.set_motor_speed("left", self.robot_model.motor_speeds["left"] - self.SPEED_STEP)
 
     def increase_right_speed(self):
-        self.robot_model.set_motor_speed("right", 
-                                    self.robot_model.motor_speeds["right"] + self.SPEED_STEP)
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] + self.SPEED_STEP)
 
     def decrease_right_speed(self):
-        self.robot_model.set_motor_speed("right", 
-                                    self.robot_model.motor_speeds["right"] - self.SPEED_STEP)
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] - self.SPEED_STEP)
 
+    def move_forward(self):
+        """Increase both motor speeds to move forward."""
+        print("Moving forward") 
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] + self.SPEED_STEP)
+        self.robot_model.set_motor_speed("left",self.robot_model.motor_speeds["left"] + self.SPEED_STEP)
+
+    def move_backward(self):
+        """Decrease both motor speeds to move backward."""
+        print("Moving backward")
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] - self.SPEED_STEP)
+        self.robot_model.set_motor_speed("left",self.robot_model.motor_speeds["left"] - self.SPEED_STEP)
 
     def stop_rotation(self):
         self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 0)

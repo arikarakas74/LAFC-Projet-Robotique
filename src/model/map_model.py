@@ -7,9 +7,14 @@ class MapModel:
         self.rows = rows
         self.cols = cols
         self.obstacles = {}  # Format: {obstacle_id: points}
-        self.start_position = (10, 10)
+        self.start_position = (0,0)
         self.end_position = None
-        self.event_listeners = []
+        self.current_shape = None
+        self.current_points = []
+        self.current_lines = []  # Track lines created during drawing
+        self.dragging_obstacle = None  # Track which obstacle is being dragged
+        self.drag_start = None  # Track the starting point of the drag
+        self.event_listeners = []  # List to store event listeners
 
     def add_event_listener(self, listener):
         self.event_listeners.append(listener)
@@ -28,13 +33,10 @@ class MapModel:
         self.start_position = position
         self.notify_event_listeners("start_position_changed", position=position)
 
-    def set_end_position(self, position):
-        self.end_position = position
-        self.notify_event_listeners("end_position_changed", position=position)
-
-    def add_obstacle(self, obstacle_id, points):
-        self.obstacles[obstacle_id] = points
-        self.notify_event_listeners("obstacle_added", obstacle_id=obstacle_id, points=points)
+    def add_obstacle(self, obstacle_id, points, polygon_id, line_ids):
+        """Adds an obstacle and notifies listeners."""
+        self.obstacles[obstacle_id] = (points, polygon_id, line_ids)
+        self.notify_event_listeners("obstacle_added", obstacle_id=obstacle_id, points=points, polygon_id=polygon_id, line_ids=line_ids)
 
     def remove_obstacle(self, obstacle_id):
         if obstacle_id in self.obstacles:
@@ -49,7 +51,7 @@ class MapModel:
     def is_collision(self, x, y):
         """Vérifie les collisions avec les obstacles (version corrigée)"""
         for points in self.obstacles.values():
-            if point_in_polygon((x, y), points):
+            if point_in_polygon(x, y, points):
                 return True  
         return False  
     

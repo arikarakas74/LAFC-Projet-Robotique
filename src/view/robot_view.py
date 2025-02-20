@@ -4,14 +4,15 @@ from tkinter import ttk
 
 class RobotView:
     def __init__(self, parent, sim_controller):
+
+        self.parent = parent
         self.canvas = tk.Canvas(parent, width=800, height=600)
         self.canvas.pack()
         
-        self.speed_label = ttk.Label(parent)
+        self.speed_label = tk.Label(parent)
         self.speed_label.pack()
         
         sim_controller.add_state_listener(self.update_display)
-        self.parent = parent
 
     def update_display(self, state):
         self.parent.after(0, self._safe_update, state)
@@ -21,6 +22,7 @@ class RobotView:
         self._update_labels(state)
 
     def _draw_robot(self, state):
+        """Dessiner le robot avec self.x et self.y"""
         self.canvas.delete("robot")
         size = 15
         x, y = state['x'], state['y']
@@ -44,3 +46,10 @@ class RobotView:
     def _update_labels(self, state):
         text = f"Left: {state['left_speed']}°/s | Right: {state['right_speed']}°/s"
         self.speed_label.config(text=text)
+
+    def clear_robot(self):
+        """Clears the robot from the canvas."""
+        self.canvas.delete("robot")
+
+        if self.speed_label:
+            self.speed_label.config(text="")

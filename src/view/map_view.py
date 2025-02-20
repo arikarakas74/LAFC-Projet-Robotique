@@ -80,8 +80,6 @@ class MapView:
     def delete_all(self):
         """Deletes all items on the canvas."""
         self.canvas.delete("all")
-        if self.speed_label:
-            self.speed_label.config(text="")
         self.robot_view.clear_robot()  # Clear the robot from the canvas
 
     def update_message_label(self, text):
