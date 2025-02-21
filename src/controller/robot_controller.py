@@ -4,7 +4,7 @@ from model.robot import RobotModel  # Modèle robot
 from model.map_model import MapModel      # Modèle carte
 import keyboard
 
-
+SPEED_MULTIPLIER = 8.0
 class RobotController:
     WHEEL_BASE_WIDTH = 10.0  # cm
     WHEEL_DIAMETER = 5.0     # cm
@@ -26,24 +26,49 @@ class RobotController:
         keyboard.add_hotkey('s', self.move_backward)
 
     def update_physics(self, delta_time):
+
+        """Met à jour la simulation avec le temps écoulé"""
         if delta_time <= 0:
             return
 
-        l_speed = self.robot_model.motor_speeds["left"]
-        r_speed = self.robot_model.motor_speeds["right"]
+        # Récupération des vitesses
+        left_speed = self.robot_model.motor_speeds["left"]
+        right_speed = self.robot_model.motor_speeds["right"]
         
-        # Calcul des vitesses linéaires (cm/s)
-        l_velocity = (l_speed / 360) * (2 * math.pi * self.robot_model.WHEEL_RADIUS)
-        r_velocity = (r_speed / 360) * (2 * math.pi * self.robot_model.WHEEL_RADIUS)
+        # Calcul des vitesses linéaire/angulaire
+        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
+        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
         
-        linear = (l_velocity + r_velocity) / 2
-        angular = (r_velocity - l_velocity) / self.robot_model.WHEEL_BASE_WIDTH
+        linear_velocity = (left_velocity + right_velocity) / 2
+        angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
-        new_x = self.robot_model.x + linear * math.cos(self.robot_model.direction_angle) * delta_time
-        new_y = self.robot_model.y + linear * math.sin(self.robot_model.direction_angle) * delta_time
-        new_angle = normalize_angle(self.robot_model.direction_angle + angular * delta_time)
+        if left_velocity == right_velocity:
+            new_x = self.robot_model.x + SPEED_MULTIPLIER * linear_velocity * math.cos(self.robot_model.direction_angle) * delta_time
+            new_y = self.robot_model.y + SPEED_MULTIPLIER * linear_velocity * math.sin(self.robot_model.direction_angle) * delta_time
+            new_angle = self.robot_model.direction_angle
+        else:
+            R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
+            delta_theta = angular_velocity * delta_time * SPEED_MULTIPLIER/2
+            
+            Cx = self.robot_model.x - R * math.sin(self.robot_model.direction_angle)
+            Cy = self.robot_model.y + R * math.cos(self.robot_model.direction_angle)
+
+            new_x = Cx + R * math.sin(self.robot_model.direction_angle + delta_theta)
+            new_y = Cy - R * math.cos(self.robot_model.direction_angle + delta_theta)
+            new_angle = self.robot_model.direction_angle + delta_theta
+
+            # contrôle à distance basé sur le nouvel emplacement
 
         self.robot_model.update_position(new_x, new_y, new_angle)
+        # Mise à jour des encodeurs
+        self.robot_model.update_motors(delta_time)
+
+        # Synchronisation avec l'interfac
+
+
+        
+
+    
 
     def set_motor_speed(self, motor, speed):
         self.robot_model.set_motor_speed(motor, speed)

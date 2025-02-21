@@ -11,7 +11,7 @@ class RobotView:
         
         self.speed_label = tk.Label(parent)
         self.speed_label.pack()
-        
+        self.WHEEL_BASE_WIDTH = 20.0
         sim_controller.add_state_listener(self.update_display)
 
     def update_display(self, state):
@@ -26,20 +26,12 @@ class RobotView:
         self.canvas.delete("robot")
         size = 15
         x, y = state['x'], state['y']
-        angle = state['angle']
+        direction_angle = state['angle']
         
-        front = (
-            x + size * math.cos(angle),
-            y + size * math.sin(angle)
-        )
-        left = (
-            x + size * math.cos(angle + 2.2),
-            y + size * math.sin(angle + 2.2)
-        )
-        right = (
-            x + size * math.cos(angle - 2.2),
-            y + size * math.sin(angle - 2.2)
-        )
+        size = 30
+        front = (x + size * math.cos(direction_angle),y + size * math.sin(direction_angle))
+        left = (x + (self.WHEEL_BASE_WIDTH / 2) * math.cos(direction_angle + math.pi / 2), y + (self.WHEEL_BASE_WIDTH / 2) * math.sin(direction_angle + math.pi / 2))
+        right = (x + (self.WHEEL_BASE_WIDTH / 2) * math.cos(direction_angle - math.pi / 2), y + (self.WHEEL_BASE_WIDTH / 2) * math.sin(direction_angle - math.pi / 2))
         
         self.canvas.create_polygon(front, left, right, fill="blue", tags="robot")
 
