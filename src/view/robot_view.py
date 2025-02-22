@@ -11,7 +11,7 @@ class RobotView:
         
         self.speed_label = tk.Label(parent)
         self.speed_label.pack()
-        self.WHEEL_BASE_WIDTH = 20.0
+        self.WHEEL_BASE_WIDTH = sim_controller.robot_model.WHEEL_BASE_WIDTH
         sim_controller.add_state_listener(self.update_display)
 
     def update_display(self, state):

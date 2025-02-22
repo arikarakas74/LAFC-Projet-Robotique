@@ -3,7 +3,7 @@ from model.map_model import MapModel
 from utils.geometry import normalize_angle
 
 class RobotModel:
-    WHEEL_BASE_WIDTH = 10.0  # cm
+    WHEEL_BASE_WIDTH = 20.0  # cm
     WHEEL_DIAMETER = 5.0     # cm
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
 
