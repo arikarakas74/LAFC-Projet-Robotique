@@ -19,7 +19,7 @@ class RobotController:
     def _setup_key_bindings(self):
         """Lie les touches aux actions."""
         keyboard.add_hotkey('q', self.increase_left_speed)
-        keyboard.add_hotkey('a', self.increase_left_speed)
+        keyboard.add_hotkey('a', self.decrease_left_speed)
         keyboard.add_hotkey('e', self.increase_right_speed)
         keyboard.add_hotkey('d', self.decrease_right_speed)
         keyboard.add_hotkey('w', self.move_forward)
