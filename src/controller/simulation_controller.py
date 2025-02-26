@@ -54,3 +54,5 @@ class SimulationController:
         self.stop_simulation()
         self.robot_model.x, self.robot_model.y = self.map_model.start_position
         self.robot_model.direction_angle = 0.0
+    def square(self):
+        self.robot_controller.draw_square(200)

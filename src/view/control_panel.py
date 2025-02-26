@@ -21,7 +21,8 @@ class ControlPanel:
             ("Set Start", self.map_controller.set_start_mode),
             ("Set Obstacles", self.map_controller.set_obstacles_mode),
             ("Run Simulation", self.simulation_controller.run_simulation),
-            ("Reset", self.reset_all)
+            ("Reset", self.reset_all),
+            ("draw", self.simulation_controller.square)
         ]
         
         for text, cmd in buttons:
