@@ -58,25 +58,30 @@ class RobotController:
         if delta_time <= 0:
             return
 
+        # Application du multiplicateur de vitesse de façon uniforme
+        effective_delta_time = delta_time * SPEED_MULTIPLIER
+
         # Calculs cinématiques précis
         left_speed = self.robot_model.motor_speeds["left"]
         right_speed = self.robot_model.motor_speeds["right"]
-        
+
         left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
         right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        
+
         linear_velocity = (left_velocity + right_velocity) / 2
         angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
         # Mise à jour de la position
         if left_velocity == right_velocity:
-            new_x = self.robot_model.x + SPEED_MULTIPLIER * linear_velocity * math.cos(self.robot_model.direction_angle) * delta_time
-            new_y = self.robot_model.y + SPEED_MULTIPLIER * linear_velocity * math.sin(self.robot_model.direction_angle) * delta_time
+            # Déplacement en ligne droite
+            new_x = self.robot_model.x + linear_velocity * math.cos(self.robot_model.direction_angle) * effective_delta_time
+            new_y = self.robot_model.y + linear_velocity * math.sin(self.robot_model.direction_angle) * effective_delta_time
             new_angle = self.robot_model.direction_angle
         else:
+            # Déplacement suivant un arc de cercle (rotation)
             R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
-            delta_theta = angular_velocity * delta_time
-            
+            delta_theta = angular_velocity * effective_delta_time
+
             Cx = self.robot_model.x - R * math.sin(self.robot_model.direction_angle)
             Cy = self.robot_model.y + R * math.cos(self.robot_model.direction_angle)
 
@@ -101,17 +106,16 @@ class RobotController:
                     self.square_step += 1
                     if self.square_step < 8:
                         self._start_rotation()
-
             else:  # Phase angulaire
                 current_angle = normalize_angle(self.robot_model.direction_angle)
-                target_angle = normalize_angle(self.start_angle + math.pi/2)
+                target_angle = normalize_angle(self.start_angle + math.pi / 2)
                 angle_error = normalize_angle(target_angle - current_angle)
                 
                 # Contrôle proportionnel pour précision
                 if abs(angle_error) < math.radians(5):
-                    self.set_motor_speed("left", 60 * (angle_error/math.radians(5)))
-                    self.set_motor_speed("right", -60 * (angle_error/math.radians(5)))
-
+                    self.set_motor_speed("left", 60 * (angle_error / math.radians(5)))
+                    self.set_motor_speed("right", -60 * (angle_error / math.radians(5)))
+                
                 # Validation finale avec compensation
                 if abs(angle_error) <= math.radians(0.1):
                     self.stop()
@@ -126,9 +130,10 @@ class RobotController:
                     else:
                         self.drawing_square = False
 
+
     # Méthodes existantes
     def set_motor_speed(self, motor, speed):
-        self.robot_model.set_motor_speed(motor, max(-250, min(250, speed)))
+        self.robot_model.set_motor_speed(motor, speed)
 
     def stop(self):
         self.set_motor_speed("left", 0)

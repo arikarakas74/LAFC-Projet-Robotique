@@ -39,67 +39,85 @@ def main():
     # Configuration des arguments en ligne de commande
     parser = argparse.ArgumentParser(description="Simulation de robot MVC")
     parser.add_argument('mode', 
-                      choices=['gui', 'cli'], 
-                      nargs='?',
-                      default='gui',
-                      help="Mode d'exécution: gui (par défaut) ou cli")
+                        choices=['gui', 'cli'], 
+                        nargs='?',
+                        default='gui',
+                        help="Mode d'exécution: gui (par défaut) ou cli")
     args = parser.parse_args()
 
     if args.mode == 'gui':
         # Import des composants GUI uniquement si nécessaire
         import tkinter as tk
+        from tkinter import ttk
         from controller.map_controller import MapController
         from view.robot_view import RobotView
         from view.map_view import MapView
         from view.control_panel import ControlPanel
 
-        class RobotApp:
-            """Classe principale pour l'interface graphique"""
-            def __init__(self, root):
-                self.root = root
-                self.root.title("Robot Simulation MVC")
-            
-                # Configuration des modèles
+        class MainApplication(tk.Tk):
+            def __init__(self):
+                super().__init__()
+                self.title("Robot Simulation MVC")
+                self._create_menu()
+
+                # Création de la zone principale
+                main_frame = ttk.Frame(self)
+                main_frame.pack(fill="both", expand=True)
+
+                # Zone de dessin (Canvas) en haut
+                canvas_frame = ttk.Frame(main_frame)
+                canvas_frame.pack(side="top", fill="both", expand=True)
+
+                # Zone de contrôle en bas
+                controls_frame = ttk.Frame(main_frame, padding=10)
+                controls_frame.pack(side="bottom", fill="x")
+
+                # Initialisation des modèles et du contrôleur de simulation
                 self.map_model = MapModel(20, 20)
                 self.robot_model = RobotModel(self.map_model)
                 self.sim_controller = SimulationController(self.map_model, self.robot_model)
-                
-                # Création des vues et contrôleurs
-                main_frame = tk.Frame(self.root)
-                main_frame.pack(fill=tk.BOTH, expand=True)
-                
-                self.robot_view = RobotView(main_frame, self.sim_controller)
+
+                # Création des vues
+                self.robot_view = RobotView(canvas_frame, self.sim_controller)
                 self.map_view = MapView(
-                    parent=main_frame,
+                    parent=canvas_frame,
                     rows=20,
                     cols=20,
                     grid_size=30,
                     robot_view=self.robot_view
                 )
-                
-                self.map_controller = MapController(
-                    map_model=self.map_model,
-                    map_view=self.map_view,
-                    window=self.root
-                )
-                
-                # Panneau de contrôle
-                self.control_panel = ControlPanel(
-                    parent=self.root,
-                    map_controller=self.map_controller,
-                    simulation_controller=self.sim_controller
-                )
-                
-                # Configuration du layout
-                self.control_panel.control_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
-                main_frame.pack(fill=tk.BOTH, expand=True)
-                self.map_view.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                self.robot_view.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+                # Le canvas occupe tout l'espace disponible
+                self.robot_view.canvas.pack(fill="both", expand=True)
+
+                # Création du contrôleur de la carte
+                self.map_controller = MapController(self.map_model, self.map_view, self)
+
+                # Pour centrer réellement les boutons, on crée un sous-frame
+                inner_frame = ttk.Frame(controls_frame)
+                # anchor='center' permet de centrer horizontalement
+                inner_frame.pack(anchor='center')
+
+                # Panneau de contrôle pour lancer la simulation, réinitialiser, etc.
+                self.control_panel = ControlPanel(inner_frame, self.map_controller, self.sim_controller)
+                self.control_panel.control_frame.pack(pady=5)
+
+                # Exemple : ajouter un listener pour mettre à jour certains éléments de l'interface
+                self.sim_controller.add_state_listener(self.on_state_update)
+
+            def _create_menu(self):
+                menubar = tk.Menu(self)
+                self.config(menu=menubar)
+                file_menu = tk.Menu(menubar, tearoff=False)
+                menubar.add_cascade(label="File", menu=file_menu)
+                file_menu.add_command(label="Quit", command=self.quit)
+
+            def on_state_update(self, state):
+                # Mise à jour de l'interface en temps réel si besoin
+                pass
 
         # Lancement de l'application GUI
-        root = tk.Tk()
-        app = RobotApp(root)
-        root.mainloop()
+        app = MainApplication()
+        app.mainloop()
     else:
         # Lancement de la version console
         simulation = HeadlessSimulation()
