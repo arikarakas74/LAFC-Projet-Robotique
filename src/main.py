@@ -94,15 +94,22 @@ def main():
 
                 # Pour centrer réellement les boutons, on crée un sous-frame
                 inner_frame = ttk.Frame(controls_frame)
-                # anchor='center' permet de centrer horizontalement
                 inner_frame.pack(anchor='center')
 
                 # Panneau de contrôle pour lancer la simulation, réinitialiser, etc.
                 self.control_panel = ControlPanel(inner_frame, self.map_controller, self.sim_controller)
                 self.control_panel.control_frame.pack(pady=5)
 
-                # Exemple : ajouter un listener pour mettre à jour certains éléments de l'interface
+                # Ajout d'un listener pour mettre à jour certains éléments de l'interface si nécessaire
                 self.sim_controller.add_state_listener(self.on_state_update)
+
+
+
+                # Ajout des bindings pour les commandes clavier via la fenêtre principale
+                self.bind("<q>", lambda event: self.sim_controller.robot_controller.increase_left_speed())
+                self.bind("<a>", lambda event: self.sim_controller.robot_controller.decrease_left_speed())
+                self.bind("<e>", lambda event: self.sim_controller.robot_controller.increase_right_speed())
+                self.bind("<d>", lambda event: self.sim_controller.robot_controller.decrease_right_speed())
 
             def _create_menu(self):
                 menubar = tk.Menu(self)
@@ -119,7 +126,7 @@ def main():
         app = MainApplication()
         app.mainloop()
     else:
-        # Lancement de la version console
+        # Lancement de la version console (CLI)
         simulation = HeadlessSimulation()
         simulation.run()
 

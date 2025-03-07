@@ -1,0 +1,62 @@
+2025-03-07 21:38:38,926 - Début du dessin d'un carré de côté 200 cm
+2025-03-07 21:38:38,926 - Coin enregistré: (229.0, 243.0)
+2025-03-07 21:38:38,927 - Nouveau côté commencé
+2025-03-07 21:38:41,230 - Côté terminé, distance atteinte = 201.23 cm, étape 0
+2025-03-07 21:38:41,230 - Coin enregistré: (430.23277960315846, 243.0)
+2025-03-07 21:38:41,230 - Passage à la phase de rotation
+2025-03-07 21:38:41,230 - Rotation démarrée
+2025-03-07 21:38:41,591 - Rotation terminée, étape 1
+2025-03-07 21:38:41,591 - Démarrage d'un nouveau côté
+2025-03-07 21:38:41,592 - Nouveau côté commencé
+2025-03-07 21:38:43,883 - Côté terminé, distance atteinte = 199.98 cm, étape 2
+2025-03-07 21:38:43,883 - Coin enregistré: (430.23277960315846, 442.9785971772993)
+2025-03-07 21:38:43,883 - Passage à la phase de rotation
+2025-03-07 21:38:43,883 - Rotation démarrée
+2025-03-07 21:38:44,263 - Rotation terminée, étape 3
+2025-03-07 21:38:44,263 - Démarrage d'un nouveau côté
+2025-03-07 21:38:44,263 - Nouveau côté commencé
+2025-03-07 21:38:46,559 - Côté terminé, distance atteinte = 200.35 cm, étape 4
+2025-03-07 21:38:46,559 - Coin enregistré: (229.8788015478339, 442.9785971772993)
+2025-03-07 21:38:46,559 - Passage à la phase de rotation
+2025-03-07 21:38:46,559 - Rotation démarrée
+2025-03-07 21:38:46,906 - Rotation terminée, étape 5
+2025-03-07 21:38:46,906 - Démarrage d'un nouveau côté
+2025-03-07 21:38:46,906 - Nouveau côté commencé
+2025-03-07 21:38:49,196 - Côté terminé, distance atteinte = 199.87 cm, étape 6
+2025-03-07 21:38:49,196 - Coin enregistré: (229.8788015478339, 243.11243533227164)
+2025-03-07 21:38:49,196 - Passage à la phase de rotation
+2025-03-07 21:38:49,196 - Rotation démarrée
+2025-03-07 21:38:49,477 - Rotation terminée, étape 7
+2025-03-07 21:38:49,477 - Dessin du carré terminé
+2025-03-07 21:38:49,478 - Le carré a été correctement dessiné.
+2025-03-07 22:10:07,635 - Début du dessin d'un carré de côté 200 cm
+2025-03-07 22:10:07,635 - Coin enregistré: (319.0, 337.0)
+2025-03-07 22:10:07,635 - Nouveau côté commencé
+2025-03-07 22:10:09,926 - Côté terminé, distance atteinte = 201.08 cm, étape 0
+2025-03-07 22:10:09,926 - Coin enregistré: (520.0766517842527, 337.0)
+2025-03-07 22:10:09,926 - Passage à la phase de rotation
+2025-03-07 22:10:09,926 - Rotation démarrée
+2025-03-07 22:10:10,303 - Rotation terminée, étape 1
+2025-03-07 22:10:10,303 - Démarrage d'un nouveau côté
+2025-03-07 22:10:10,303 - Nouveau côté commencé
+2025-03-07 22:10:12,606 - Côté terminé, distance atteinte = 200.99 cm, étape 2
+2025-03-07 22:10:12,606 - Coin enregistré: (520.0766517842527, 537.9934696120797)
+2025-03-07 22:10:12,607 - Passage à la phase de rotation
+2025-03-07 22:10:12,607 - Rotation démarrée
+2025-03-07 22:10:12,982 - Rotation terminée, étape 3
+2025-03-07 22:10:12,982 - Démarrage d'un nouveau côté
+2025-03-07 22:10:12,982 - Nouveau côté commencé
+2025-03-07 22:10:15,272 - Côté terminé, distance atteinte = 199.86 cm, étape 4
+2025-03-07 22:10:15,273 - Coin enregistré: (320.2183129749271, 537.9934696120797)
+2025-03-07 22:10:15,273 - Passage à la phase de rotation
+2025-03-07 22:10:15,273 - Rotation démarrée
+2025-03-07 22:10:15,668 - Rotation terminée, étape 5
+2025-03-07 22:10:15,668 - Démarrage d'un nouveau côté
+2025-03-07 22:10:15,668 - Nouveau côté commencé
+2025-03-07 22:10:17,965 - Côté terminé, distance atteinte = 200.46 cm, étape 6
+2025-03-07 22:10:17,965 - Coin enregistré: (320.2183129749271, 337.53423427585875)
+2025-03-07 22:10:17,965 - Passage à la phase de rotation
+2025-03-07 22:10:17,965 - Rotation démarrée
+2025-03-07 22:10:18,344 - Rotation terminée, étape 7
+2025-03-07 22:10:18,344 - Dessin du carré terminé
+2025-03-07 22:10:18,344 - Le carré a été correctement dessiné.
