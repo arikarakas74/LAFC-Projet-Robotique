@@ -1,14 +1,11 @@
-# robot_controller.py
 import math
-from utils.geometry import normalize_angle
-from model.robot import RobotModel
-from model.map_model import MapModel
 import keyboard
+from utils.geometry import normalize_angle
 
 SPEED_MULTIPLIER = 8.0
 
 class RobotController:
-    WHEEL_BASE_WIDTH = 20.0  # Doit correspondre à RobotModel
+    WHEEL_BASE_WIDTH = 20.0  # Correspond à RobotModel
     WHEEL_DIAMETER = 5.0
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
     SPEED_STEP = 30.0
@@ -33,7 +30,7 @@ class RobotController:
         keyboard.add_hotkey('s', self.move_backward)
 
     def draw_square(self, side_length_cm):
-        """Démarre un carré avec une précision de 0.1°"""
+        """Démarre le dessin d'un carré."""
         if not self.drawing_square:
             self.drawing_square = True
             self.square_step = 0
@@ -41,27 +38,24 @@ class RobotController:
             self._start_new_side()
 
     def _start_new_side(self):
-        """Initialise un côté avec référence de position"""
+        """Initialise un nouveau côté avec position et angle de départ."""
         self.start_x = self.robot_model.x
         self.start_y = self.robot_model.y
         self.start_angle = self.robot_model.direction_angle
-        self.set_motor_speed("left", 250)  # Vitesse réduite pour stabilité
+        self.set_motor_speed("left", 250)
         self.set_motor_speed("right", 250)
 
     def _start_rotation(self):
-        """Rotation contrôlée avec compensation inertielle"""
+        """Démarre la rotation pour passer à l'angle suivant."""
         self.start_angle = self.robot_model.direction_angle
-        self.set_motor_speed("left", 160)   # Vitesse optimisée
+        self.set_motor_speed("left", 160)
         self.set_motor_speed("right", -160)
 
     def update_physics(self, delta_time):
         if delta_time <= 0:
             return
 
-        # Application du multiplicateur de vitesse de façon uniforme
-        effective_delta_time = delta_time * SPEED_MULTIPLIER
-
-        # Calculs cinématiques précis
+        # Calculs pour la mise à jour physique du robot
         left_speed = self.robot_model.motor_speeds["left"]
         right_speed = self.robot_model.motor_speeds["right"]
 
@@ -71,14 +65,13 @@ class RobotController:
         linear_velocity = (left_velocity + right_velocity) / 2
         angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
-        # Mise à jour de la position
+        effective_delta_time = delta_time * SPEED_MULTIPLIER
+
         if left_velocity == right_velocity:
-            # Déplacement en ligne droite
             new_x = self.robot_model.x + linear_velocity * math.cos(self.robot_model.direction_angle) * effective_delta_time
             new_y = self.robot_model.y + linear_velocity * math.sin(self.robot_model.direction_angle) * effective_delta_time
             new_angle = self.robot_model.direction_angle
         else:
-            # Déplacement suivant un arc de cercle (rotation)
             R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
             delta_theta = angular_velocity * effective_delta_time
 
@@ -92,31 +85,26 @@ class RobotController:
         self.robot_model.update_position(new_x, new_y, new_angle)
         self.robot_model.update_motors(delta_time)
 
-        # Logique de contrôle du carré améliorée
+        # Logique pour la séquence du carré
         if self.drawing_square:
             if self.square_step % 2 == 0:  # Phase linéaire
-                distance = math.hypot(
-                    self.robot_model.x - self.start_x,
-                    self.robot_model.y - self.start_y
-                )
-                
-                # Marge de 0.5 cm + compensation dynamique
+                distance = math.hypot(self.robot_model.x - self.start_x,
+                                      self.robot_model.y - self.start_y)
                 if distance >= max(self.side_length - 0.5, self.side_length * 0.98):
                     self.stop()
                     self.square_step += 1
+
                     if self.square_step < 8:
                         self._start_rotation()
             else:  # Phase angulaire
                 current_angle = normalize_angle(self.robot_model.direction_angle)
                 target_angle = normalize_angle(self.start_angle + math.pi / 2)
                 angle_error = normalize_angle(target_angle - current_angle)
-                
-                # Contrôle proportionnel pour précision
+
                 if abs(angle_error) < math.radians(5):
                     self.set_motor_speed("left", 60 * (angle_error / math.radians(5)))
                     self.set_motor_speed("right", -60 * (angle_error / math.radians(5)))
-                
-                # Validation finale avec compensation
+
                 if abs(angle_error) <= math.radians(0.1):
                     self.stop()
                     self.robot_model.update_position(
@@ -125,13 +113,12 @@ class RobotController:
                         target_angle  # Forçage de l'angle exact
                     )
                     self.square_step += 1
+
                     if self.square_step < 8:
                         self._start_new_side()
                     else:
                         self.drawing_square = False
 
-
-    # Méthodes existantes
     def set_motor_speed(self, motor, speed):
         self.robot_model.set_motor_speed(motor, speed)
 
