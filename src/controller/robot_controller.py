@@ -1,6 +1,6 @@
 import math
 import logging
-import keyboard
+import threading
 from utils.geometry import normalize_angle
 
 # Initialisation du logger pour le dessin de carré
@@ -19,7 +19,7 @@ class RobotController:
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
     SPEED_STEP = 30.0
 
-    def __init__(self, robot_model, map_model):
+    def __init__(self, robot_model, map_model, cli_mode=True):
         self.robot_model = robot_model
         self.map_model = map_model
         self.drawing_square = False
@@ -39,15 +39,28 @@ class RobotController:
         position_handler.setFormatter(position_formatter)
         self.position_logger.addHandler(position_handler)
         
-        self._setup_key_bindings()
+        # Démarrage du thread de saisie uniquement en mode CLI
+        if cli_mode:
+            self._start_input_thread()
 
-    def _setup_key_bindings(self):
-        keyboard.add_hotkey('q', self.increase_left_speed)
-        keyboard.add_hotkey('a', self.decrease_left_speed)
-        keyboard.add_hotkey('e', self.increase_right_speed)
-        keyboard.add_hotkey('d', self.decrease_right_speed)
-        keyboard.add_hotkey('w', self.move_forward)
-        keyboard.add_hotkey('s', self.move_backward)
+    def _start_input_thread(self):
+        threading.Thread(target=self._read_input, daemon=True).start()
+
+    def _read_input(self):
+        while True:
+            key = input("Press a key (q/a/e/d/w/s): ").strip()
+            if key == 'q':
+                self.increase_left_speed()
+            elif key == 'a':
+                self.decrease_left_speed()
+            elif key == 'e':
+                self.increase_right_speed()
+            elif key == 'd':
+                self.decrease_right_speed()
+            elif key == 'w':
+                self.move_forward()
+            elif key == 's':
+                self.move_backward()
 
     def draw_square(self, side_length_cm):
         """Démarre le dessin d'un carré et enregistre les coins dans le fichier de log."""
@@ -198,7 +211,6 @@ class RobotController:
             cos_angle = max(-1, min(1, cos_angle))
             return math.acos(cos_angle)
 
-        # Pour chaque coin (sauf le premier et le dernier, identiques)
         for i in range(1, len(self.corners) - 1):
             v1 = (self.corners[i][0] - self.corners[i-1][0],
                   self.corners[i][1] - self.corners[i-1][1])
