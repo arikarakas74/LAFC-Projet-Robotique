@@ -31,7 +31,7 @@ class RobotController:
         # Liste pour enregistrer les coins
         self.corners = []
         
-        # Ajout du logger pour la traçabilité des positions
+        # Logger pour la traçabilité des positions
         self.position_logger = logging.getLogger('traceability.positions')
         self.position_logger.setLevel(logging.INFO)
         position_handler = logging.FileHandler('traceability_positions.log')
@@ -158,6 +158,57 @@ class RobotController:
                     else:
                         square_logger.info("Dessin du carré terminé")
                         self.drawing_square = False
+                        # Vérification de la validité du carré
+                        if self.check_square():
+                            square_logger.info("Le carré a été correctement dessiné.")
+                        else:
+                            square_logger.info("Le carré n'est pas correctement dessiné.")
+
+    def check_square(self, distance_tolerance=0.1, angle_tolerance=0.1745):
+        """
+        Vérifie que le carré est correctement tracé.
+        - distance_tolerance : tolérance relative pour la longueur des côtés (10% par défaut)
+        - angle_tolerance : tolérance en radians pour l'angle (environ 10°)
+        """
+        # Le carré doit avoir au moins 5 coins (le premier répété à la fin)
+        if len(self.corners) < 5:
+            return False
+
+        # Vérifier que le premier et le dernier coin se rejoignent
+        first = self.corners[0]
+        last = self.corners[-1]
+        if math.hypot(last[0] - first[0], last[1] - first[1]) > distance_tolerance * self.side_length:
+            return False
+
+        # Vérifier la longueur de chaque côté
+        for i in range(1, len(self.corners)):
+            d = math.hypot(self.corners[i][0] - self.corners[i-1][0],
+                           self.corners[i][1] - self.corners[i-1][1])
+            if abs(d - self.side_length) > distance_tolerance * self.side_length:
+                return False
+
+        # Vérifier que les angles entre les côtés sont proches de 90°
+        def angle_between(v1, v2):
+            dot = v1[0]*v2[0] + v1[1]*v2[1]
+            norm1 = math.hypot(v1[0], v1[1])
+            norm2 = math.hypot(v2[0], v2[1])
+            if norm1 == 0 or norm2 == 0:
+                return 0
+            cos_angle = dot / (norm1 * norm2)
+            cos_angle = max(-1, min(1, cos_angle))
+            return math.acos(cos_angle)
+
+        # Pour chaque coin (sauf le premier et le dernier, identiques)
+        for i in range(1, len(self.corners) - 1):
+            v1 = (self.corners[i][0] - self.corners[i-1][0],
+                  self.corners[i][1] - self.corners[i-1][1])
+            v2 = (self.corners[i+1][0] - self.corners[i][0],
+                  self.corners[i+1][1] - self.corners[i][1])
+            angle = angle_between(v1, v2)
+            if abs(angle - math.pi/2) > angle_tolerance:
+                return False
+
+        return True
 
     def set_motor_speed(self, motor, speed):
         self.robot_model.set_motor_speed(motor, speed)
