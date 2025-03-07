@@ -30,6 +30,15 @@ class RobotController:
         self.start_angle = 0.0
         # Liste pour enregistrer les coins
         self.corners = []
+        
+        # Ajout du logger pour la traçabilité des positions
+        self.position_logger = logging.getLogger('traceability.positions')
+        self.position_logger.setLevel(logging.INFO)
+        position_handler = logging.FileHandler('traceability_positions.log')
+        position_formatter = logging.Formatter('%(asctime)s - Position: %(message)s')
+        position_handler.setFormatter(position_formatter)
+        self.position_logger.addHandler(position_handler)
+        
         self._setup_key_bindings()
 
     def _setup_key_bindings(self):
@@ -102,6 +111,9 @@ class RobotController:
 
         self.robot_model.update_position(new_x, new_y, new_angle)
         self.robot_model.update_motors(delta_time)
+        
+        # Enregistrement de la nouvelle position pour la traçabilité
+        self.position_logger.info(f"x={self.robot_model.x:.2f}, y={self.robot_model.y:.2f}, angle={math.degrees(self.robot_model.direction_angle):.2f}°")
 
         # Logique pour la séquence du carré
         if self.drawing_square:
