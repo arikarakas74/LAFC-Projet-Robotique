@@ -1,6 +1,15 @@
 import math
+import logging
 import keyboard
 from utils.geometry import normalize_angle
+
+# Initialisation du logger pour le dessin de carré
+square_logger = logging.getLogger('traceability.square')
+square_logger.setLevel(logging.INFO)
+square_handler = logging.FileHandler('traceability_square.log')
+square_formatter = logging.Formatter('%(asctime)s - %(message)s')
+square_handler.setFormatter(square_formatter)
+square_logger.addHandler(square_handler)
 
 SPEED_MULTIPLIER = 8.0
 
@@ -19,6 +28,8 @@ class RobotController:
         self.start_x = 0.0
         self.start_y = 0.0
         self.start_angle = 0.0
+        # Liste pour enregistrer les coins
+        self.corners = []
         self._setup_key_bindings()
 
     def _setup_key_bindings(self):
@@ -30,11 +41,16 @@ class RobotController:
         keyboard.add_hotkey('s', self.move_backward)
 
     def draw_square(self, side_length_cm):
-        """Démarre le dessin d'un carré."""
+        """Démarre le dessin d'un carré et enregistre les coins dans le fichier de log."""
         if not self.drawing_square:
             self.drawing_square = True
             self.square_step = 0
             self.side_length = side_length_cm
+            square_logger.info(f"Début du dessin d'un carré de côté {side_length_cm} cm")
+            # Initialisation de la liste des coins (premier coin = position de départ)
+            self.corners = []
+            self.corners.append((self.robot_model.x, self.robot_model.y))
+            square_logger.info(f"Coin enregistré: ({self.robot_model.x}, {self.robot_model.y})")
             self._start_new_side()
 
     def _start_new_side(self):
@@ -44,12 +60,14 @@ class RobotController:
         self.start_angle = self.robot_model.direction_angle
         self.set_motor_speed("left", 250)
         self.set_motor_speed("right", 250)
+        square_logger.info("Nouveau côté commencé")
 
     def _start_rotation(self):
         """Démarre la rotation pour passer à l'angle suivant."""
         self.start_angle = self.robot_model.direction_angle
         self.set_motor_speed("left", 160)
         self.set_motor_speed("right", -160)
+        square_logger.info("Rotation démarrée")
 
     def update_physics(self, delta_time):
         if delta_time <= 0:
@@ -91,10 +109,17 @@ class RobotController:
                 distance = math.hypot(self.robot_model.x - self.start_x,
                                       self.robot_model.y - self.start_y)
                 if distance >= max(self.side_length - 0.5, self.side_length * 0.98):
+                    square_logger.info(f"Côté terminé, distance atteinte = {distance:.2f} cm, étape {self.square_step}")
                     self.stop()
                     self.square_step += 1
 
+                    # Enregistrement du coin (fin du côté)
+                    coin = (self.robot_model.x, self.robot_model.y)
+                    self.corners.append(coin)
+                    square_logger.info(f"Coin enregistré: {coin}")
+
                     if self.square_step < 8:
+                        square_logger.info("Passage à la phase de rotation")
                         self._start_rotation()
             else:  # Phase angulaire
                 current_angle = normalize_angle(self.robot_model.direction_angle)
@@ -106,6 +131,7 @@ class RobotController:
                     self.set_motor_speed("right", -60 * (angle_error / math.radians(5)))
 
                 if abs(angle_error) <= math.radians(0.1):
+                    square_logger.info(f"Rotation terminée, étape {self.square_step}")
                     self.stop()
                     self.robot_model.update_position(
                         self.robot_model.x,
@@ -115,8 +141,10 @@ class RobotController:
                     self.square_step += 1
 
                     if self.square_step < 8:
+                        square_logger.info("Démarrage d'un nouveau côté")
                         self._start_new_side()
                     else:
+                        square_logger.info("Dessin du carré terminé")
                         self.drawing_square = False
 
     def set_motor_speed(self, motor, speed):
