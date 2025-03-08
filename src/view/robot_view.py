@@ -13,6 +13,8 @@ class RobotView:
         self.speed_label.pack()
         self.WHEEL_BASE_WIDTH = sim_controller.robot_model.WHEEL_BASE_WIDTH
         sim_controller.add_state_listener(self.update_display)
+        self.last_x = None
+        self.last_y = None
 
     def update_display(self, state):
         self.parent.after(0, self._safe_update, state)
@@ -27,6 +29,12 @@ class RobotView:
         size = 15
         x, y = state['x'], state['y']
         direction_angle = state['angle']
+
+        if self.last_x is not None and self.last_y is not None:
+            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
+        
+        self.last_x = x
+        self.last_y = y
         
         size = 30
         front = (x + size * math.cos(direction_angle),y + size * math.sin(direction_angle))
@@ -42,6 +50,9 @@ class RobotView:
     def clear_robot(self):
         """Clears the robot from the canvas."""
         self.canvas.delete("robot")
+        self.canvas.delete("trace")
+        self.last_x = None
+        self.last_y = None
 
         if self.speed_label:
             self.speed_label.config(text="")
