@@ -38,6 +38,11 @@ class RobotController:
         position_formatter = logging.Formatter('%(asctime)s - Position: %(message)s')
         position_handler.setFormatter(position_formatter)
         self.position_logger.addHandler(position_handler)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(position_formatter)
+        self.position_logger.addHandler(console_handler)
         
         # Démarrage du thread de saisie uniquement en mode CLI
         if cli_mode:
