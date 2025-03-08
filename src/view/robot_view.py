@@ -26,7 +26,6 @@ class RobotView:
     def _draw_robot(self, state):
         """Dessiner le robot avec self.x et self.y"""
         self.canvas.delete("robot")
-        size = 15
         x, y = state['x'], state['y']
         direction_angle = state['angle']
 
@@ -44,7 +43,8 @@ class RobotView:
         self.canvas.create_polygon(front, left, right, fill="blue", tags="robot")
 
     def _update_labels(self, state):
-        text = f"Left: {state['left_speed']}°/s | Right: {state['right_speed']}°/s"
+        angle_deg = math.degrees(state['angle'])
+        text = f"Left: {state['left_speed']}°/s | Right: {state['right_speed']}°/s | Angle: {angle_deg:.2f}°"
         self.speed_label.config(text=text)
 
     def clear_robot(self):
