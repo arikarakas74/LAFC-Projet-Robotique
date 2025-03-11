@@ -31,7 +31,7 @@ class SimulationController:
     WHEEL_DIAMETER = 5.0     # Diamètre des roues (cm)
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
 
-    def __init__(self, map_model, robot_model):
+    def __init__(self, map_model, robot_model, cli_mode = False):
         """
         Initialise le contrôleur de simulation.
         
@@ -40,7 +40,7 @@ class SimulationController:
         """
         self.robot_model = robot_model
         self.map_model = map_model
-        self.robot_controller = RobotController(self.robot_model, self.map_model)
+        self.robot_controller = RobotController(self.robot_model, self.map_model, cli_mode)
         self.simulation_running = False
         self.listeners: List[Callable[[dict], None]] = []
         self.update_interval = 0.02  # Intervalle de mise à jour : 50 Hz
@@ -63,10 +63,11 @@ class SimulationController:
         self.position_logger.addHandler(position_handler)
 
         # Logger pour afficher en console
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(position_formatter)
-        self.position_logger.addHandler(console_handler)
+        if not cli_mode:
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
+            console_handler.setFormatter(position_formatter)
+            self.position_logger.addHandler(console_handler)
 
         self.simulation_thread = None
 
