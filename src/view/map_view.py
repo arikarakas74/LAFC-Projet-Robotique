@@ -29,13 +29,6 @@ class MapView:
 
     # Méthodes draw_*, delete_*, etc. (identiques à votre code original)
 
-    def draw_grid(self):
-        """Draws the grid lines on the canvas."""
-        for i in range(self.rows + 1):
-            self.canvas.create_line(0, i * self.grid_size, self.width, i * self.grid_size, fill="lightgrey")
-        for j in range(self.cols + 1):
-            self.canvas.create_line(j * self.grid_size, 0, j * self.grid_size, self.height, fill="lightgrey")
-
     def draw_start(self, position):
         """Draws the start position marker."""
         print("Drawing")
@@ -85,11 +78,6 @@ class MapView:
     def update_message_label(self, text):
         """Updates the message label text."""
         pass
-
-    def create_speed_label(self):
-        """Creates the speed label."""
-        self.speed_label = tk.Label(self.parent.window, text="left wheel speed: 0.00 - right wheel speed: 0.00 | direction_angle: 0°")
-        self.speed_label.pack()
 
     def clear_all(self):
         """Clears all items on the canvas and resets UI components."""
