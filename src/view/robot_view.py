@@ -44,7 +44,7 @@ class RobotView:
 
     def _update_labels(self, state):
         angle_deg = math.degrees(state['angle'])
-        text = f"Left: {state['left_speed']}°/s | Right: {state['right_speed']}°/s | Angle: {angle_deg:.2f}°"
+        text = f"Left: {state['left_speed']:.1f}°/s | Right: {state['right_speed']:.1f}°/s | Angle: {angle_deg:.2f}°"
         self.speed_label.config(text=text)
 
     def clear_robot(self):
