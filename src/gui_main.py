@@ -30,7 +30,7 @@ class MainApplication(tk.Tk):
         self.map_model = MapModel(20, 20)
         self.robot_model = RobotModel(self.map_model)
         # Pass cli_mode=False to avoid launching the CLI input thread.
-        self.sim_controller = SimulationController(self.map_model, self.robot_model)
+        self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
 
         # Create the views
         self.robot_view = RobotView(canvas_frame, self.sim_controller)

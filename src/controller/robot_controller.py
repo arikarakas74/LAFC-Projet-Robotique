@@ -4,7 +4,7 @@ import threading
 
 class RobotController:
     SPEED_STEP = 30.0
-    def __init__(self, robot_model, map_model, cli_mode=True):
+    def __init__(self, robot_model, map_model, cli_mode=False):
         self.robot_model = robot_model
         self.map_model = map_model
 

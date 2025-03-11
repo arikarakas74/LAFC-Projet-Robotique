@@ -10,7 +10,7 @@ class HeadlessSimulation:
         self.map_model = MapModel(20, 20)
         self.robot_model = RobotModel(self.map_model)
         # By default, RobotController in SimulationController will launch its CLI input thread.
-        self.sim_controller = SimulationController(self.map_model, self.robot_model)
+        self.sim_controller = SimulationController(self.map_model, self.robot_model, True)
         self.sim_controller.add_state_listener(self.print_state)
     
     def print_state(self, state):
@@ -25,8 +25,8 @@ class HeadlessSimulation:
         self.sim_controller.run_simulation()
         
         # Example of an automatic command
-        self.sim_controller.robot_controller.set_motor_speed("left", 2)
-        self.sim_controller.robot_controller.set_motor_speed("right", 2)
+        self.sim_controller.robot_model.set_motor_speed("left", 0)
+        self.sim_controller.robot_model.set_motor_speed("right", 0)
         
         try:
             while True:
