@@ -40,4 +40,3 @@ class RobotModel:
         """Met à jour les positions des moteurs avec le temps écoulé"""
         for motor in ["left", "right"]:
             self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
-            self.motor_positions[motor] %= 360  # Normalisation à 
