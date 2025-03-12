@@ -322,6 +322,8 @@ class SimulationController:
         self.stop_simulation()
         self.robot_model.x, self.robot_model.y = self.map_model.start_position
         self.robot_model.direction_angle = 0.0
+        if self.drawing_square :
+            self.drawing_square=False
 
     def square(self):
         """Méthode raccourcie pour démarrer le dessin d'un carré de 200 cm de côté."""
