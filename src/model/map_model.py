@@ -57,15 +57,14 @@ class MapModel:
     
     def is_out_of_bounds(self, x, y):
         """Vérifie si le robot sort des limites de la carte."""
-        MAP_WIDTH = 800  
-        MAP_HEIGHT = 600  
-        ROBOT_RADIUS = 10 
+        MAP_WIDTH = 800
+        MAP_HEIGHT = 600
 
-        if x - ROBOT_RADIUS < 0:
-            return "LEFT" 
-        if x + ROBOT_RADIUS > MAP_WIDTH:
-            return "RIGHT" 
-        if y - ROBOT_RADIUS < 0:
-            return "TOP" 
-        if y + ROBOT_RADIUS > MAP_HEIGHT:
-            return "BOTTOM"
+        if x  < 0:
+            return True 
+        if x > MAP_WIDTH:
+            return True
+        if y < 0:
+            return True
+        if y > MAP_HEIGHT:
+            return True
