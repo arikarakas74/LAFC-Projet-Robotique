@@ -29,3 +29,37 @@
 2025-03-10 13:22:16,935 - Rotation terminée, étape 7
 2025-03-10 13:22:16,935 - Dessin du carré terminé
 2025-03-10 13:22:16,935 - Le carré a été correctement dessiné.
+2025-03-12 10:30:09,300 - Début du dessin d'un carré de côté 200 cm
+2025-03-12 10:30:09,300 - Coin enregistré: (326.4390640773008, 271.0)
+2025-03-12 10:30:09,300 - Nouveau côté commencé
+2025-03-12 10:30:29,756 - Début du dessin d'un carré de côté 200 cm
+2025-03-12 10:30:29,756 - Coin enregistré: (230.0, 266.0)
+2025-03-12 10:30:29,756 - Nouveau côté commencé
+2025-03-12 10:30:32,054 - Côté terminé, distance atteinte = 200.63 cm, étape 0
+2025-03-12 10:30:32,054 - Coin enregistré: (430.6313629276131, 266.0)
+2025-03-12 10:30:32,055 - Passage à la phase de rotation
+2025-03-12 10:30:32,055 - Rotation démarrée
+2025-03-12 10:30:32,445 - Rotation terminée, étape 1
+2025-03-12 10:30:32,445 - Démarrage d'un nouveau côté
+2025-03-12 10:30:32,445 - Nouveau côté commencé
+2025-03-12 10:30:34,738 - Côté terminé, distance atteinte = 200.16 cm, étape 2
+2025-03-12 10:30:34,738 - Coin enregistré: (430.6313629276131, 466.16337478386976)
+2025-03-12 10:30:34,738 - Passage à la phase de rotation
+2025-03-12 10:30:34,738 - Rotation démarrée
+2025-03-12 10:30:35,127 - Rotation terminée, étape 3
+2025-03-12 10:30:35,127 - Démarrage d'un nouveau côté
+2025-03-12 10:30:35,127 - Nouveau côté commencé
+2025-03-12 10:30:37,422 - Côté terminé, distance atteinte = 200.24 cm, étape 4
+2025-03-12 10:30:37,422 - Coin enregistré: (230.3877812218508, 466.16337478386976)
+2025-03-12 10:30:37,422 - Passage à la phase de rotation
+2025-03-12 10:30:37,422 - Rotation démarrée
+2025-03-12 10:30:37,812 - Rotation terminée, étape 5
+2025-03-12 10:30:37,812 - Démarrage d'un nouveau côté
+2025-03-12 10:30:37,812 - Nouveau côté commencé
+2025-03-12 10:30:40,103 - Côté terminé, distance atteinte = 199.94 cm, étape 6
+2025-03-12 10:30:40,103 - Coin enregistré: (230.3877812218508, 266.22033496831193)
+2025-03-12 10:30:40,103 - Passage à la phase de rotation
+2025-03-12 10:30:40,103 - Rotation démarrée
+2025-03-12 10:30:40,492 - Rotation terminée, étape 7
+2025-03-12 10:30:40,492 - Dessin du carré terminé
+2025-03-12 10:30:40,492 - Le carré a été correctement dessiné.

@@ -18,7 +18,6 @@ class RobotModel:
     def update_position(self, new_x: float, new_y: float, new_angle: float):
         """Met à jour la position après vérification des collisions"""
         if not ( self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y)):
-            print( self.map_model.is_out_of_bounds(new_x, new_y))
             self.x = new_x
             self.y = new_y
             self.direction_angle =normalize_angle(new_angle)

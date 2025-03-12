@@ -7,7 +7,7 @@ from model.robot import RobotModel
 class HeadlessSimulation:
     """Class for running the simulation in CLI mode (without a GUI)."""
     def __init__(self):
-        self.map_model = MapModel(20, 20)
+        self.map_model = MapModel()
         self.robot_model = RobotModel(self.map_model)
         # By default, RobotController in SimulationController will launch its CLI input thread.
         self.sim_controller = SimulationController(self.map_model, self.robot_model, True)
