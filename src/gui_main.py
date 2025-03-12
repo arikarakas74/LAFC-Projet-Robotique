@@ -27,7 +27,7 @@ class MainApplication(tk.Tk):
         controls_frame.pack(side="bottom", fill="x")
 
         # Initialize models and simulation controller
-        self.map_model = MapModel(20, 20)
+        self.map_model = MapModel()
         self.robot_model = RobotModel(self.map_model)
         # Pass cli_mode=False to avoid launching the CLI input thread.
         self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
@@ -36,9 +36,6 @@ class MainApplication(tk.Tk):
         self.robot_view = RobotView(canvas_frame, self.sim_controller)
         self.map_view = MapView(
             parent=canvas_frame,
-            rows=20,
-            cols=20,
-            grid_size=30,
             robot_view=self.robot_view
         )
         self.robot_view.canvas.pack(fill="both", expand=True)

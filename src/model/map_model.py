@@ -3,9 +3,7 @@ from utils.geometry import point_in_polygon
 class MapModel:
     """Stocke les données de la carte (obstacles, positions de départ/arrivée)."""
 
-    def __init__(self, rows, cols):
-        self.rows = rows
-        self.cols = cols
+    def __init__(self):
         self.obstacles = {}  # Format: {obstacle_id: points}
         self.start_position = (0,0)
         self.end_position = None

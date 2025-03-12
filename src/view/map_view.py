@@ -3,11 +3,8 @@ import tkinter as tk
 class MapView:
     """Gère l'affichage graphique de la carte."""
 
-    def __init__(self, parent, rows, cols, grid_size, robot_view):
+    def __init__(self, parent,robot_view):
         self.parent = parent
-        self.rows = rows
-        self.cols = cols
-        self.grid_size = grid_size
         self.robot_view = robot_view
         
         # Création du canvas
