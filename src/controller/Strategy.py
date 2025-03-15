@@ -457,7 +457,7 @@ class FollowBeaconStrategy(AsyncCommand):
     Strategy to make the robot follow a beacon (end position).
     The robot will orient itself towards the beacon and move towards it.
     """
-    def __init__(self, distance_tolerance=10, angle_tolerance=0.1, movement_speed=100, turning_speed=45):
+    def __init__(self, distance_tolerance=10, angle_tolerance=0.2, movement_speed=100, turning_speed=45):
         """
         Initialize the strategy.
         
@@ -468,7 +468,7 @@ class FollowBeaconStrategy(AsyncCommand):
             turning_speed: The speed at which the robot turns towards the beacon (degrees per second)
         """
         self.distance_tolerance = distance_tolerance
-        self.angle_tolerance = angle_tolerance
+        self.angle_tolerance = angle_tolerance  # Increased from 0.1 to 0.2 radians (about 11 degrees)
         self.movement_speed = movement_speed
         self.turning_speed = turning_speed
         self.started = False
@@ -523,25 +523,34 @@ class FollowBeaconStrategy(AsyncCommand):
         # Calculate the difference between the current angle and the target angle
         angle_diff = normalize_angle(target_angle - yaw)
         
-        # If we're not facing the beacon, turn towards it
-        if abs(angle_diff) > self.angle_tolerance:
-            # Use proportional control for smoother turning
-            turn_speed = min(self.turning_speed, abs(angle_diff) * 180 / math.pi)
-            
-            # Set motor speeds for turning
-            if angle_diff > 0:
-                robot_model.set_motor_speed("left", turn_speed)
-                robot_model.set_motor_speed("right", -turn_speed)
-            else:
-                robot_model.set_motor_speed("left", -turn_speed)
-                robot_model.set_motor_speed("right", turn_speed)
-                
-            self.logger.info(f"Turning towards beacon, angle diff: {math.degrees(angle_diff):.2f}°")
-        else:
-            # We're facing the beacon, move towards it
-            robot_model.set_motor_speed("left", self.movement_speed)
-            robot_model.set_motor_speed("right", self.movement_speed)
-            self.logger.info(f"Moving towards beacon, distance: {distance:.2f}cm")
+        # Use a combined approach: turn and move at the same time with different speeds
+        # This prevents the robot from getting stuck in a perpetual turning loop
+        
+        # Calculate turn component based on angle difference
+        # Use a proportional control with gain of 0.8 (this is a tuning parameter)
+        turn_factor = min(1.0, abs(angle_diff) / math.pi)  # Normalized from 0 to 1
+        turn_speed = self.turning_speed * turn_factor * 0.8
+        
+        # Calculate forward movement component
+        # Move faster when facing the target, slower when turning sharply
+        forward_factor = 1.0 - min(0.8, turn_factor)  # Higher when more aligned
+        forward_speed = self.movement_speed * forward_factor
+        
+        # Apply motor speeds with differential steering
+        if angle_diff > 0:  # Need to turn left
+            robot_model.set_motor_speed("left", forward_speed - turn_speed)
+            robot_model.set_motor_speed("right", forward_speed + turn_speed)
+        else:  # Need to turn right
+            robot_model.set_motor_speed("left", forward_speed + turn_speed)
+            robot_model.set_motor_speed("right", forward_speed - turn_speed)
+        
+        # Log movement data
+        self.logger.info(
+            f"Moving toward beacon at ({beacon_x:.2f}, {beacon_y:.2f}), " +
+            f"distance: {distance:.2f}cm, " +
+            f"angle diff: {math.degrees(angle_diff):.2f}°, " +
+            f"forward: {forward_speed:.2f}, turn: {turn_speed:.2f}"
+        )
             
         return False
         
