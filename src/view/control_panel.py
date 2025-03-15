@@ -84,7 +84,8 @@ class ControlPanel:
             
         # -- Additional velocity components that might exist --
         for attr in dir(robot_model):
-            if 'velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr:
+            # Exclude 'motor_speeds' to prevent overwriting the dictionary
+            if attr != 'motor_speeds' and ('velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr):
                 try:
                     setattr(robot_model, attr, 0)
                 except:
