@@ -316,17 +316,5 @@ class RobotView3D:
         # Show a message that beacon has been set
         self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f})")
         
-        # If the simulation is already running, update the robot to follow the new beacon position
-        if self.sim_controller.simulation_running:
-            # Stop any current strategy
-            self.sim_controller.stop_strategy()
-            
-            # Small delay to ensure the previous strategy is fully stopped
-            import threading
-            threading.Timer(0.2, self.sim_controller.follow_beacon).start()
-            
-            # Log that we're updating to follow a new beacon
-            self.info_label.config(text=f"Following new beacon at ({world_x:.1f}, {world_y:.1f})")
-        
         # Redraw the scene immediately
         self._render_scene() 

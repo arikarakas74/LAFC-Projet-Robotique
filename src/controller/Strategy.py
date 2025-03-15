@@ -475,10 +475,13 @@ class FollowBeaconStrategy(AsyncCommand):
         self.finished = False
         self.current_command = None
         self.logger = logging.getLogger("strategy.FollowBeaconStrategy")
+        self.last_beacon_pos = None  # Track the last beacon position to detect changes
         
     def start(self, robot_model):
         """Start following the beacon."""
         self.started = True
+        # Initialize the last beacon position
+        self.last_beacon_pos = robot_model.map_model.end_position
         self.logger.info("Started following beacon")
         
     def step(self, robot_model, delta_time):
@@ -499,6 +502,11 @@ class FollowBeaconStrategy(AsyncCommand):
             self.logger.error("No beacon position set")
             self.finished = True
             return True
+        
+        # Check if the beacon position has changed
+        if self.last_beacon_pos != beacon_pos:
+            self.logger.info(f"Beacon position changed to {beacon_pos}")
+            self.last_beacon_pos = beacon_pos
             
         beacon_x, beacon_y = beacon_pos
         beacon_z = 0  # Assume beacon is at ground level
