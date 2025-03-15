@@ -357,9 +357,27 @@ class SimulationController:
         self.position_logger.info(f"Started following beacon at ({beacon_x}, {beacon_y})")
         
     def stop_strategy(self):
-        """Stops any running strategy."""
-        self.strategy_executor.stop()
-        self.position_logger.info("Stopped strategy execution")
+        """
+        Stops any running strategy and ensures a clean state.
+        
+        This method ensures the robot motors are stopped and any running
+        strategy is properly terminated.
+        """
+        if self.strategy_executor.is_running():
+            # Log what strategy we're stopping
+            strategy_name = self.strategy_executor.current_strategy.__class__.__name__
+            self.position_logger.info(f"Stopping active {strategy_name}")
+            
+            # Stop the strategy executor
+            self.strategy_executor.stop()
+            
+            # Ensure motors are completely stopped
+            self.robot_model.set_motor_speed("left", 0)
+            self.robot_model.set_motor_speed("right", 0)
+            
+            self.position_logger.info("Strategy execution stopped, motors reset")
+        else:
+            self.position_logger.info("No active strategy to stop")
     
     def is_strategy_running(self):
         """

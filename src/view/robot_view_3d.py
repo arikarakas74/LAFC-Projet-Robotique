@@ -319,10 +319,22 @@ class RobotView3D:
         # Show a message that beacon has been set
         self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f})")
         
-        # If simulation is running with a beacon strategy, ensure it detects the new position
-        if self.sim_controller.simulation_running and self.sim_controller.strategy_executor.is_running():
-            # Log that we've updated the beacon position during active simulation
-            self.sim_controller.position_logger.info(f"Beacon position updated during active simulation: ({world_x:.1f}, {world_y:.1f})")
+        # If a strategy is currently running, check if it's a FollowBeaconStrategy
+        # and trigger an update to the beacon position
+        if self.sim_controller.is_strategy_running():
+            strategy_executor = self.sim_controller.strategy_executor
+            current_strategy = strategy_executor.current_strategy
+            
+            # If we've interrupted something like a triangle strategy, start following the beacon
+            if not isinstance(current_strategy, FollowBeaconStrategy):
+                self.sim_controller.strategy_executor.stop()
+                self.sim_controller.position_logger.info(f"Stopped existing strategy to follow new beacon at ({world_x:.1f}, {world_y:.1f})")
+                # Start following the beacon after a brief pause to ensure the robot has stopped
+                self.after(100, self.sim_controller.follow_beacon)
+            else:
+                # If already following a beacon, just reset the state to pick up the new position
+                current_strategy.reset_state()
+                self.sim_controller.position_logger.info(f"Updating beacon target to ({world_x:.1f}, {world_y:.1f})")
         
-        # Redraw the scene immediately
+        # Force immediate redraw to show the beacon
         self._render_scene() 
