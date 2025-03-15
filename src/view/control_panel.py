@@ -1,6 +1,7 @@
 import tkinter as tk
 import math
 import time
+import inspect
 
 class ControlPanel:
     """Panneau de contrôle pour les interactions utilisateur."""
@@ -84,8 +85,11 @@ class ControlPanel:
             
         # -- Additional velocity components that might exist --
         for attr in dir(robot_model):
-            # Exclude 'motor_speeds' to prevent overwriting the dictionary
-            if attr != 'motor_speeds' and ('velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr):
+            # Skip motor_speeds, methods, functions, and special attributes
+            if (attr != 'motor_speeds' and 
+                not attr.startswith('__') and 
+                not callable(getattr(robot_model, attr)) and
+                ('velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr)):
                 try:
                     setattr(robot_model, attr, 0)
                 except:
