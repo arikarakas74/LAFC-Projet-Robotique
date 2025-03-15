@@ -322,6 +322,20 @@ class SimulationController:
         The robot will orient itself towards the beacon and move towards it.
         If no beacon is set, a warning will be logged.
         """
+        # Check if a strategy is already running
+        if self.strategy_executor.is_running():
+            current_strategy = self.strategy_executor.current_strategy
+            # If it's already a FollowBeaconStrategy, just ensure it's aware of any changes
+            if isinstance(current_strategy, FollowBeaconStrategy):
+                self.position_logger.info("Already following beacon - continuing with current strategy")
+                # Reset the state to ensure it picks up the latest beacon position
+                current_strategy.reset_state()
+                return
+            else:
+                # If a different strategy is running, stop it
+                self.strategy_executor.stop()
+                self.position_logger.info("Stopped previous strategy to follow beacon")
+            
         # Check if the beacon is set
         if self.map_model.end_position is None:
             self.position_logger.warning("Cannot follow beacon: No beacon position set")
@@ -330,7 +344,7 @@ class SimulationController:
         # Create a beacon following strategy with default parameters
         beacon_strategy = FollowBeaconStrategy(
             distance_tolerance=10,  # Stop within 10cm of the beacon
-            angle_tolerance=0.1,    # Allow 0.1 radians (~5.7 degrees) of orientation error
+            angle_tolerance=0.2,    # Allow 0.2 radians (~11 degrees) of orientation error
             movement_speed=100,     # Move at 100% speed
             turning_speed=45        # Turn at 45 degrees per second
         )

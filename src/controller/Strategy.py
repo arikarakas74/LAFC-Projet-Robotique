@@ -423,7 +423,10 @@ class StrategyExecutor:
         self.current_strategy.start(self.robot_model)
         
         # Execute the strategy step by step until it's finished or stopped
-        while self.running and not self.current_strategy.is_finished():
+        while self.running:
+            if self.current_strategy.is_finished():
+                break
+                
             self.current_strategy.step(self.robot_model, self.delta_time)
             time.sleep(self.delta_time)
             
@@ -444,12 +447,7 @@ class StrategyExecutor:
             self.logger.info("Strategy execution stopped")
             
     def is_running(self):
-        """
-        Check if a strategy is currently running.
-        
-        Returns:
-            bool: True if a strategy is running, False otherwise
-        """
+        """Check if a strategy is running."""
         return self.running and self.strategy_thread and self.strategy_thread.is_alive()
 
 class FollowBeaconStrategy(AsyncCommand):
@@ -476,13 +474,25 @@ class FollowBeaconStrategy(AsyncCommand):
         self.current_command = None
         self.logger = logging.getLogger("strategy.FollowBeaconStrategy")
         self.last_beacon_pos = None  # Track the last beacon position to detect changes
+        self.waiting_for_beacon_change = False  # Flag to indicate waiting for a new beacon position
+        self.last_position = None  # Track last position to detect collisions
+        self.collision_count = 0  # Counter for potential collisions
         
     def start(self, robot_model):
         """Start following the beacon."""
         self.started = True
         # Initialize the last beacon position
         self.last_beacon_pos = robot_model.map_model.end_position
+        self.last_position = (robot_model.x, robot_model.y)
+        self.waiting_for_beacon_change = False
+        self.collision_count = 0
         self.logger.info("Started following beacon")
+        
+    def reset_state(self):
+        """Reset the waiting state to follow a new beacon."""
+        self.waiting_for_beacon_change = False
+        self.collision_count = 0
+        self.logger.info("Reset state to follow new beacon")
         
     def step(self, robot_model, delta_time):
         """Execute one step of following the beacon."""
@@ -494,19 +504,44 @@ class FollowBeaconStrategy(AsyncCommand):
         x, y, z = state['x'], state['y'], state['z']
         yaw = state['yaw']
         
-        # Get the beacon position
+        # Detect collision (robot not moving despite motors running)
+        current_position = (x, y)
+        if self.last_position:
+            position_diff = math.sqrt((current_position[0] - self.last_position[0])**2 + 
+                                     (current_position[1] - self.last_position[1])**2)
+            if position_diff < 0.1 and not self.waiting_for_beacon_change:
+                self.collision_count += 1
+                if self.collision_count > 20:  # If stuck for several frames
+                    self.logger.warning("Potential collision detected, resetting direction")
+                    # Try to move away from obstacle
+                    robot_model.set_motor_speed("left", -30)  # Reverse slightly
+                    robot_model.set_motor_speed("right", -30)
+                    self.collision_count = 0  # Reset counter
+                    return False
+            else:
+                self.collision_count = 0  # Reset if moving
+        
+        # Update last position
+        self.last_position = current_position
+        
+        # Get the beacon position - check on every step for immediate changes
         beacon_pos = robot_model.map_model.end_position
         
-        # If no beacon is set, we can't follow it
+        # If no beacon is set, wait in position 
         if beacon_pos is None:
-            self.logger.error("No beacon position set")
-            self.finished = True
-            return True
-        
-        # Check if the beacon position has changed
-        if self.last_beacon_pos != beacon_pos:
-            self.logger.info(f"Beacon position changed to {beacon_pos}")
+            if not self.waiting_for_beacon_change:
+                self.logger.info("No beacon position set, waiting for beacon")
+                robot_model.set_motor_speed("left", 0)
+                robot_model.set_motor_speed("right", 0)
+                self.waiting_for_beacon_change = True
+            return False  # Stay in the strategy but do nothing
+            
+        # Check if the beacon position has changed or we were waiting
+        if self.last_beacon_pos != beacon_pos or self.waiting_for_beacon_change:
+            self.logger.info(f"Beacon position changed to {beacon_pos}, resuming movement")
             self.last_beacon_pos = beacon_pos
+            self.waiting_for_beacon_change = False
+            self.collision_count = 0
             
         beacon_x, beacon_y = beacon_pos
         beacon_z = 0  # Assume beacon is at ground level
@@ -517,13 +552,22 @@ class FollowBeaconStrategy(AsyncCommand):
         dz = beacon_z - z
         distance = math.sqrt(dx*dx + dy*dy + dz*dz)
         
-        # If we've reached the beacon, we're done
+        # If we've reached the beacon, wait for a new beacon
         if distance <= self.distance_tolerance:
             robot_model.set_motor_speed("left", 0)
             robot_model.set_motor_speed("right", 0)
-            self.logger.info(f"Reached beacon at ({beacon_x:.2f}, {beacon_y:.2f}, {beacon_z:.2f})")
-            self.finished = True
-            return True
+            
+            if not self.waiting_for_beacon_change:
+                self.logger.info(f"Reached beacon at ({beacon_x:.2f}, {beacon_y:.2f}, {beacon_z:.2f}), waiting for new position")
+                self.waiting_for_beacon_change = True
+                
+            return False  # Don't finish the strategy, keep waiting for a new beacon
+            
+        # If we're waiting for a beacon change but haven't reached it yet 
+        # (this handles the case where a new beacon was set while waiting)
+        if self.waiting_for_beacon_change:
+            self.waiting_for_beacon_change = False
+            self.logger.info(f"Resuming movement to beacon at ({beacon_x:.2f}, {beacon_y:.2f})")
             
         # Calculate target angle to beacon (in 2D for simplicity)
         target_angle = math.atan2(dy, dx)
@@ -560,8 +604,8 @@ class FollowBeaconStrategy(AsyncCommand):
             f"forward: {forward_speed:.2f}, turn: {turn_speed:.2f}"
         )
             
-        return False
+        return False  # Never finish the strategy, always keep waiting for beacon changes
         
     def is_finished(self):
         """Check if we've reached the beacon."""
-        return self.finished 
+        return False  # Never finish - the strategy stays active to react to new beacon positions 

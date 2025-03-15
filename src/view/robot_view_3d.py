@@ -310,11 +310,19 @@ class RobotView3D:
         world_x = robot_x + (x - self.width/2)
         world_y = robot_y - (y - self.height/2)
         
+        # Store previous beacon position to detect changes
+        previous_beacon = self.sim_controller.map_model.end_position
+        
         # Set the beacon position in the map model
         self.sim_controller.map_model.set_end_position((world_x, world_y))
         
         # Show a message that beacon has been set
         self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f})")
+        
+        # If simulation is running with a beacon strategy, ensure it detects the new position
+        if self.sim_controller.simulation_running and self.sim_controller.strategy_executor.is_running():
+            # Log that we've updated the beacon position during active simulation
+            self.sim_controller.position_logger.info(f"Beacon position updated during active simulation: ({world_x:.1f}, {world_y:.1f})")
         
         # Redraw the scene immediately
         self._render_scene() 
