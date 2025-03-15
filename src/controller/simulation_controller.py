@@ -8,7 +8,7 @@ from model.robot import RobotModel
 from controller.robot_controller import RobotController
 from utils.geometry import normalize_angle
 from utils.geometry3d import normalize_angle_3d
-from controller.Strategy import StrategyExecutor, PolygonStrategy
+from controller.Strategy import StrategyExecutor, PolygonStrategy, FollowBeaconStrategy
 
 # --- Configuration des loggers ---
 
@@ -304,6 +304,33 @@ class SimulationController:
     def draw_pentagon(self, side_length):
         """Draws a pentagon with the specified side length using the strategy pattern."""
         self.draw_polygon(5, side_length)
+        
+    def follow_beacon(self):
+        """
+        Makes the robot follow the beacon (end position) using the FollowBeaconStrategy.
+        
+        The robot will orient itself towards the beacon and move towards it.
+        If no beacon is set, a warning will be logged.
+        """
+        # Check if the beacon is set
+        if self.map_model.end_position is None:
+            self.position_logger.warning("Cannot follow beacon: No beacon position set")
+            return
+            
+        # Create a beacon following strategy with default parameters
+        beacon_strategy = FollowBeaconStrategy(
+            distance_tolerance=10,  # Stop within 10cm of the beacon
+            angle_tolerance=0.1,    # Allow 0.1 radians (~5.7 degrees) of orientation error
+            movement_speed=100,     # Move at 100% speed
+            turning_speed=45        # Turn at 45 degrees per second
+        )
+        
+        # Execute the strategy
+        self.strategy_executor.execute_strategy(beacon_strategy)
+        
+        # Log that we've started following the beacon
+        beacon_x, beacon_y = self.map_model.end_position
+        self.position_logger.info(f"Started following beacon at ({beacon_x}, {beacon_y})")
         
     def stop_strategy(self):
         """Stops any running strategy."""

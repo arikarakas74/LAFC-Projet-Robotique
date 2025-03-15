@@ -450,4 +450,101 @@ class StrategyExecutor:
         Returns:
             bool: True if a strategy is running, False otherwise
         """
-        return self.running and self.strategy_thread and self.strategy_thread.is_alive() 
+        return self.running and self.strategy_thread and self.strategy_thread.is_alive()
+
+class FollowBeaconStrategy(AsyncCommand):
+    """
+    Strategy to make the robot follow a beacon (end position).
+    The robot will orient itself towards the beacon and move towards it.
+    """
+    def __init__(self, distance_tolerance=10, angle_tolerance=0.1, movement_speed=100, turning_speed=45):
+        """
+        Initialize the strategy.
+        
+        Args:
+            distance_tolerance: The distance (in cm) at which the robot is considered to have reached the beacon
+            angle_tolerance: The angle (in radians) at which the robot is considered to be facing the beacon
+            movement_speed: The speed at which the robot moves towards the beacon
+            turning_speed: The speed at which the robot turns towards the beacon (degrees per second)
+        """
+        self.distance_tolerance = distance_tolerance
+        self.angle_tolerance = angle_tolerance
+        self.movement_speed = movement_speed
+        self.turning_speed = turning_speed
+        self.started = False
+        self.finished = False
+        self.current_command = None
+        self.logger = logging.getLogger("strategy.FollowBeaconStrategy")
+        
+    def start(self, robot_model):
+        """Start following the beacon."""
+        self.started = True
+        self.logger.info("Started following beacon")
+        
+    def step(self, robot_model, delta_time):
+        """Execute one step of following the beacon."""
+        if not self.started:
+            self.start(robot_model)
+            
+        # Get the current state
+        state = robot_model.get_state()
+        x, y, z = state['x'], state['y'], state['z']
+        yaw = state['yaw']
+        
+        # Get the beacon position
+        beacon_pos = robot_model.map_model.end_position
+        
+        # If no beacon is set, we can't follow it
+        if beacon_pos is None:
+            self.logger.error("No beacon position set")
+            self.finished = True
+            return True
+            
+        beacon_x, beacon_y = beacon_pos
+        beacon_z = 0  # Assume beacon is at ground level
+        
+        # Calculate distance to beacon
+        dx = beacon_x - x
+        dy = beacon_y - y
+        dz = beacon_z - z
+        distance = math.sqrt(dx*dx + dy*dy + dz*dz)
+        
+        # If we've reached the beacon, we're done
+        if distance <= self.distance_tolerance:
+            robot_model.set_motor_speed("left", 0)
+            robot_model.set_motor_speed("right", 0)
+            self.logger.info(f"Reached beacon at ({beacon_x:.2f}, {beacon_y:.2f}, {beacon_z:.2f})")
+            self.finished = True
+            return True
+            
+        # Calculate target angle to beacon (in 2D for simplicity)
+        target_angle = math.atan2(dy, dx)
+        
+        # Calculate the difference between the current angle and the target angle
+        angle_diff = normalize_angle(target_angle - yaw)
+        
+        # If we're not facing the beacon, turn towards it
+        if abs(angle_diff) > self.angle_tolerance:
+            # Use proportional control for smoother turning
+            turn_speed = min(self.turning_speed, abs(angle_diff) * 180 / math.pi)
+            
+            # Set motor speeds for turning
+            if angle_diff > 0:
+                robot_model.set_motor_speed("left", turn_speed)
+                robot_model.set_motor_speed("right", -turn_speed)
+            else:
+                robot_model.set_motor_speed("left", -turn_speed)
+                robot_model.set_motor_speed("right", turn_speed)
+                
+            self.logger.info(f"Turning towards beacon, angle diff: {math.degrees(angle_diff):.2f}°")
+        else:
+            # We're facing the beacon, move towards it
+            robot_model.set_motor_speed("left", self.movement_speed)
+            robot_model.set_motor_speed("right", self.movement_speed)
+            self.logger.info(f"Moving towards beacon, distance: {distance:.2f}cm")
+            
+        return False
+        
+    def is_finished(self):
+        """Check if we've reached the beacon."""
+        return self.finished 
