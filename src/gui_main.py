@@ -105,15 +105,43 @@ class MainApplication(tk.Tk):
         # Stop the simulation
         self.sim_controller.stop_simulation()
         
-        # Reset all wheel speeds to 0 by updating the robot model directly
-        self.robot_model.left_speed = 0
-        self.robot_model.right_speed = 0
+        # Reset all motion-related variables in the robot model
+        robot_model = self.robot_model
         
-        # Reset 3D orientation if present
-        if hasattr(self.robot_model, 'pitch'):
-            self.robot_model.pitch = 0
-        if hasattr(self.robot_model, 'roll'):
-            self.robot_model.roll = 0
+        # Reset wheel speeds to 0
+        robot_model.left_speed = 0
+        robot_model.right_speed = 0
+        
+        # Reset wheel positions if they exist
+        if hasattr(robot_model, 'left_wheel_pos'):
+            robot_model.left_wheel_pos = 0
+        if hasattr(robot_model, 'right_wheel_pos'):
+            robot_model.right_wheel_pos = 0
+            
+        # Reset any velocity or acceleration variables if they exist
+        if hasattr(robot_model, 'linear_velocity'):
+            robot_model.linear_velocity = 0
+        if hasattr(robot_model, 'angular_velocity'):
+            robot_model.angular_velocity = 0
+        
+        # Reset 3D specific variables
+        if hasattr(robot_model, 'pitch'):
+            robot_model.pitch = 0
+        if hasattr(robot_model, 'roll'):
+            robot_model.roll = 0
+        if hasattr(robot_model, 'z'):
+            robot_model.z = 0  # Reset height to ground level
+            
+        # Get the start position from the map model if available
+        map_model = self.map_model
+        if hasattr(map_model, 'start_position') and map_model.start_position:
+            start_x, start_y = map_model.start_position
+            robot_model.x = start_x
+            robot_model.y = start_y
+            # Reset direction to default (facing east)
+            robot_model.theta = 0
+            if hasattr(robot_model, 'yaw'):
+                robot_model.yaw = 0
             
         # Clear robot view if needed
         if hasattr(self.robot_view, 'clear_robot'):
