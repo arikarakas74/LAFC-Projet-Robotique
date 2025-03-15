@@ -38,6 +38,7 @@ class ControlPanel:
 
     def reset_all(self):
         """Réinitialise l'application."""
-        self.simulation_controller.reset_simulation()
+        self.simulation_controller.stop_simulation()
+        self.simulation_controller.run_simulation()  # Restart the simulation
         if self.map_controller is not None:
             self.map_controller.reset()
