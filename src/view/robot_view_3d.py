@@ -226,18 +226,6 @@ class RobotView3D:
         dir_y = y1 - robot_size * math.sin(yaw)
         draw.line([(x1, y1), (dir_x, dir_y)], fill=(255, 255, 0), width=3)
         
-        # Add a simple visualization of pitch and roll
-        pitch_indicator = int(20 * pitch / math.pi)
-        roll_indicator = int(20 * roll / math.pi)
-        
-        draw.text((x1 + 35, y1 - 20), f"P", fill=(255, 200, 200))
-        draw.rectangle([(x1 + 45, y1 - 25), (x1 + 55, y1 - 15 + pitch_indicator)], 
-                      fill=(200 + min(55, abs(pitch_indicator)*5), 200, 200))
-                      
-        draw.text((x1 + 65, y1 - 20), f"R", fill=(200, 255, 200))
-        draw.rectangle([(x1 + 75, y1 - 25), (x1 + 85, y1 - 15 + roll_indicator)], 
-                      fill=(200, 200 + min(55, abs(roll_indicator)*5), 200))
-        
     def clear_robot(self):
         """Clears the robot and trail."""
         self.trail_points = []
