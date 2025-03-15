@@ -76,14 +76,6 @@ class MainApplication(tk.Tk):
         self.control_panel = ControlPanel(inner_frame, self.map_controller, self.sim_controller)
         self.control_panel.control_frame.pack(pady=5)
 
-        # Create view toggle button
-        self.view_toggle_button = ttk.Button(
-            inner_frame,
-            text="Toggle Follow Mode" if self.use_3d_view else "Switch to 3D View",
-            command=self.toggle_view
-        )
-        self.view_toggle_button.pack(pady=5)
-        
         # Create clear trail button for 3D view
         if self.use_3d_view:
             self.clear_trail_button = ttk.Button(
@@ -220,9 +212,6 @@ class MainApplication(tk.Tk):
         self.bind("<Down>", lambda event: self.sim_controller.robot_controller.pitch_down())
         self.bind("<Left>", lambda event: self.sim_controller.robot_controller.roll_left())
         self.bind("<Right>", lambda event: self.sim_controller.robot_controller.roll_right())
-        
-        # Add a key for toggling follow mode (using F1)
-        self.bind("<F1>", lambda event: self.toggle_view())
         
         # Add a key for clearing the trail (Ctrl+T)
         self.bind("<Control-t>", lambda event: self.clear_robot_trail())
