@@ -105,9 +105,9 @@ class MainApplication(tk.Tk):
         # Stop the simulation
         self.sim_controller.stop_simulation()
         
-        # Reset all wheel speeds to 0
-        self.sim_controller.robot_controller.set_left_speed(0)
-        self.sim_controller.robot_controller.set_right_speed(0)
+        # Reset all wheel speeds to 0 by updating the robot model directly
+        self.robot_model.left_speed = 0
+        self.robot_model.right_speed = 0
         
         # Reset 3D orientation if present
         if hasattr(self.robot_model, 'pitch'):

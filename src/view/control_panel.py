@@ -41,13 +41,12 @@ class ControlPanel:
         # Stop the simulation
         self.simulation_controller.stop_simulation()
         
-        # Reset all wheel speeds to 0
-        robot_controller = self.simulation_controller.robot_controller
-        robot_controller.set_left_speed(0)
-        robot_controller.set_right_speed(0)
+        # Reset all wheel speeds to 0 by updating the robot model directly
+        robot_model = self.simulation_controller.robot_model
+        robot_model.left_speed = 0
+        robot_model.right_speed = 0
         
         # Reset any other states if necessary (pitch, roll, etc. in 3D mode)
-        robot_model = self.simulation_controller.robot_model
         if hasattr(robot_model, 'pitch'):
             robot_model.pitch = 0
         if hasattr(robot_model, 'roll'):
