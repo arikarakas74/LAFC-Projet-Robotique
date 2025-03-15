@@ -83,6 +83,15 @@ class MainApplication(tk.Tk):
             command=self.toggle_view
         )
         self.view_toggle_button.pack(pady=5)
+        
+        # Create clear trail button for 3D view
+        if self.use_3d_view:
+            self.clear_trail_button = ttk.Button(
+                inner_frame,
+                text="Clear Trail",
+                command=self.clear_robot_trail
+            )
+            self.clear_trail_button.pack(pady=5)
 
         # Bind keyboard events for the 3D view mode
         self._bind_3d_keys()
@@ -175,9 +184,9 @@ class MainApplication(tk.Tk):
         if hasattr(robot_model, 'is_moving'):
             robot_model.is_moving = False
             
-        # Clear robot view if needed
+        # Clear robot view but preserve the trail by default
         if hasattr(self.robot_view, 'clear_robot'):
-            self.robot_view.clear_robot()
+            self.robot_view.clear_robot(clear_trail=False)
         
         # Clear any cached motion data or trail history
         if hasattr(self.sim_controller, 'clear_cache'):
@@ -214,6 +223,14 @@ class MainApplication(tk.Tk):
         
         # Add a key for toggling follow mode (using F1)
         self.bind("<F1>", lambda event: self.toggle_view())
+        
+        # Add a key for clearing the trail (Ctrl+T)
+        self.bind("<Control-t>", lambda event: self.clear_robot_trail())
+
+    def clear_robot_trail(self):
+        """Clears only the robot's trail, preserving its position."""
+        if hasattr(self.robot_view, 'clear_robot'):
+            self.robot_view.clear_robot(clear_trail=True)
 
 def run_gui():
     app = MainApplication()

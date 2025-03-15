@@ -40,7 +40,7 @@ class RobotView3D:
         
         # Trail points to show robot path
         self.trail_points = []
-        self.max_trail_points = 100
+        self.max_trail_points = 5000  # Increased from 100 to 5000 for much longer trails
         
         # Create a frame for the OpenGL rendering
         self.frame = tk.Frame(parent, width=self.width, height=self.height)
@@ -163,7 +163,7 @@ class RobotView3D:
         
         # Draw trail
         if len(screen_points) >= 2:
-            draw.line(screen_points, fill=(100, 100, 200), width=2)
+            draw.line(screen_points, fill=(255, 215, 0), width=3)
             
     def _draw_simplified_obstacles(self, image):
         """Draws simplified obstacles on the image."""
@@ -226,9 +226,15 @@ class RobotView3D:
         dir_y = y1 - robot_size * math.sin(yaw)
         draw.line([(x1, y1), (dir_x, dir_y)], fill=(255, 255, 0), width=3)
         
-    def clear_robot(self):
-        """Clears the robot and trail."""
-        self.trail_points = []
+    def clear_robot(self, clear_trail=True):
+        """
+        Clears the robot and optionally the trail.
+        
+        Args:
+            clear_trail: If True, clears the trail. If False, preserves the trail.
+        """
+        if clear_trail:
+            self.trail_points = []
         
     def toggle_follow_mode(self, follow=None):
         """Toggles camera follow mode."""
