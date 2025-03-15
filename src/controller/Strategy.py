@@ -535,19 +535,11 @@ class FollowBeaconStrategy(AsyncCommand):
                 robot_model.set_motor_speed("right", 0)
                 self.waiting_for_beacon_change = True
             return False  # Stay in the strategy but do nothing
-        
-        # Force immediate response if we were reset or the beacon changed
-        force_update = self.waiting_for_beacon_change
             
-        # Check if the beacon position has changed
-        if self.last_beacon_pos != beacon_pos:
-            self.logger.info(f"Beacon position changed to {beacon_pos}, updating target")
+        # Check if the beacon position has changed or we were waiting
+        if self.last_beacon_pos != beacon_pos or self.waiting_for_beacon_change:
+            self.logger.info(f"Beacon position changed to {beacon_pos}, resuming movement")
             self.last_beacon_pos = beacon_pos
-            force_update = True
-            
-        # If we were waiting or beacon position changed, reset the waiting state
-        if force_update:
-            self.logger.info("Resuming movement to beacon")
             self.waiting_for_beacon_change = False
             self.collision_count = 0
             
@@ -557,79 +549,62 @@ class FollowBeaconStrategy(AsyncCommand):
         # Calculate distance to beacon
         dx = beacon_x - x
         dy = beacon_y - y
-        distance = math.sqrt(dx**2 + dy**2)
+        dz = beacon_z - z
+        distance = math.sqrt(dx*dx + dy*dy + dz*dz)
         
-        # Calculate target angle to beacon (in radians)
-        target_angle_rad = math.atan2(dy, dx)
-        
-        # Convert yaw to radians and normalize
-        yaw_rad = math.radians(yaw)
-        
-        # Calculate the difference between current angle and target angle
-        angle_diff = self._normalize_angle(target_angle_rad - yaw_rad)
-        
-        # If we've reached the beacon, stop and wait for a new beacon position
-        if distance < self.distance_tolerance and not force_update:
-            self.logger.info(f"Reached beacon at ({beacon_x}, {beacon_y}). Distance: {distance:.2f} cm")
+        # If we've reached the beacon, wait for a new beacon
+        if distance <= self.distance_tolerance:
             robot_model.set_motor_speed("left", 0)
             robot_model.set_motor_speed("right", 0)
-            self.waiting_for_beacon_change = True
-            return False  # Keep the strategy running but wait for a new beacon
             
-        # Log current state (useful for debugging)
-        self.logger.debug(f"Distance to beacon: {distance:.2f} cm, Angle diff: {math.degrees(angle_diff):.2f}°")
-        
-        # Determine if we need to turn or move forward
-        if abs(angle_diff) > self.angle_tolerance:
-            # We need to turn to face the beacon
-            self._turn_to_angle(robot_model, angle_diff)
-        else:
-            # We're facing the beacon, move forward
-            self._move_forward(robot_model, distance, angle_diff)
+            if not self.waiting_for_beacon_change:
+                self.logger.info(f"Reached beacon at ({beacon_x:.2f}, {beacon_y:.2f}, {beacon_z:.2f}), waiting for new position")
+                self.waiting_for_beacon_change = True
+                
+            return False  # Don't finish the strategy, keep waiting for a new beacon
             
-        return False  # Never finish the strategy - keep it running until manually stopped
+        # If we're waiting for a beacon change but haven't reached it yet 
+        # (this handles the case where a new beacon was set while waiting)
+        if self.waiting_for_beacon_change:
+            self.waiting_for_beacon_change = False
+            self.logger.info(f"Resuming movement to beacon at ({beacon_x:.2f}, {beacon_y:.2f})")
+            
+        # Calculate target angle to beacon (in 2D for simplicity)
+        target_angle = math.atan2(dy, dx)
         
-    def _normalize_angle(self, angle):
-        """Normalize angle to be between -pi and pi."""
-        while angle > math.pi:
-            angle -= 2.0 * math.pi
-        while angle < -math.pi:
-            angle += 2.0 * math.pi
-        return angle
-    
-    def _turn_to_angle(self, robot_model, angle_diff):
-        """Helper to turn toward target angle with proportional control."""
-        # Scale turn speed based on the angle difference (proportional control)
-        turn_factor = min(1.0, abs(angle_diff) / math.pi)  # 0 to 1 scale
-        turn_speed = self.turning_speed * turn_factor
+        # Calculate the difference between the current angle and the target angle
+        angle_diff = normalize_angle(target_angle - yaw)
         
+        # Use a combined approach: turn and move at the same time with different speeds
+        # This prevents the robot from getting stuck in a perpetual turning loop
+        
+        # Calculate turn component based on angle difference
+        # Use a proportional control with gain of 0.8 (this is a tuning parameter)
+        turn_factor = min(1.0, abs(angle_diff) / math.pi)  # Normalized from 0 to 1
+        turn_speed = self.turning_speed * turn_factor * 0.8
+        
+        # Calculate forward movement component
+        # Move faster when facing the target, slower when turning sharply
+        forward_factor = 1.0 - min(0.8, turn_factor)  # Higher when more aligned
+        forward_speed = self.movement_speed * forward_factor
+        
+        # Apply motor speeds with differential steering
         if angle_diff > 0:  # Need to turn left
-            robot_model.set_motor_speed("left", -turn_speed)
-            robot_model.set_motor_speed("right", turn_speed)
+            robot_model.set_motor_speed("left", forward_speed - turn_speed)
+            robot_model.set_motor_speed("right", forward_speed + turn_speed)
         else:  # Need to turn right
-            robot_model.set_motor_speed("left", turn_speed)
-            robot_model.set_motor_speed("right", -turn_speed)
+            robot_model.set_motor_speed("left", forward_speed + turn_speed)
+            robot_model.set_motor_speed("right", forward_speed - turn_speed)
+        
+        # Log movement data
+        self.logger.info(
+            f"Moving toward beacon at ({beacon_x:.2f}, {beacon_y:.2f}), " +
+            f"distance: {distance:.2f}cm, " +
+            f"angle diff: {math.degrees(angle_diff):.2f}°, " +
+            f"forward: {forward_speed:.2f}, turn: {turn_speed:.2f}"
+        )
             
-        self.logger.debug(f"Turning to face beacon, angle diff: {math.degrees(angle_diff):.2f}°, speed: {turn_speed:.2f}")
-    
-    def _move_forward(self, robot_model, distance, angle_diff):
-        """Helper to move forward while making small steering adjustments."""
-        # Use proportional control for slight steering while moving
-        steering_factor = angle_diff / self.angle_tolerance
-        
-        # Limit the steering adjustment
-        max_steering = 0.3 * self.movement_speed
-        steering_adjustment = max_steering * steering_factor
-        
-        # Set speeds with slight steering correction
-        left_speed = self.movement_speed - steering_adjustment
-        right_speed = self.movement_speed + steering_adjustment
-        
-        # Apply motor speeds
-        robot_model.set_motor_speed("left", left_speed)
-        robot_model.set_motor_speed("right", right_speed)
-        
-        self.logger.debug(f"Moving toward beacon, distance: {distance:.2f} cm, L: {left_speed:.2f}, R: {right_speed:.2f}")
+        return False  # Never finish the strategy, always keep waiting for beacon changes
         
     def is_finished(self):
         """Check if we've reached the beacon."""
