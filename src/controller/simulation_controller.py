@@ -8,6 +8,7 @@ from model.robot import RobotModel
 from controller.robot_controller import RobotController
 from utils.geometry import normalize_angle
 from utils.geometry3d import normalize_angle_3d
+from controller.Strategy import StrategyExecutor, PolygonStrategy
 
 # --- Configuration des loggers ---
 
@@ -77,6 +78,9 @@ class SimulationController:
             self.position_logger.addHandler(console_handler)
 
         self.simulation_thread = None
+
+        # Create the strategy executor
+        self.strategy_executor = StrategyExecutor(self)
 
     def add_state_listener(self, callback: Callable[[dict], None]):
         """Adds a callback that will be notified on each robot state update."""
@@ -265,30 +269,147 @@ class SimulationController:
         # but would need updates for 3D visualization and logging
         # ...
         
-    def draw_square(self, side_length):
-        """Starts the process of drawing a square with the specified side length."""
-        if self.drawing_square:
+    def draw_polygon(self, sides, side_length):
+        """
+        Draws a regular polygon with the specified number of sides and side length.
+        
+        Args:
+            sides: The number of sides of the polygon
+            side_length: The length of each side in centimeters
+        """
+        if sides < 3:
+            self.position_logger.error("A polygon must have at least 3 sides")
             return
             
-        self.drawing_square = True
-        self.square_step = 0
-        self.side_length = side_length
+        # Create a polygon strategy
+        polygon_strategy = PolygonStrategy(
+            sides=sides,
+            side_length_cm=side_length,
+            movement_speed=100,  # Use a moderate speed
+            turning_speed=45     # 45 degrees per second
+        )
         
-        # Record the starting position (now in 3D)
-        state = self.robot_model.get_state()
-        self.start_x = state['x']
-        self.start_y = state['y']
-        self.start_z = state['z']
-        self.start_angle = state['yaw']  # Using yaw as primary direction
+        # Execute the strategy
+        self.strategy_executor.execute_strategy(polygon_strategy)
+        self.position_logger.info(f"Started drawing a {sides}-sided polygon with side length {side_length}cm")
+    
+    def draw_square(self, side_length):
+        """Draws a square with the specified side length using the strategy pattern."""
+        self.draw_polygon(4, side_length)
         
-        self.corners = [(self.start_x, self.start_y, self.start_z)]
+    def draw_triangle(self, side_length):
+        """Draws a triangle with the specified side length using the strategy pattern."""
+        self.draw_polygon(3, side_length)
+    
+    def draw_pentagon(self, side_length):
+        """Draws a pentagon with the specified side length using the strategy pattern."""
+        self.draw_polygon(5, side_length)
         
-        # Log the start of square drawing
-        square_logger.info(f"Starting square drawing with side length: {side_length}")
-        square_logger.info(f"Starting position: ({self.start_x:.2f}, {self.start_y:.2f}, {self.start_z:.2f})")
+    def stop_strategy(self):
+        """Stops any running strategy."""
+        self.strategy_executor.stop()
+        self.position_logger.info("Stopped strategy execution")
+    
+    def is_strategy_running(self):
+        """
+        Checks if a strategy is currently running.
         
-        # Initial movement to draw the first side
-        self.robot_model.set_motor_speed("left", 100)
-        self.robot_model.set_motor_speed("right", 100)
+        Returns:
+            bool: True if a strategy is running, False otherwise
+        """
+        return self.strategy_executor.is_running()
+
+    def export_movements_to_file(self, output_file="robot_movements.csv"):
+        """Exports recorded robot movements to a CSV file.
         
+        Args:
+            output_file: Name of the CSV file to export to. Default is "robot_movements.csv".
+            
+        Returns:
+            bool: True if export was successful, False otherwise.
+        """
+        try:
+            # Read the traceability log file
+            with open("traceability_positions.log", "r") as log_file:
+                lines = log_file.readlines()
+            
+            # Open output CSV file
+            with open(output_file, "w") as csv_file:
+                # Write header
+                csv_file.write("Timestamp,X,Y,Z,Pitch,Yaw,Roll\n")
+                
+                # Process each line from the log
+                for line in lines:
+                    # Skip empty lines
+                    if not line.strip():
+                        continue
+                    
+                    # Extract timestamp and position data
+                    parts = line.split(" - Position: ")
+                    if len(parts) != 2:
+                        continue
+                    
+                    timestamp = parts[0].strip()
+                    position_data = parts[1].strip()
+                    
+                    # Extract X, Y, Z values and angles
+                    x, y, z = 0.0, 0.0, 0.0
+                    pitch, yaw, roll = 0.0, 0.0, 0.0
+                    
+                    # Parse X, Y
+                    if "X:" in position_data and "Y:" in position_data:
+                        try:
+                            x_part = position_data.split("X:")[1].split(",")[0].strip()
+                            x = float(x_part)
+                            
+                            y_part = position_data.split("Y:")[1].split(",")[0].strip()
+                            y = float(y_part)
+                        except:
+                            pass
+                    
+                    # Parse Z if present
+                    if "Z:" in position_data:
+                        try:
+                            z_part = position_data.split("Z:")[1].split(",")[0].strip()
+                            z = float(z_part)
+                        except:
+                            pass
+                    
+                    # Parse angles
+                    if "Pitch:" in position_data:
+                        try:
+                            pitch_part = position_data.split("Pitch:")[1].split("°")[0].strip()
+                            pitch = float(pitch_part)
+                        except:
+                            pass
+                            
+                    if "Yaw:" in position_data:
+                        try:
+                            yaw_part = position_data.split("Yaw:")[1].split("°")[0].strip()
+                            yaw = float(yaw_part)
+                        except:
+                            pass
+                    elif "Angle:" in position_data:  # Backward compatibility for 2D logs
+                        try:
+                            yaw_part = position_data.split("Angle:")[1].split("°")[0].strip()
+                            yaw = float(yaw_part)
+                        except:
+                            pass
+                            
+                    if "Roll:" in position_data:
+                        try:
+                            roll_part = position_data.split("Roll:")[1].split("°")[0].strip()
+                            roll = float(roll_part)
+                        except:
+                            pass
+                    
+                    # Write to CSV
+                    csv_file.write(f"{timestamp},{x},{y},{z},{pitch},{yaw},{roll}\n")
+            
+            self.position_logger.info(f"Movements exported to {output_file}")
+            return True
+        except Exception as e:
+            self.position_logger.error(f"Error exporting movements: {str(e)}")
+            return False
+
     # Other methods would be updated similarly to support 3D

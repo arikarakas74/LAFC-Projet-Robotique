@@ -30,13 +30,39 @@ class ControlPanel:
             map_buttons = [
                 ("Set Start", self.map_controller.set_start_mode),
                 ("Set Obstacles", self.map_controller.set_obstacles_mode),
-                ("draw", self.simulation_controller.square)
             ]
             buttons = map_buttons + buttons
+        
+        # Add strategy buttons
+        strategy_buttons = [
+            ("Triangle", self.draw_triangle),
+            ("Square", self.draw_square),
+            ("Pentagon", self.draw_pentagon),
+            ("Stop", self.stop_strategy)
+        ]
+        
+        # Combine all buttons
+        buttons.extend(strategy_buttons)
         
         for text, cmd in buttons:
             btn = tk.Button(self.control_frame, text=text, command=cmd)
             btn.pack(side=tk.LEFT, padx=5)
+
+    def draw_triangle(self):
+        """Draw a triangle with a side length of 50cm."""
+        self.simulation_controller.draw_triangle(50)
+        
+    def draw_square(self):
+        """Draw a square with a side length of 50cm."""
+        self.simulation_controller.draw_square(50)
+        
+    def draw_pentagon(self):
+        """Draw a pentagon with a side length of 50cm."""
+        self.simulation_controller.draw_pentagon(50)
+        
+    def stop_strategy(self):
+        """Stop the currently running strategy."""
+        self.simulation_controller.stop_strategy()
 
     def reset_all(self):
         """Réinitialise l'application. Force complete stop of robot motion."""
@@ -135,3 +161,15 @@ class ControlPanel:
         # Force update all views if controller has this method
         if hasattr(self.simulation_controller, 'update_views'):
             self.simulation_controller.update_views()
+
+    def export_movements(self):
+        """Export recorded robot movements to a CSV file."""
+        success = self.simulation_controller.export_movements_to_file()
+        if success:
+            self.export_status.set("Movements exported to robot_movements.csv")
+            # Schedule the message to disappear after 3 seconds
+            self.parent.after(3000, lambda: self.export_status.set(""))
+        else:
+            self.export_status.set("Export failed. See logs for details.")
+            # Schedule the message to disappear after 3 seconds
+            self.parent.after(3000, lambda: self.export_status.set(""))
