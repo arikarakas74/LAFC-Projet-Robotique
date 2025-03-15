@@ -129,8 +129,8 @@ class MainApplication(tk.Tk):
         self.bind("<Left>", lambda event: self.sim_controller.robot_controller.roll_left())
         self.bind("<Right>", lambda event: self.sim_controller.robot_controller.roll_right())
         
-        # Add a key for toggling follow mode
-        self.bind("<f1>", lambda event: self.toggle_view())
+        # Add a key for toggling follow mode (using F1)
+        self.bind("<F1>", lambda event: self.toggle_view())
 
 def run_gui():
     app = MainApplication()
