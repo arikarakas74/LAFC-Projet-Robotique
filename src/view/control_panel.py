@@ -30,14 +30,19 @@ class ControlPanel:
             map_buttons = [
                 ("Set Start", self.map_controller.set_start_mode),
                 ("Set Obstacles", self.map_controller.set_obstacles_mode),
+                ("Set Beacon", self.map_controller.set_end_mode),
             ]
             buttons = map_buttons + buttons
+        else:
+            # Even in 3D mode, add a button to set the beacon position
+            buttons.insert(0, ("Set Beacon", self.set_beacon_3d))
         
         # Add strategy buttons
         strategy_buttons = [
             ("Triangle", self.draw_triangle),
             ("Square", self.draw_square),
             ("Pentagon", self.draw_pentagon),
+            ("Follow Beacon", self.follow_beacon),
             ("Stop", self.stop_strategy)
         ]
         
@@ -47,6 +52,41 @@ class ControlPanel:
         for text, cmd in buttons:
             btn = tk.Button(self.control_frame, text=text, command=cmd)
             btn.pack(side=tk.LEFT, padx=5)
+
+    def set_beacon_3d(self):
+        """Set beacon position in 3D mode by showing a dialog."""
+        # Create a simple popup dialog
+        dialog = tk.Toplevel(self.parent)
+        dialog.title("Set Beacon Position")
+        dialog.geometry("300x150")
+        dialog.transient(self.parent)
+        dialog.grab_set()
+        
+        # Create entry fields for X and Y coordinates
+        frame = tk.Frame(dialog, padx=10, pady=10)
+        frame.pack(fill="both", expand=True)
+        
+        tk.Label(frame, text="X coordinate:").grid(row=0, column=0, sticky="w", pady=5)
+        x_entry = tk.Entry(frame)
+        x_entry.grid(row=0, column=1, sticky="ew", pady=5)
+        x_entry.insert(0, "500")  # Default value
+        
+        tk.Label(frame, text="Y coordinate:").grid(row=1, column=0, sticky="w", pady=5)
+        y_entry = tk.Entry(frame)
+        y_entry.grid(row=1, column=1, sticky="ew", pady=5)
+        y_entry.insert(0, "500")  # Default value
+        
+        # Add a button to confirm
+        def confirm():
+            try:
+                x = float(x_entry.get())
+                y = float(y_entry.get())
+                self.simulation_controller.map_model.set_end_position((x, y))
+                dialog.destroy()
+            except ValueError:
+                tk.Label(frame, text="Please enter valid numbers!", fg="red").grid(row=3, column=0, columnspan=2)
+        
+        tk.Button(frame, text="Set Beacon", command=confirm).grid(row=2, column=0, columnspan=2, pady=10)
 
     def draw_triangle(self):
         """Draw a triangle with a side length of 50cm."""
@@ -59,6 +99,10 @@ class ControlPanel:
     def draw_pentagon(self):
         """Draw a pentagon with a side length of 50cm."""
         self.simulation_controller.draw_pentagon(50)
+        
+    def follow_beacon(self):
+        """Follow the beacon (end position) using the FollowBeaconStrategy."""
+        self.simulation_controller.follow_beacon()
         
     def stop_strategy(self):
         """Stop the currently running strategy."""

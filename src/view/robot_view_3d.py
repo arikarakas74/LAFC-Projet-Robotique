@@ -120,6 +120,9 @@ class RobotView3D:
         # Draw a simple representation of obstacles (simplified)
         self._draw_simplified_obstacles(image)
         
+        # Draw the beacon (end position) if it exists
+        self._draw_beacon(image)
+        
         # Draw a simple representation of the robot (simplified)
         self._draw_simplified_robot(image, robot_x, robot_y, robot_z, pitch, yaw, roll)
         
@@ -225,6 +228,54 @@ class RobotView3D:
         dir_x = x1 + robot_size * math.cos(yaw)
         dir_y = y1 - robot_size * math.sin(yaw)
         draw.line([(x1, y1), (dir_x, dir_y)], fill=(255, 255, 0), width=3)
+        
+    def _draw_beacon(self, image):
+        """Draws the beacon (end position) on the image if it exists."""
+        from PIL import ImageDraw, ImageFont
+        draw = ImageDraw.Draw(image)
+        
+        # Get the beacon position from the map model
+        beacon_pos = self.sim_controller.map_model.end_position
+        
+        if beacon_pos is not None:
+            beacon_x, beacon_y = beacon_pos
+            robot_x = self.sim_controller.robot_model.x
+            robot_y = self.sim_controller.robot_model.y
+            
+            # Transform to screen coordinates
+            screen_x = int(self.width/2 + beacon_x - robot_x)
+            screen_y = int(self.height/2 - beacon_y + robot_y)
+            
+            # Draw a distinctive beacon marker (a star-like shape)
+            radius = 15
+            inner_radius = 7
+            points = []
+            
+            # Create a star shape with 5 points
+            for i in range(10):
+                angle = math.pi/2 + i * math.pi * 2 / 10
+                r = radius if i % 2 == 0 else inner_radius
+                points.append((
+                    screen_x + r * math.cos(angle),
+                    screen_y + r * math.sin(angle)
+                ))
+            
+            # Draw the star in bright green
+            draw.polygon(points, fill=(0, 255, 100), outline=(0, 200, 0))
+            
+            # Add a dot in the center
+            draw.ellipse((screen_x-3, screen_y-3, screen_x+3, screen_y+3), fill=(0, 100, 0))
+            
+            # Add a "BEACON" text below the marker
+            try:
+                # Try to get a font, fall back to default if not available
+                font = ImageFont.truetype("Arial", 12)
+            except IOError:
+                font = ImageFont.load_default()
+                
+            text = "BEACON"
+            text_width = draw.textlength(text, font=font)
+            draw.text((screen_x - text_width/2, screen_y + radius + 5), text, font=font, fill=(0, 255, 100))
         
     def clear_robot(self, clear_trail=True):
         """
