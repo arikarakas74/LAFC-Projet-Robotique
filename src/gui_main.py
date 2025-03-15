@@ -8,6 +8,7 @@ from view.control_panel import ControlPanel
 from model.map_model import MapModel
 from model.robot import RobotModel
 from controller.simulation_controller import SimulationController
+import time
 
 class MainApplication(tk.Tk):
     def __init__(self):
@@ -101,54 +102,78 @@ class MainApplication(tk.Tk):
             self.robot_view.toggle_follow_mode()
             
     def reset_simulation(self):
-        """Reset the simulation."""
-        # Stop the simulation
+        """Reset the simulation with a complete hard stop."""
+        # Hard stop the simulation
         self.sim_controller.stop_simulation()
         
-        # Reset all motion-related variables in the robot model
+        # Small pause to ensure everything stops
+        time.sleep(0.1)
+        
+        # FORCE COMPLETE STOP: Reset ALL possible motion variables
         robot_model = self.robot_model
         
-        # Reset wheel speeds to 0
+        # -- Primary motion variables --
         robot_model.left_speed = 0
         robot_model.right_speed = 0
         
-        # Reset wheel positions if they exist
+        # -- Ensure any internal velocity tracking is reset --
         if hasattr(robot_model, 'left_wheel_pos'):
             robot_model.left_wheel_pos = 0
         if hasattr(robot_model, 'right_wheel_pos'):
             robot_model.right_wheel_pos = 0
-            
-        # Reset any velocity or acceleration variables if they exist
         if hasattr(robot_model, 'linear_velocity'):
             robot_model.linear_velocity = 0
         if hasattr(robot_model, 'angular_velocity'):
             robot_model.angular_velocity = 0
+            
+        # -- Additional velocity components that might exist --
+        for attr in dir(robot_model):
+            if 'velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr:
+                try:
+                    setattr(robot_model, attr, 0)
+                except:
+                    pass
         
-        # Reset 3D specific variables
+        # -- Reset 3D specific variables --
         if hasattr(robot_model, 'pitch'):
             robot_model.pitch = 0
         if hasattr(robot_model, 'roll'):
             robot_model.roll = 0
+        if hasattr(robot_model, 'yaw'):
+            robot_model.yaw = 0
         if hasattr(robot_model, 'z'):
             robot_model.z = 0  # Reset height to ground level
             
-        # Get the start position from the map model if available
-        map_model = self.map_model
-        if hasattr(map_model, 'start_position') and map_model.start_position:
-            start_x, start_y = map_model.start_position
+        # -- Force robot back to start position --
+        if hasattr(self.map_model, 'start_position') and self.map_model.start_position:
+            start_x, start_y = self.map_model.start_position
             robot_model.x = start_x
             robot_model.y = start_y
             # Reset direction to default (facing east)
             robot_model.theta = 0
-            if hasattr(robot_model, 'yaw'):
-                robot_model.yaw = 0
+        
+        # -- Force a physics state update if controller has this method --
+        if hasattr(self.sim_controller, 'update_physics'):
+            self.sim_controller.update_physics(0)
+        
+        # -- Ensure the robot knows it's not moving --
+        if hasattr(robot_model, 'is_moving'):
+            robot_model.is_moving = False
             
         # Clear robot view if needed
         if hasattr(self.robot_view, 'clear_robot'):
             self.robot_view.clear_robot()
+        
+        # Clear any cached motion data or trail history
+        if hasattr(self.sim_controller, 'clear_cache'):
+            self.sim_controller.clear_cache()
             
-        # Restart the simulation
+        # Restart the simulation only after confirming all motion is stopped
         self.sim_controller.run_simulation()
+        
+        # Force update all views if controller has this method
+        if hasattr(self.sim_controller, 'update_views'):
+            self.sim_controller.update_views()
 
     def _bind_3d_keys(self):
         """Bind keyboard events for 3D robot control."""
