@@ -102,9 +102,24 @@ class MainApplication(tk.Tk):
             
     def reset_simulation(self):
         """Reset the simulation."""
+        # Stop the simulation
         self.sim_controller.stop_simulation()
+        
+        # Reset all wheel speeds to 0
+        self.sim_controller.robot_controller.set_left_speed(0)
+        self.sim_controller.robot_controller.set_right_speed(0)
+        
+        # Reset 3D orientation if present
+        if hasattr(self.robot_model, 'pitch'):
+            self.robot_model.pitch = 0
+        if hasattr(self.robot_model, 'roll'):
+            self.robot_model.roll = 0
+            
+        # Clear robot view if needed
         if hasattr(self.robot_view, 'clear_robot'):
             self.robot_view.clear_robot()
+            
+        # Restart the simulation
         self.sim_controller.run_simulation()
 
     def _bind_3d_keys(self):

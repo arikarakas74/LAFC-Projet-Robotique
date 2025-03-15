@@ -38,7 +38,24 @@ class ControlPanel:
 
     def reset_all(self):
         """Réinitialise l'application."""
+        # Stop the simulation
         self.simulation_controller.stop_simulation()
-        self.simulation_controller.run_simulation()  # Restart the simulation
+        
+        # Reset all wheel speeds to 0
+        robot_controller = self.simulation_controller.robot_controller
+        robot_controller.set_left_speed(0)
+        robot_controller.set_right_speed(0)
+        
+        # Reset any other states if necessary (pitch, roll, etc. in 3D mode)
+        robot_model = self.simulation_controller.robot_model
+        if hasattr(robot_model, 'pitch'):
+            robot_model.pitch = 0
+        if hasattr(robot_model, 'roll'):
+            robot_model.roll = 0
+        
+        # Restart the simulation
+        self.simulation_controller.run_simulation()
+        
+        # Reset map if in 2D mode
         if self.map_controller is not None:
             self.map_controller.reset()
