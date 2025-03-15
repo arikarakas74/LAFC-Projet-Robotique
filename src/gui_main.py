@@ -92,15 +92,9 @@ class MainApplication(tk.Tk):
         self.config(menu=menubar)
         file_menu = tk.Menu(menubar, tearoff=False)
         menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Toggle View", command=self.toggle_view)
         file_menu.add_command(label="Reset", command=self.reset_simulation)
         file_menu.add_command(label="Quit", command=self.quit)
 
-    def toggle_view(self):
-        """Toggle between follow mode and free camera mode in 3D view."""
-        if self.use_3d_view and hasattr(self.robot_view, 'toggle_follow_mode'):
-            self.robot_view.toggle_follow_mode()
-            
     def reset_simulation(self):
         """Reset the simulation with a complete hard stop."""
         # Hard stop the simulation
