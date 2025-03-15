@@ -196,12 +196,12 @@ class MainApplication(tk.Tk):
         # WASD for basic movement
         self.bind("<w>", lambda event: self.sim_controller.robot_controller.move_forward())
         self.bind("<s>", lambda event: self.sim_controller.robot_controller.move_backward())
-        self.bind("<a>", lambda event: self.sim_controller.robot_controller.decrease_right_speed())
-        self.bind("<d>", lambda event: self.sim_controller.robot_controller.increase_right_speed())
+        self.bind("<a>", lambda event: self.sim_controller.robot_controller.decrease_left_speed())
+        self.bind("<d>", lambda event: self.sim_controller.robot_controller.decrease_right_speed())
         
         # QE for left wheel control
         self.bind("<q>", lambda event: self.sim_controller.robot_controller.increase_left_speed())
-        self.bind("<e>", lambda event: self.sim_controller.robot_controller.decrease_left_speed())
+        self.bind("<e>", lambda event: self.sim_controller.robot_controller.increase_right_speed())
         
         # RF for up/down in 3D
         self.bind("<r>", lambda event: self.sim_controller.robot_controller.move_up())
