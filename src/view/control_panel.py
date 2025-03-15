@@ -17,13 +17,20 @@ class ControlPanel:
         self._create_buttons()
 
     def _create_buttons(self):
+        # Common buttons for both 2D and 3D modes
         buttons = [
-            ("Set Start", self.map_controller.set_start_mode),
-            ("Set Obstacles", self.map_controller.set_obstacles_mode),
             ("Run Simulation", self.simulation_controller.run_simulation),
             ("Reset", self.reset_all),
-            ("draw", self.simulation_controller.square)
         ]
+        
+        # Add map-specific buttons only if we have a map controller (2D mode)
+        if self.map_controller is not None:
+            map_buttons = [
+                ("Set Start", self.map_controller.set_start_mode),
+                ("Set Obstacles", self.map_controller.set_obstacles_mode),
+                ("draw", self.simulation_controller.square)
+            ]
+            buttons = map_buttons + buttons
         
         for text, cmd in buttons:
             btn = tk.Button(self.control_frame, text=text, command=cmd)
@@ -32,4 +39,5 @@ class ControlPanel:
     def reset_all(self):
         """Réinitialise l'application."""
         self.simulation_controller.reset_simulation()
-        self.map_controller.reset()
+        if self.map_controller is not None:
+            self.map_controller.reset()

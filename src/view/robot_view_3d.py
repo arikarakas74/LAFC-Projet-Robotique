@@ -1,6 +1,9 @@
 import math
 import numpy as np
 import tkinter as tk
+from tkinter import ttk
+import sys
+import platform
 from OpenGL import GL, GLU
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -39,16 +42,26 @@ class RobotView3D:
         self.trail_points = []
         self.max_trail_points = 100
         
-        # Create OpenGL-compatible canvas
-        self.canvas = tk.Canvas(parent, width=self.width, height=self.height)
+        # Create a frame for the OpenGL rendering
+        self.frame = tk.Frame(parent, width=self.width, height=self.height)
+        self.frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a canvas for drawing the rendered image
+        self.canvas = tk.Canvas(self.frame, width=self.width, height=self.height)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         
         # Create a label for displaying robot state
         self.info_label = tk.Label(parent, text="", justify=tk.LEFT, anchor="w")
         self.info_label.pack(fill=tk.X)
         
-        # Initialize OpenGL context
-        self._init_opengl()
+        # Create a PIL Image to render to
+        self.image = Image.new("RGB", (self.width, self.height))
+        self.photo = ImageTk.PhotoImage(self.image)
+        self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+        
+        # Since we can't use OpenGL directly with Tkinter on macOS easily,
+        # we'll simulate the 3D rendering with a simpler approach
+        print("3D rendering is simulated due to OpenGL integration limitations")
         
         # Add state listener
         sim_controller.add_state_listener(self.update_display)
@@ -57,66 +70,8 @@ class RobotView3D:
         self._render_loop()
         
     def _init_opengl(self):
-        """Initializes the OpenGL context and settings."""
-        # Create a PIL Image to render to
-        self.image = Image.new("RGB", (self.width, self.height))
-        self.photo = ImageTk.PhotoImage(self.image)
-        self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-        
-        # Initialize OpenGL
-        self.context = GL.glContext(self.width, self.height)
-        self.context.makeCurrent()
-        
-        # Set up initial OpenGL state
-        glClearColor(0.2, 0.2, 0.2, 1.0)
-        glEnable(GL_DEPTH_TEST)
-        glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
-        glEnable(GL_COLOR_MATERIAL)
-        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-        
-        # Set up projection matrix
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(45.0, self.width / self.height, 0.1, 1000.0)
-        
-        # Set up view matrix
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        
-        # Set up light
-        light_position = [0.0, 10.0, 10.0, 1.0]
-        light_ambient = [0.2, 0.2, 0.2, 1.0]
-        light_diffuse = [1.0, 1.0, 1.0, 1.0]
-        light_specular = [1.0, 1.0, 1.0, 1.0]
-        
-        glLightfv(GL_LIGHT0, GL_POSITION, light_position)
-        glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient)
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse)
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular)
-        
-        # Create checkerboard texture for the ground
-        self._create_ground_texture()
-        
-    def _create_ground_texture(self):
-        """Creates a checkerboard texture for the ground plane."""
-        tex_size = 64
-        texture_data = []
-        
-        for y in range(tex_size):
-            for x in range(tex_size):
-                if (x // 8 + y // 8) % 2 == 0:
-                    texture_data.extend([0.9, 0.9, 0.9])  # Light gray
-                else:
-                    texture_data.extend([0.4, 0.4, 0.4])  # Dark gray
-                    
-        texture_data = np.array(texture_data, dtype=np.float32)
-        
-        self.texture_id = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.texture_id)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex_size, tex_size, 0, GL_RGB, GL_FLOAT, texture_data)
+        """This is a dummy function as we're not using real OpenGL in this version."""
+        pass
         
     def update_display(self, state):
         """Updates the display with the new robot state."""
@@ -143,8 +98,9 @@ class RobotView3D:
         self.parent.after(16, self._render_loop)  # ~60 FPS
         
     def _render_scene(self):
-        """Renders the 3D scene with robot and environment."""
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        """Renders a simplified 2D representation instead of 3D."""
+        # Create a new image
+        image = Image.new("RGB", (self.width, self.height), (50, 50, 50))
         
         # Get current robot state
         state = self.sim_controller.robot_model.get_state()
@@ -155,330 +111,132 @@ class RobotView3D:
         yaw = state['yaw']
         roll = state['roll']
         
-        # Set up camera
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+        # Draw a grid (simplified)
+        self._draw_simplified_grid(image)
         
-        if self.follow_robot:
-            # Position camera relative to robot
-            camera_x = robot_x - self.camera_distance * math.sin(yaw)
-            camera_y = robot_y - self.camera_distance * math.cos(yaw)
-            camera_z = robot_z + self.camera_height
-            
-            # Look at robot
-            gluLookAt(
-                camera_x, camera_y, camera_z,  # Camera position
-                robot_x, robot_y, robot_z,     # Look at point (robot position)
-                0.0, 0.0, 1.0                  # Up vector
-            )
-        else:
-            # Fixed camera with orbit controls
-            glRotatef(self.camera_angle_x, 1.0, 0.0, 0.0)
-            glRotatef(self.camera_angle_y, 0.0, 1.0, 0.0)
-            glTranslatef(-robot_x, -robot_y, -robot_z - self.camera_height)
-            
-        # Draw grid ground
-        self._draw_ground()
+        # Draw a simple path for the robot trail (simplified)
+        self._draw_simplified_trail(image)
         
-        # Draw axes
-        self._draw_axes()
+        # Draw a simple representation of obstacles (simplified)
+        self._draw_simplified_obstacles(image)
         
-        # Draw robot trail
-        self._draw_trail()
+        # Draw a simple representation of the robot (simplified)
+        self._draw_simplified_robot(image, robot_x, robot_y, robot_z, pitch, yaw, roll)
         
-        # Draw obstacles
-        self._draw_obstacles()
-        
-        # Draw robot
-        self._draw_robot(robot_x, robot_y, robot_z, pitch, yaw, roll)
-        
-        # Swap buffers to display the rendered image
-        self.context.swapBuffers()
-        
-        # Update the Tkinter canvas with the OpenGL rendered image
-        glReadBuffer(GL_FRONT)
-        pixels = glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE)
-        image = Image.frombytes("RGB", (self.width, self.height), pixels)
-        image = image.transpose(Image.FLIP_TOP_BOTTOM)
+        # Update the canvas with the new image
         self.photo = ImageTk.PhotoImage(image)
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
         
-    def _draw_ground(self):
-        """Draws the ground plane with a grid texture."""
-        grid_size = 800
-        grid_step = 50
+    def _draw_simplified_grid(self, image):
+        """Draws a simplified grid on the image."""
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(image)
         
-        glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, self.texture_id)
+        # Draw grid lines
+        grid_size = 50
+        for x in range(0, self.width, grid_size):
+            draw.line([(x, 0), (x, self.height)], fill=(70, 70, 70), width=1)
+        for y in range(0, self.height, grid_size):
+            draw.line([(0, y), (self.width, y)], fill=(70, 70, 70), width=1)
+            
+        # Draw coordinate axes
+        draw.line([(0, self.height//2), (self.width, self.height//2)], fill=(150, 150, 150), width=2)
+        draw.line([(self.width//2, 0), (self.width//2, self.height)], fill=(150, 150, 150), width=2)
         
-        glBegin(GL_QUADS)
-        glColor3f(0.7, 0.7, 0.7)
-        glNormal3f(0.0, 0.0, 1.0)
-        
-        glTexCoord2f(0.0, 0.0)
-        glVertex3f(-grid_size/2, -grid_size/2, 0.0)
-        
-        glTexCoord2f(grid_size/grid_step, 0.0)
-        glVertex3f(grid_size/2, -grid_size/2, 0.0)
-        
-        glTexCoord2f(grid_size/grid_step, grid_size/grid_step)
-        glVertex3f(grid_size/2, grid_size/2, 0.0)
-        
-        glTexCoord2f(0.0, grid_size/grid_step)
-        glVertex3f(-grid_size/2, grid_size/2, 0.0)
-        
-        glEnd()
-        
-        glDisable(GL_TEXTURE_2D)
-        
-    def _draw_axes(self):
-        """Draws the coordinate system axes."""
-        axis_length = 50.0
-        
-        glBegin(GL_LINES)
-        
-        # X-axis (red)
-        glColor3f(1.0, 0.0, 0.0)
-        glVertex3f(0.0, 0.0, 0.0)
-        glVertex3f(axis_length, 0.0, 0.0)
-        
-        # Y-axis (green)
-        glColor3f(0.0, 1.0, 0.0)
-        glVertex3f(0.0, 0.0, 0.0)
-        glVertex3f(0.0, axis_length, 0.0)
-        
-        # Z-axis (blue)
-        glColor3f(0.0, 0.0, 1.0)
-        glVertex3f(0.0, 0.0, 0.0)
-        glVertex3f(0.0, 0.0, axis_length)
-        
-        glEnd()
-        
-    def _draw_trail(self):
-        """Draws the robot's movement trail."""
+    def _draw_simplified_trail(self, image):
+        """Draws a simplified trail on the image."""
         if len(self.trail_points) < 2:
             return
             
-        glColor3f(0.5, 0.5, 0.8)
-        glBegin(GL_LINE_STRIP)
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(image)
         
+        # Transform 3D trail points to 2D screen coordinates
+        screen_points = []
         for point in self.trail_points:
-            glVertex3f(point[0], point[1], point[2] + 1.0)  # Slightly above ground
-            
-        glEnd()
+            x, y, z = point
+            # Simple projection (ignoring z for simplicity)
+            screen_x = int(self.width/2 + x - self.sim_controller.robot_model.x)
+            screen_y = int(self.height/2 - y + self.sim_controller.robot_model.y)
+            if 0 <= screen_x < self.width and 0 <= screen_y < self.height:
+                screen_points.append((screen_x, screen_y))
         
-    def _draw_obstacles(self):
-        """Draws obstacles from the map model."""
-        # Draw 3D obstacles
-        for min_point, max_point, _ in self.sim_controller.map_model.obstacles_3d.values():
-            self._draw_cuboid(min_point, max_point, (1.0, 0.0, 0.0))  # Red for obstacles
+        # Draw trail
+        if len(screen_points) >= 2:
+            draw.line(screen_points, fill=(100, 100, 200), width=2)
             
-        # Draw 2D obstacles as extruded polygons (for backwards compatibility)
-        glColor3f(1.0, 0.0, 0.0)  # Red
+    def _draw_simplified_obstacles(self, image):
+        """Draws simplified obstacles on the image."""
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(image)
+        
+        # Draw 3D obstacles as rectangles
+        for min_point, max_point, _ in self.sim_controller.map_model.obstacles_3d.values():
+            x1, y1, z1 = min_point
+            x2, y2, z2 = max_point
+            
+            # Convert to screen coordinates
+            screen_x1 = int(self.width/2 + x1 - self.sim_controller.robot_model.x)
+            screen_y1 = int(self.height/2 - y2 + self.sim_controller.robot_model.y)
+            screen_x2 = int(self.width/2 + x2 - self.sim_controller.robot_model.x)
+            screen_y2 = int(self.height/2 - y1 + self.sim_controller.robot_model.y)
+            
+            # Draw rectangle
+            draw.rectangle([(screen_x1, screen_y1), (screen_x2, screen_y2)], 
+                           fill=(200, 50, 50), outline=(255, 100, 100))
+            
+        # Draw 2D obstacles as polygons
         for obstacle_data in self.sim_controller.map_model.obstacles.values():
             points = obstacle_data[0]  # Extract points from the tuple
             if not points or len(points) < 3:
                 continue
                 
-            # Draw the base (bottom face)
-            glBegin(GL_POLYGON)
-            glNormal3f(0.0, 0.0, -1.0)
+            # Convert to screen coordinates
+            screen_points = []
             for point in points:
-                glVertex3f(point[0], point[1], 0.0)
-            glEnd()
-            
-            # Draw the top face
-            height = 30.0  # Arbitrary height for 2D obstacles
-            glBegin(GL_POLYGON)
-            glNormal3f(0.0, 0.0, 1.0)
-            for point in points:
-                glVertex3f(point[0], point[1], height)
-            glEnd()
-            
-            # Draw the side faces
-            glBegin(GL_QUADS)
-            for i in range(len(points)):
-                p1 = points[i]
-                p2 = points[(i + 1) % len(points)]
+                screen_x = int(self.width/2 + point[0] - self.sim_controller.robot_model.x)
+                screen_y = int(self.height/2 - point[1] + self.sim_controller.robot_model.y)
+                screen_points.append((screen_x, screen_y))
                 
-                # Calculate normal (perpendicular to the side face)
-                dx = p2[0] - p1[0]
-                dy = p2[1] - p1[1]
-                length = math.sqrt(dx*dx + dy*dy)
-                if length > 0:
-                    nx, ny = dy/length, -dx/length
-                else:
-                    nx, ny = 0, 1
-                    
-                glNormal3f(nx, ny, 0.0)
-                glVertex3f(p1[0], p1[1], 0.0)
-                glVertex3f(p2[0], p2[1], 0.0)
-                glVertex3f(p2[0], p2[1], height)
-                glVertex3f(p1[0], p1[1], height)
-            glEnd()
+            # Draw polygon
+            draw.polygon(screen_points, fill=(200, 50, 50), outline=(255, 100, 100))
             
-    def _draw_cuboid(self, min_point, max_point, color):
-        """Draws a 3D cuboid from min and max points."""
-        x1, y1, z1 = min_point
-        x2, y2, z2 = max_point
-        
-        glColor3f(*color)
-        
-        # Define the 8 vertices of the cube
-        vertices = [
-            (x1, y1, z1),  # 0: bottom-left-back
-            (x2, y1, z1),  # 1: bottom-right-back
-            (x2, y2, z1),  # 2: bottom-right-front
-            (x1, y2, z1),  # 3: bottom-left-front
-            (x1, y1, z2),  # 4: top-left-back
-            (x2, y1, z2),  # 5: top-right-back
-            (x2, y2, z2),  # 6: top-right-front
-            (x1, y2, z2),  # 7: top-left-front
-        ]
-        
-        # Define the 6 faces using vertices indices
-        faces = [
-            (0, 1, 2, 3),  # bottom
-            (4, 5, 6, 7),  # top
-            (0, 1, 5, 4),  # back
-            (2, 3, 7, 6),  # front
-            (0, 3, 7, 4),  # left
-            (1, 2, 6, 5),  # right
-        ]
-        
-        # Define normals for each face
-        normals = [
-            (0, 0, -1),  # bottom
-            (0, 0, 1),   # top
-            (0, -1, 0),  # back
-            (0, 1, 0),   # front
-            (-1, 0, 0),  # left
-            (1, 0, 0),   # right
-        ]
-        
-        glBegin(GL_QUADS)
-        for i, face in enumerate(faces):
-            glNormal3f(*normals[i])
-            for vertex_idx in face:
-                glVertex3f(*vertices[vertex_idx])
-        glEnd()
-            
-    def _draw_robot(self, x, y, z, pitch, yaw, roll):
-        """Draws the robot as a 3D model."""
-        # Save current matrix
-        glPushMatrix()
-        
-        # Position and orient the robot
-        glTranslatef(x, y, z)
-        glRotatef(math.degrees(yaw), 0.0, 0.0, 1.0)   # Rotate around Z (yaw)
-        glRotatef(math.degrees(pitch), 1.0, 0.0, 0.0) # Rotate around X (pitch)
-        glRotatef(math.degrees(roll), 0.0, 1.0, 0.0)  # Rotate around Y (roll)
+    def _draw_simplified_robot(self, image, x, y, z, pitch, yaw, roll):
+        """Draws a simplified robot on the image."""
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(image)
         
         # Robot dimensions
-        body_width = self.wheel_base_width
-        body_length = body_width * 1.5
-        body_height = self.robot_height
+        robot_size = 30
         
-        # Draw robot body (main rectangle)
-        glColor3f(0.0, 0.0, 0.8)  # Blue
+        # Draw a triangle for the robot
+        # Calculate vertices based on robot position and yaw
+        x1 = self.width/2
+        y1 = self.height/2
+        x2 = x1 + robot_size * math.cos(yaw + math.pi*2/3)
+        y2 = y1 - robot_size * math.sin(yaw + math.pi*2/3)
+        x3 = x1 + robot_size * math.cos(yaw + math.pi*4/3)
+        y3 = y1 - robot_size * math.sin(yaw + math.pi*4/3)
         
-        glBegin(GL_QUADS)
+        # Draw robot body
+        draw.polygon([(x1, y1), (x2, y2), (x3, y3)], fill=(0, 0, 200), outline=(100, 100, 255))
         
-        # Bottom face
-        glNormal3f(0.0, 0.0, -1.0)
-        glVertex3f(-body_length/2, -body_width/2, 0.0)
-        glVertex3f(body_length/2, -body_width/2, 0.0)
-        glVertex3f(body_length/2, body_width/2, 0.0)
-        glVertex3f(-body_length/2, body_width/2, 0.0)
+        # Draw direction indicator
+        dir_x = x1 + robot_size * math.cos(yaw)
+        dir_y = y1 - robot_size * math.sin(yaw)
+        draw.line([(x1, y1), (dir_x, dir_y)], fill=(255, 255, 0), width=3)
         
-        # Top face
-        glNormal3f(0.0, 0.0, 1.0)
-        glVertex3f(-body_length/2, -body_width/2, body_height)
-        glVertex3f(body_length/2, -body_width/2, body_height)
-        glVertex3f(body_length/2, body_width/2, body_height)
-        glVertex3f(-body_length/2, body_width/2, body_height)
+        # Add a simple visualization of pitch and roll
+        pitch_indicator = int(20 * pitch / math.pi)
+        roll_indicator = int(20 * roll / math.pi)
         
-        # Front face
-        glNormal3f(1.0, 0.0, 0.0)
-        glVertex3f(body_length/2, -body_width/2, 0.0)
-        glVertex3f(body_length/2, body_width/2, 0.0)
-        glVertex3f(body_length/2, body_width/2, body_height)
-        glVertex3f(body_length/2, -body_width/2, body_height)
-        
-        # Back face
-        glNormal3f(-1.0, 0.0, 0.0)
-        glVertex3f(-body_length/2, -body_width/2, 0.0)
-        glVertex3f(-body_length/2, body_width/2, 0.0)
-        glVertex3f(-body_length/2, body_width/2, body_height)
-        glVertex3f(-body_length/2, -body_width/2, body_height)
-        
-        # Left face
-        glNormal3f(0.0, -1.0, 0.0)
-        glVertex3f(-body_length/2, -body_width/2, 0.0)
-        glVertex3f(body_length/2, -body_width/2, 0.0)
-        glVertex3f(body_length/2, -body_width/2, body_height)
-        glVertex3f(-body_length/2, -body_width/2, body_height)
-        
-        # Right face
-        glNormal3f(0.0, 1.0, 0.0)
-        glVertex3f(-body_length/2, body_width/2, 0.0)
-        glVertex3f(body_length/2, body_width/2, 0.0)
-        glVertex3f(body_length/2, body_width/2, body_height)
-        glVertex3f(-body_length/2, body_width/2, body_height)
-        
-        glEnd()
-        
-        # Draw wheels
-        self._draw_wheel(-body_length/4, -body_width/2 - 3, body_height/4, 90, 0, 0)  # Left wheel
-        self._draw_wheel(-body_length/4, body_width/2 + 3, body_height/4, 90, 0, 0)   # Right wheel
-        
-        # Draw direction indicator (arrow)
-        glColor3f(1.0, 1.0, 0.0)  # Yellow
-        glBegin(GL_TRIANGLES)
-        glNormal3f(0.0, 0.0, 1.0)
-        glVertex3f(body_length/2 + 5, 0, body_height/2)
-        glVertex3f(body_length/2, -5, body_height/2)
-        glVertex3f(body_length/2, 5, body_height/2)
-        glEnd()
-        
-        # Restore matrix
-        glPopMatrix()
-        
-    def _draw_wheel(self, x, y, z, rx, ry, rz):
-        """Draws a wheel at the specified position and rotation."""
-        glPushMatrix()
-        
-        glTranslatef(x, y, z)
-        glRotatef(rx, 1.0, 0.0, 0.0)
-        glRotatef(ry, 0.0, 1.0, 0.0)
-        glRotatef(rz, 0.0, 0.0, 1.0)
-        
-        wheel_radius = self.sim_controller.robot_model.WHEEL_RADIUS
-        wheel_width = 3.0
-        
-        # Draw the wheel as a cylinder
-        glColor3f(0.2, 0.2, 0.2)  # Dark gray
-        
-        # Create a cylinder
-        quadric = gluNewQuadric()
-        gluCylinder(quadric, wheel_radius, wheel_radius, wheel_width, 16, 1)
-        
-        # Draw the wheel caps
-        glBegin(GL_TRIANGLE_FAN)
-        glVertex3f(0, 0, 0)
-        for i in range(17):
-            angle = 2.0 * math.pi * i / 16
-            glVertex3f(wheel_radius * math.cos(angle), wheel_radius * math.sin(angle), 0)
-        glEnd()
-        
-        glBegin(GL_TRIANGLE_FAN)
-        glVertex3f(0, 0, wheel_width)
-        for i in range(17):
-            angle = 2.0 * math.pi * i / 16
-            glVertex3f(wheel_radius * math.cos(angle), wheel_radius * math.sin(angle), wheel_width)
-        glEnd()
-        
-        glPopMatrix()
+        draw.text((x1 + 35, y1 - 20), f"P", fill=(255, 200, 200))
+        draw.rectangle([(x1 + 45, y1 - 25), (x1 + 55, y1 - 15 + pitch_indicator)], 
+                      fill=(200 + min(55, abs(pitch_indicator)*5), 200, 200))
+                      
+        draw.text((x1 + 65, y1 - 20), f"R", fill=(200, 255, 200))
+        draw.rectangle([(x1 + 75, y1 - 25), (x1 + 85, y1 - 15 + roll_indicator)], 
+                      fill=(200, 200 + min(55, abs(roll_indicator)*5), 200))
         
     def clear_robot(self):
         """Clears the robot and trail."""
@@ -489,4 +247,5 @@ class RobotView3D:
         if follow is not None:
             self.follow_robot = follow
         else:
-            self.follow_robot = not self.follow_robot 
+            self.follow_robot = not self.follow_robot
+            print(f"Follow mode: {'Enabled' if self.follow_robot else 'Disabled'}") 

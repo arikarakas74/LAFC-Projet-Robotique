@@ -49,11 +49,12 @@ class MainApplication(tk.Tk):
 
         # Create the views - use the 3D view by default
         self.use_3d_view = True
+        self.map_controller = None  # Initialize to None
         
         if self.use_3d_view:
             # Create 3D view
             self.robot_view = RobotView3D(canvas_frame, self.sim_controller)
-            # In 3D mode we don't need a separate map view as it's integrated
+            # In 3D mode we don't need a separate map view or map controller
             self.map_view = None
         else:
             # Create 2D views for backward compatibility
@@ -63,9 +64,8 @@ class MainApplication(tk.Tk):
                 parent=canvas_frame,
                 robot_view=self.robot_view
             )
-
-        # Create the map controller
-        self.map_controller = MapController(self.map_model, self.map_view, self)
+            # Create the map controller (only in 2D mode)
+            self.map_controller = MapController(self.map_model, self.map_view, self)
 
         # Create a sub-frame to center the control panel
         inner_frame = ttk.Frame(controls_frame)
