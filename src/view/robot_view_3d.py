@@ -50,6 +50,9 @@ class RobotView3D:
         self.canvas = tk.Canvas(self.frame, width=self.width, height=self.height)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         
+        # Bind mouse click event to set beacon
+        self.canvas.bind("<Button-1>", self.handle_click)
+        
         # Create a label for displaying robot state
         self.info_label = tk.Label(parent, text="", justify=tk.LEFT, anchor="w")
         self.info_label.pack(fill=tk.X)
@@ -293,4 +296,25 @@ class RobotView3D:
             self.follow_robot = follow
         else:
             self.follow_robot = not self.follow_robot
-            print(f"Follow mode: {'Enabled' if self.follow_robot else 'Disabled'}") 
+            print(f"Follow mode: {'Enabled' if self.follow_robot else 'Disabled'}")
+
+    def handle_click(self, event):
+        """Handle mouse click to set the beacon (end position)."""
+        x, y = event.x, event.y
+        
+        # Convert screen coordinates to world coordinates
+        robot_x = self.sim_controller.robot_model.x
+        robot_y = self.sim_controller.robot_model.y
+        
+        # Calculate world coordinates from screen position
+        world_x = robot_x + (x - self.width/2)
+        world_y = robot_y - (y - self.height/2)
+        
+        # Set the beacon position in the map model
+        self.sim_controller.map_model.set_end_position((world_x, world_y))
+        
+        # Show a message that beacon has been set
+        self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f})")
+        
+        # Redraw the scene immediately
+        self._render_scene() 

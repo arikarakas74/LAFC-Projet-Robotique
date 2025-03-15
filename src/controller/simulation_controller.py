@@ -106,6 +106,16 @@ class SimulationController:
         self.simulation_running = True
         self.simulation_thread = threading.Thread(target=self.run_loop, daemon=True)
         self.simulation_thread.start()
+        
+        # If a beacon is set, automatically follow it
+        if self.map_model.end_position is not None:
+            # Use a small delay to ensure the simulation has fully started
+            # before following the beacon
+            threading.Timer(0.5, self.follow_beacon).start()
+            
+            # Log that we're automatically following the beacon
+            beacon_x, beacon_y = self.map_model.end_position
+            self.position_logger.info(f"Auto-following beacon at ({beacon_x}, {beacon_y})")
 
     def run_loop(self):
         """Main simulation loop, running in a separate thread."""
