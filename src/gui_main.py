@@ -113,8 +113,25 @@ class MainApplication(tk.Tk):
         robot_model = self.robot_model
         
         # -- Primary motion variables --
-        robot_model.left_speed = 0
-        robot_model.right_speed = 0
+        # Handle both possible ways motor speeds might be stored
+        if hasattr(robot_model, 'motor_speeds'):
+            # If motor_speeds is a dictionary
+            if isinstance(robot_model.motor_speeds, dict):
+                robot_model.motor_speeds["left"] = 0
+                robot_model.motor_speeds["right"] = 0
+            # If motor_speeds is something else but has left/right attributes
+            elif hasattr(robot_model.motor_speeds, 'left') and hasattr(robot_model.motor_speeds, 'right'):
+                robot_model.motor_speeds.left = 0
+                robot_model.motor_speeds.right = 0
+            else:
+                # Just reset it to an appropriate default structure
+                robot_model.motor_speeds = {"left": 0, "right": 0}
+                
+        # Also reset left_speed and right_speed for compatibility
+        if hasattr(robot_model, 'left_speed'):
+            robot_model.left_speed = 0
+        if hasattr(robot_model, 'right_speed'):
+            robot_model.right_speed = 0
         
         # -- Ensure any internal velocity tracking is reset --
         if hasattr(robot_model, 'left_wheel_pos'):
