@@ -9,7 +9,6 @@ from controller.robot_controller import RobotController
 from utils.geometry import normalize_angle
 from utils.geometry3d import normalize_angle_3d
 from controller.strategy import StrategyManager
-from utils.data_exporter import DataExporter
 
 # --- Configuration des loggers ---
 
@@ -75,10 +74,8 @@ class SimulationController:
             console_handler.setFormatter(position_formatter)
             self.position_logger.addHandler(console_handler)
 
-        # Create the strategy manager and data exporter
-        # These are accessible by other components directly
+        # Create the strategy manager
         self.strategy_manager = StrategyManager(self.robot_model)
-        self.data_exporter = DataExporter()
         
         # Set up logging
         self.logger = logging.getLogger("SimulationController")
@@ -304,15 +301,6 @@ class SimulationController:
         with self.simulation_lock:
             return self.log_data.copy()
             
-    def export_log_data(self, file_path):
-        """
-        Export the logged data to a CSV file.
-        
-        Args:
-            file_path: Path to save the CSV file
-        """
-        return self.data_exporter.export_to_csv(self.get_log_data(), file_path)
-
     def is_simulation_running(self):
         """
         Check if the simulation is running.

@@ -1,15 +1,24 @@
 import tkinter as tk
 import math
 import time
-import inspect
+import logging
 
 class ControlPanel:
     """Control panel for user interactions with the 3D simulation."""
     
     def __init__(self, parent, map_controller, simulation_controller):
+        """
+        Initialize the control panel.
+        
+        Args:
+            parent: The parent widget
+            map_controller: The map controller (can be None)
+            simulation_controller: The simulation controller
+        """
         self.parent = parent
         self.map_controller = map_controller
         self.simulation_controller = simulation_controller
+        self.strategy_manager = simulation_controller.strategy_manager
         
         # Frame for buttons
         self.control_frame = tk.Frame(parent)
@@ -19,6 +28,7 @@ class ControlPanel:
         self._create_buttons()
 
     def _create_buttons(self):
+        """Create the control buttons."""
         # Simulation and strategy buttons
         buttons = [
             ("Run Simulation", self.simulation_controller.run_simulation),
@@ -29,8 +39,8 @@ class ControlPanel:
             ("Reset", self.reset_all),
         ]
         
-        # Display beacon instruction message
-        self.parent.after(500, lambda: self._show_beacon_instructions())
+        # Display beacon instruction message after a short delay
+        self.parent.after(500, self._show_beacon_instructions)
         
         # Create button widgets
         for text, cmd in buttons:
@@ -78,15 +88,23 @@ class ControlPanel:
     
     def draw_triangle(self):
         """Draw an equilateral triangle."""
-        self.simulation_controller.draw_triangle(100)
+        logging.info("Starting to draw a triangle")
+        self.strategy_manager.draw_triangle(side_length=100)
     
     def draw_square(self):
         """Draw a square."""
-        self.simulation_controller.draw_square(100)
+        logging.info("Starting to draw a square")
+        self.strategy_manager.draw_square(side_length=100)
     
     def draw_pentagon(self):
         """Draw a pentagon."""
-        self.simulation_controller.draw_pentagon(100)
+        logging.info("Starting to draw a pentagon")
+        self.strategy_manager.draw_pentagon(side_length=100)
+    
+    def stop_strategy(self):
+        """Stop the current strategy."""
+        logging.info("Stopping current strategy")
+        self.strategy_manager.stop_strategy()
     
     def reset_all(self):
         """Reset the application. Forces complete stop of robot motion."""
@@ -101,71 +119,32 @@ class ControlPanel:
         self.simulation_controller.stop_simulation()
         
         # Stop any running strategy
-        if hasattr(self.simulation_controller, 'stop_strategy'):
-            self.simulation_controller.stop_strategy()
+        self.strategy_manager.stop_strategy()
         
         # Reset motor speeds
         robot_model.set_motor_speed("left", 0)
         robot_model.set_motor_speed("right", 0)
         
-        # Also reset left_speed and right_speed for compatibility
-        if hasattr(robot_model, 'left_speed'):
-            robot_model.left_speed = 0
-        if hasattr(robot_model, 'right_speed'):
-            robot_model.right_speed = 0
-        
-        # Reset all possible motion attributes
-        for attr in dir(robot_model):
-            # Skip motor_speeds, methods, functions, and special attributes
-            if (attr != 'motor_speeds' and 
-                not attr.startswith('__') and 
-                not callable(getattr(robot_model, attr)) and
-                ('velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr)):
-                try:
-                    setattr(robot_model, attr, 0)
-                except:
-                    pass
-        
-        # Reset 3D specific variables
-        if hasattr(robot_model, 'pitch'):
-            robot_model.pitch = 0
-        if hasattr(robot_model, 'roll'):
-            robot_model.roll = 0
-        if hasattr(robot_model, 'yaw'):
-            robot_model.yaw = 0
-        if hasattr(robot_model, 'z'):
-            robot_model.z = 0  # Reset height to ground level
-        
-        # Force robot back to start position
-        if hasattr(map_model, 'start_position') and map_model.start_position:
-            # Handle 3D or 2D start position
-            start_pos = map_model.start_position
-            if len(start_pos) == 3:
-                start_x, start_y, start_z = start_pos
+        # Reset position to start if available
+        if map_model.start_position:
+            if len(map_model.start_position) == 3:
+                x, y, z = map_model.start_position
             else:
-                start_x, start_y = start_pos
-                start_z = 0
+                x, y = map_model.start_position
+                z = 0
+                
+            robot_model.set_position(x, y, z)
             
-            robot_model.x = start_x
-            robot_model.y = start_y
-            robot_model.z = start_z
+        # Reset orientation
+        robot_model.update_position(
+            robot_model.x, 
+            robot_model.y, 
+            robot_model.z,
+            0.0,  # Reset pitch
+            0.0,  # Reset yaw
+            0.0   # Reset roll
+        )
         
         # Restart the simulation
         self.simulation_controller.run_simulation()
-    
-    def stop_strategy(self):
-        """Stop the current strategy."""
-        if hasattr(self.simulation_controller, 'stop_strategy'):
-            self.simulation_controller.stop_strategy()
-
-    def export_movements(self):
-        """Export recorded robot movements to a CSV file."""
-        success = self.simulation_controller.export_movements_to_file()
-        if success:
-            self.export_status.set("Movements exported to robot_movements.csv")
-            # Schedule the message to disappear after 3 seconds
-            self.parent.after(3000, lambda: self.export_status.set(""))
-        else:
-            self.export_status.set("Export failed. See logs for details.")
-            # Schedule the message to disappear after 3 seconds
-            self.parent.after(3000, lambda: self.export_status.set(""))
+        logging.info("Simulation reset and restarted")
