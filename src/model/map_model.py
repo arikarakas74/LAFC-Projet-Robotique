@@ -60,6 +60,17 @@ class MapModel:
         self.start_position = (x, y)  # Keep 2D for backward compatibility
         self.notify_event_listeners("start_position_changed", position=(x, y, z))
 
+    def set_end_position(self, position):
+        """Sets the end position (beacon). In 3D mode, z is assumed to be 0."""
+        if len(position) == 2:
+            x, y = position
+            z = 0  # Default z position is ground level
+        else:
+            x, y, z = position
+        
+        self.end_position = (x, y)  # Keep 2D for backward compatibility
+        self.notify_event_listeners("end_position_changed", position=(x, y, z))
+
     def add_obstacle(self, obstacle_id, points, polygon_id=None, line_ids=None):
         """Adds a 2D obstacle and notifies listeners (for backward compatibility)."""
         self.obstacles[obstacle_id] = (points, polygon_id, line_ids)
