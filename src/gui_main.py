@@ -1,9 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from controller.map_controller import MapController
-from view.robot_view import RobotView
 from view.robot_view_3d import RobotView3D
-from view.map_view import MapView
 from view.control_panel import ControlPanel
 from model.map_model import MapModel
 from model.robot import RobotModel
@@ -13,7 +10,7 @@ import time
 class MainApplication(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Robot Simulation MVC - 3D")
+        self.title("Robot Simulation 3D")
         self._create_menu()
 
         # Main container
@@ -45,47 +42,26 @@ class MainApplication(tk.Tk):
         # Pass cli_mode=False to avoid launching the CLI input thread.
         self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
         
-        # Setting 3D mode to enabled
-        self.sim_controller.toggle_3d_mode(True)
-
-        # Create the views - use the 3D view by default
-        self.use_3d_view = True
-        self.map_controller = None  # Initialize to None
-        
-        if self.use_3d_view:
-            # Create 3D view
-            self.robot_view = RobotView3D(canvas_frame, self.sim_controller)
-            # In 3D mode we don't need a separate map view or map controller
-            self.map_view = None
-        else:
-            # Create 2D views for backward compatibility
-            self.robot_view = RobotView(canvas_frame, self.sim_controller)
-            self.robot_view.canvas.pack(fill="both", expand=True)
-            self.map_view = MapView(
-                parent=canvas_frame,
-                robot_view=self.robot_view
-            )
-            # Create the map controller (only in 2D mode)
-            self.map_controller = MapController(self.map_model, self.map_view, self)
+        # Create 3D view
+        self.robot_view = RobotView3D(canvas_frame, self.sim_controller)
 
         # Create a sub-frame to center the control panel
         inner_frame = ttk.Frame(controls_frame)
         inner_frame.pack(anchor='center')
 
         # Control panel for simulation commands (start, reset, etc.)
-        self.control_panel = ControlPanel(inner_frame, self.map_controller, self.sim_controller)
+        self.control_panel = ControlPanel(inner_frame, None, self.sim_controller)
         self.control_panel.control_frame.pack(pady=5)
 
         # Create clear trail button for 3D view
-        if self.use_3d_view:
-            self.clear_trail_button = ttk.Button(
-                inner_frame,
-                text="Clear Trail",
-                command=self.clear_robot_trail
-            )
-            self.clear_trail_button.pack(pady=5)
+        self.clear_trail_button = ttk.Button(
+            inner_frame,
+            text="Clear Trail",
+            command=self.clear_robot_trail
+        )
+        self.clear_trail_button.pack(pady=5)
 
-        # Bind keyboard events for the 3D view mode
+        # Bind keyboard events for 3D control
         self._bind_3d_keys()
 
     def _create_menu(self):
@@ -162,16 +138,18 @@ class MainApplication(tk.Tk):
             
         # -- Force robot back to start position --
         if hasattr(self.map_model, 'start_position') and self.map_model.start_position:
-            start_x, start_y = self.map_model.start_position
+            # Handle 3D or 2D start position
+            start_pos = self.map_model.start_position
+            if len(start_pos) == 3:
+                start_x, start_y, start_z = start_pos
+            else:
+                start_x, start_y = start_pos
+                start_z = 0
+            
             robot_model.x = start_x
             robot_model.y = start_y
-            # Reset direction to default (facing east)
-            robot_model.theta = 0
-        
-        # -- Force a physics state update if controller has this method --
-        if hasattr(self.sim_controller, 'update_physics'):
-            self.sim_controller.update_physics(0)
-        
+            robot_model.z = start_z
+            
         # -- Ensure the robot knows it's not moving --
         if hasattr(robot_model, 'is_moving'):
             robot_model.is_moving = False

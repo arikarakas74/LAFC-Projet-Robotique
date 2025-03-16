@@ -25,10 +25,10 @@ SPEED_MULTIPLIER = 8.0
 
 class SimulationController:
     """
-    Simulation controller for 3D robot movement and square drawing.
+    Simulation controller for 3D robot movement and pattern following.
     
-    Manages both real-time updates of the robot's 3D position and the sequence
-    of commands to trace a square (alternating linear phases and rotations).
+    Manages real-time updates of the robot's 3D position and executes 
+    movement strategies for various patterns and behaviors.
     """
     WHEEL_BASE_WIDTH = 20.0  # Distance between wheels (cm)
     WHEEL_DIAMETER = 5.0     # Wheel diameter (cm)
@@ -50,7 +50,6 @@ class SimulationController:
         self.simulation_running = False
         self.listeners: List[Callable[[dict], None]] = []
         self.update_interval = 0.02  # Update interval: 50 Hz
-        self.is_3d_mode = True       # Whether to use 3D physics
 
         # Variables for square drawing control
         self.drawing_square = False
@@ -63,10 +62,10 @@ class SimulationController:
         self.corners = []  # List of recorded corners
 
         # Logger for robot position traceability
-        self.position_logger = logging.getLogger('traceability.positions')
+        self.position_logger = logging.getLogger('traceability.position')
         self.position_logger.setLevel(logging.INFO)
         position_handler = logging.FileHandler('traceability_positions.log')
-        position_formatter = logging.Formatter('%(asctime)s - Position: %(message)s')
+        position_formatter = logging.Formatter('%(asctime)s - %(message)s')
         position_handler.setFormatter(position_formatter)
         self.position_logger.addHandler(position_handler)
 
@@ -99,9 +98,13 @@ class SimulationController:
 
         # Position the robot at the starting point if necessary
         start_pos = self.map_model.start_position
-        if (self.robot_model.x, self.robot_model.y) != start_pos:
-            self.robot_model.x, self.robot_model.y = start_pos
-            self.robot_model.z = 0.0  # Start at ground level
+        if start_pos:
+            # Handle 3D start position
+            if len(start_pos) == 3:
+                self.robot_model.x, self.robot_model.y, self.robot_model.z = start_pos
+            else:
+                self.robot_model.x, self.robot_model.y = start_pos
+                self.robot_model.z = 0.0  # Start at ground level
 
         self.simulation_running = True
         self.simulation_thread = threading.Thread(target=self.run_loop, daemon=True)
@@ -114,8 +117,13 @@ class SimulationController:
             threading.Timer(0.5, self.follow_beacon).start()
             
             # Log that we're automatically following the beacon
-            beacon_x, beacon_y = self.map_model.end_position
-            self.position_logger.info(f"Auto-following beacon at ({beacon_x}, {beacon_y})")
+            beacon_pos = self.map_model.end_position
+            if len(beacon_pos) == 3:
+                beacon_x, beacon_y, beacon_z = beacon_pos
+                self.position_logger.info(f"Auto-following beacon at ({beacon_x:.1f}, {beacon_y:.1f}, {beacon_z:.1f})")
+            else:
+                beacon_x, beacon_y = beacon_pos
+                self.position_logger.info(f"Auto-following beacon at ({beacon_x:.1f}, {beacon_y:.1f})")
 
     def run_loop(self):
         """Main simulation loop, running in a separate thread."""
@@ -126,11 +134,8 @@ class SimulationController:
             delta_time = (current_time - last_time) * SPEED_MULTIPLIER
             last_time = current_time
 
-            # Update physics for the robot
-            if self.is_3d_mode:
-                self.update_physics_3d(delta_time)
-            else:
-                self.update_physics_2d(delta_time)  # For backward compatibility
+            # Update 3D physics for the robot
+            self.update_physics_3d(delta_time)
                 
             # Update motor positions
             self.robot_model.update_motors(delta_time)
@@ -145,41 +150,6 @@ class SimulationController:
             # Sleep to maintain the desired update rate
             time.sleep(self.update_interval)
 
-    def update_physics_2d(self, delta_time):
-        """Updates the 2D physics for backward compatibility."""
-        # Get the current position and orientation
-        x, y = self.robot_model.x, self.robot_model.y
-        yaw = self.robot_model.yaw  # Using yaw as the 2D angle
-        
-        # Get motor speeds
-        left_speed = self.robot_model.motor_speeds["left"]  # degrees per second
-        right_speed = self.robot_model.motor_speeds["right"]  # degrees per second
-        
-        # Convert degrees per second to radians per second
-        left_angular_velocity = math.radians(left_speed)
-        right_angular_velocity = math.radians(right_speed)
-        
-        # Calculate wheel velocities
-        left_wheel_velocity = left_angular_velocity * self.WHEEL_RADIUS
-        right_wheel_velocity = right_angular_velocity * self.WHEEL_RADIUS
-        
-        # Calculate linear and angular velocities
-        linear_velocity = (left_wheel_velocity + right_wheel_velocity) / 2
-        angular_velocity = (right_wheel_velocity - left_wheel_velocity) / self.WHEEL_BASE_WIDTH
-        
-        # Calculate new position and orientation
-        new_yaw = yaw + angular_velocity * delta_time
-        
-        # Use yaw for movement direction
-        new_x = x + linear_velocity * math.cos(new_yaw) * delta_time
-        new_y = y + linear_velocity * math.sin(new_yaw) * delta_time
-        
-        # Update the robot model (using 3D update with z=0 and other angles=0)
-        self.robot_model.update_position(new_x, new_y, 0.0, 0.0, new_yaw, 0.0)
-        
-        # Log the new position
-        self.position_logger.info(f"X: {new_x:.2f}, Y: {new_y:.2f}, Angle: {math.degrees(new_yaw):.2f}°")
-        
     def update_physics_3d(self, delta_time):
         """Updates the 3D physics based on robot motor speeds and orientation."""
         # Get the current position and orientation
@@ -260,12 +230,6 @@ class SimulationController:
         if self.simulation_thread and self.simulation_thread.is_alive():
             self.simulation_thread.join(timeout=1.0)
 
-    def toggle_3d_mode(self, enabled=True):
-        """Toggles between 2D and 3D physics modes."""
-        self.is_3d_mode = enabled
-        message = "3D" if enabled else "2D"
-        self.position_logger.info(f"Switched to {message} physics mode")
-        
     def update_square_drawing(self):
         """Updates the square drawing process."""
         # Get the current state
@@ -275,10 +239,9 @@ class SimulationController:
         # Use yaw as the primary orientation angle
         current_angle = state['yaw']
         
-        # The rest of the square drawing logic remains mostly unchanged
-        # but would need updates for 3D visualization and logging
+        # The square drawing logic for 3D visualization and logging
         # ...
-        
+
     def draw_polygon(self, sides, side_length):
         """
         Draws a regular polygon with the specified number of sides and side length.
@@ -353,8 +316,13 @@ class SimulationController:
         self.strategy_executor.execute_strategy(beacon_strategy)
         
         # Log that we've started following the beacon
-        beacon_x, beacon_y = self.map_model.end_position
-        self.position_logger.info(f"Started following beacon at ({beacon_x}, {beacon_y})")
+        beacon_pos = self.map_model.end_position
+        if len(beacon_pos) == 3:
+            beacon_x, beacon_y, beacon_z = beacon_pos
+            self.position_logger.info(f"Started following beacon at ({beacon_x:.1f}, {beacon_y:.1f}, {beacon_z:.1f})")
+        else:
+            beacon_x, beacon_y = beacon_pos
+            self.position_logger.info(f"Started following beacon at ({beacon_x:.1f}, {beacon_y:.1f})")
         
     def stop_strategy(self):
         """Stops any running strategy."""

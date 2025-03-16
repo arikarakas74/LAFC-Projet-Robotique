@@ -191,22 +191,6 @@ class RobotView3D:
             draw.rectangle([(screen_x1, screen_y1), (screen_x2, screen_y2)], 
                            fill=(200, 50, 50), outline=(255, 100, 100))
             
-        # Draw 2D obstacles as polygons
-        for obstacle_data in self.sim_controller.map_model.obstacles.values():
-            points = obstacle_data[0]  # Extract points from the tuple
-            if not points or len(points) < 3:
-                continue
-                
-            # Convert to screen coordinates
-            screen_points = []
-            for point in points:
-                screen_x = int(self.width/2 + point[0] - self.sim_controller.robot_model.x)
-                screen_y = int(self.height/2 - point[1] + self.sim_controller.robot_model.y)
-                screen_points.append((screen_x, screen_y))
-                
-            # Draw polygon
-            draw.polygon(screen_points, fill=(200, 50, 50), outline=(255, 100, 100))
-            
     def _draw_simplified_robot(self, image, x, y, z, pitch, yaw, roll):
         """Draws a simplified robot on the image."""
         from PIL import ImageDraw
@@ -241,7 +225,12 @@ class RobotView3D:
         beacon_pos = self.sim_controller.map_model.end_position
         
         if beacon_pos is not None:
-            beacon_x, beacon_y = beacon_pos
+            # Unpack 3D position, but only use x, y for 2D drawing
+            if len(beacon_pos) == 3:
+                beacon_x, beacon_y, beacon_z = beacon_pos
+            else:
+                beacon_x, beacon_y = beacon_pos
+                
             robot_x = self.sim_controller.robot_model.x
             robot_y = self.sim_controller.robot_model.y
             
@@ -309,20 +298,21 @@ class RobotView3D:
         # Calculate world coordinates from screen position
         world_x = robot_x + (x - self.width/2)
         world_y = robot_y - (y - self.height/2)
+        world_z = 0.0  # Set beacon at ground level
         
         # Store previous beacon position to detect changes
         previous_beacon = self.sim_controller.map_model.end_position
         
-        # Set the beacon position in the map model
-        self.sim_controller.map_model.set_end_position((world_x, world_y))
+        # Set the beacon position in the map model (with explicit 3D coordinates)
+        self.sim_controller.map_model.set_end_position((world_x, world_y, world_z))
         
         # Show a message that beacon has been set
-        self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f})")
+        self.info_label.config(text=f"Beacon set at ({world_x:.1f}, {world_y:.1f}, {world_z:.1f})")
         
         # If simulation is running with a beacon strategy, ensure it detects the new position
         if self.sim_controller.simulation_running and self.sim_controller.strategy_executor.is_running():
             # Log that we've updated the beacon position during active simulation
-            self.sim_controller.position_logger.info(f"Beacon position updated during active simulation: ({world_x:.1f}, {world_y:.1f})")
+            self.sim_controller.position_logger.info(f"Beacon position updated during active simulation: ({world_x:.1f}, {world_y:.1f}, {world_z:.1f})")
         
         # Redraw the scene immediately
         self._render_scene() 

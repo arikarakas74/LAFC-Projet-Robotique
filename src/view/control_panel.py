@@ -4,127 +4,117 @@ import time
 import inspect
 
 class ControlPanel:
-    """Panneau de contrôle pour les interactions utilisateur."""
+    """Control panel for user interactions with the 3D simulation."""
     
     def __init__(self, parent, map_controller, simulation_controller):
         self.parent = parent
         self.map_controller = map_controller
         self.simulation_controller = simulation_controller
         
-        # Frame pour les boutons
+        # Frame for buttons
         self.control_frame = tk.Frame(parent)
         self.control_frame.pack()
         
-        # Boutons
+        # Create buttons
         self._create_buttons()
 
     def _create_buttons(self):
-        # Common buttons for both 2D and 3D modes
+        # Simulation and strategy buttons
         buttons = [
             ("Run Simulation", self.simulation_controller.run_simulation),
-            ("Reset", self.reset_all),
-        ]
-        
-        # Add map-specific buttons only if we have a map controller (2D mode)
-        if self.map_controller is not None:
-            map_buttons = [
-                ("Set Start", self.map_controller.set_start_mode),
-                ("Set Obstacles", self.map_controller.set_obstacles_mode),
-                ("Set Beacon", self.map_controller.set_end_mode),
-            ]
-            buttons = map_buttons + buttons
-        else:
-            # In 3D mode, add a message to instruct how to set the beacon
-            self.parent.after(500, lambda: self._show_beacon_instructions())
-        
-        # Add strategy buttons
-        strategy_buttons = [
             ("Triangle", self.draw_triangle),
             ("Square", self.draw_square),
             ("Pentagon", self.draw_pentagon),
-            ("Stop", self.stop_strategy)
+            ("Stop", self.stop_strategy),
+            ("Reset", self.reset_all),
         ]
         
-        # Combine all buttons
-        buttons.extend(strategy_buttons)
+        # Display beacon instruction message
+        self.parent.after(500, lambda: self._show_beacon_instructions())
         
+        # Create button widgets
         for text, cmd in buttons:
             btn = tk.Button(self.control_frame, text=text, command=cmd)
             btn.pack(side=tk.LEFT, padx=5)
-
+            
     def _show_beacon_instructions(self):
-        """Show a temporary instruction about how to set beacons"""
-        instruction_label = tk.Label(
-            self.parent, 
-            text="Click anywhere on the screen to set a beacon. Robot will automatically follow it when you click 'Run Simulation'.",
-            fg="blue"
+        """Show instructions about how to set the beacon in 3D mode."""
+        instruction = "Click anywhere in the 3D view to set a beacon position."
+        instruction_window = tk.Toplevel(self.parent)
+        instruction_window.title("Beacon Instructions")
+        
+        # Set window properties
+        instruction_window.geometry("400x100")
+        instruction_window.resizable(False, False)
+        
+        # Center the window on the screen
+        window_width = 400
+        window_height = 100
+        screen_width = self.parent.winfo_screenwidth()
+        screen_height = self.parent.winfo_screenheight()
+        x = int((screen_width / 2) - (window_width / 2))
+        y = int((screen_height / 2) - (window_height / 2))
+        instruction_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # Add instruction text
+        label = tk.Label(
+            instruction_window, 
+            text=instruction,
+            font=("Arial", 12),
+            pady=20
         )
-        instruction_label.pack(pady=5)
-        # Hide the message after 10 seconds
-        self.parent.after(10000, instruction_label.destroy)
-
+        label.pack()
+        
+        # Add a close button
+        close_button = tk.Button(
+            instruction_window,
+            text="Got it!",
+            command=instruction_window.destroy
+        )
+        close_button.pack()
+        
+        # Auto-close after 10 seconds
+        self.parent.after(10000, instruction_window.destroy)
+    
     def draw_triangle(self):
-        """Draw a triangle with a side length of 50cm."""
-        self.simulation_controller.draw_triangle(50)
-        
+        """Draw an equilateral triangle."""
+        self.simulation_controller.draw_triangle(100)
+    
     def draw_square(self):
-        """Draw a square with a side length of 50cm."""
-        self.simulation_controller.draw_square(50)
-        
+        """Draw a square."""
+        self.simulation_controller.draw_square(100)
+    
     def draw_pentagon(self):
-        """Draw a pentagon with a side length of 50cm."""
-        self.simulation_controller.draw_pentagon(50)
-        
-    def stop_strategy(self):
-        """Stop the currently running strategy."""
-        self.simulation_controller.stop_strategy()
-
+        """Draw a pentagon."""
+        self.simulation_controller.draw_pentagon(100)
+    
     def reset_all(self):
-        """Réinitialise l'application. Force complete stop of robot motion."""
-        # Stop the simulation with a hard stop
-        self.simulation_controller.stop_simulation()
-        
-        # Small pause to ensure everything stops
-        time.sleep(0.1)
-        
-        # Get direct access to models
+        """Reset the application. Forces complete stop of robot motion."""
+        # Get models
         robot_model = self.simulation_controller.robot_model
         map_model = self.simulation_controller.map_model
         
-        # FORCE COMPLETE STOP: Reset ALL possible motion variables
+        # Get the current state before stopping
+        state = robot_model.get_state()
         
-        # -- Primary motion variables --
-        # Handle both possible ways motor speeds might be stored
-        if hasattr(robot_model, 'motor_speeds'):
-            # If motor_speeds is a dictionary
-            if isinstance(robot_model.motor_speeds, dict):
-                robot_model.motor_speeds["left"] = 0
-                robot_model.motor_speeds["right"] = 0
-            # If motor_speeds is something else but has left/right attributes
-            elif hasattr(robot_model.motor_speeds, 'left') and hasattr(robot_model.motor_speeds, 'right'):
-                robot_model.motor_speeds.left = 0
-                robot_model.motor_speeds.right = 0
-            else:
-                # Just reset it to an appropriate default structure
-                robot_model.motor_speeds = {"left": 0, "right": 0}
-                
+        # Stop the simulation
+        self.simulation_controller.stop_simulation()
+        
+        # Stop any running strategy
+        if hasattr(self.simulation_controller, 'stop_strategy'):
+            self.simulation_controller.stop_strategy()
+        
+        # Reset motor speeds
+        robot_model.set_motor_speed("left", 0)
+        robot_model.set_motor_speed("right", 0)
+        
         # Also reset left_speed and right_speed for compatibility
         if hasattr(robot_model, 'left_speed'):
             robot_model.left_speed = 0
         if hasattr(robot_model, 'right_speed'):
             robot_model.right_speed = 0
         
-        # -- Ensure any internal velocity tracking is reset --
-        if hasattr(robot_model, 'left_wheel_pos'):
-            robot_model.left_wheel_pos = 0
-        if hasattr(robot_model, 'right_wheel_pos'):
-            robot_model.right_wheel_pos = 0
-        if hasattr(robot_model, 'linear_velocity'):
-            robot_model.linear_velocity = 0
-        if hasattr(robot_model, 'angular_velocity'):
-            robot_model.angular_velocity = 0
-            
-        # -- Additional velocity components that might exist --
+        # Reset all possible motion attributes
         for attr in dir(robot_model):
             # Skip motor_speeds, methods, functions, and special attributes
             if (attr != 'motor_speeds' and 
@@ -136,7 +126,7 @@ class ControlPanel:
                 except:
                     pass
         
-        # -- Reset 3D specific variables --
+        # Reset 3D specific variables
         if hasattr(robot_model, 'pitch'):
             robot_model.pitch = 0
         if hasattr(robot_model, 'roll'):
@@ -146,36 +136,27 @@ class ControlPanel:
         if hasattr(robot_model, 'z'):
             robot_model.z = 0  # Reset height to ground level
         
-        # -- Force robot back to start position --
+        # Force robot back to start position
         if hasattr(map_model, 'start_position') and map_model.start_position:
-            start_x, start_y = map_model.start_position
+            # Handle 3D or 2D start position
+            start_pos = map_model.start_position
+            if len(start_pos) == 3:
+                start_x, start_y, start_z = start_pos
+            else:
+                start_x, start_y = start_pos
+                start_z = 0
+            
             robot_model.x = start_x
             robot_model.y = start_y
-            # Reset direction to default (facing east)
-            robot_model.theta = 0
+            robot_model.z = start_z
         
-        # -- Force a physics state update if controller has this method --
-        if hasattr(self.simulation_controller, 'update_physics'):
-            self.simulation_controller.update_physics(0)
-        
-        # -- Ensure the robot knows it's not moving --
-        if hasattr(robot_model, 'is_moving'):
-            robot_model.is_moving = False
-        
-        # Reset map if in 2D mode
-        if self.map_controller is not None:
-            self.map_controller.reset()
-        
-        # Clear any cached motion data or trail history
-        if hasattr(self.simulation_controller, 'clear_cache'):
-            self.simulation_controller.clear_cache()
-            
-        # Restart the simulation only after confirming all motion is stopped
+        # Restart the simulation
         self.simulation_controller.run_simulation()
-        
-        # Force update all views if controller has this method
-        if hasattr(self.simulation_controller, 'update_views'):
-            self.simulation_controller.update_views()
+    
+    def stop_strategy(self):
+        """Stop the current strategy."""
+        if hasattr(self.simulation_controller, 'stop_strategy'):
+            self.simulation_controller.stop_strategy()
 
     def export_movements(self):
         """Export recorded robot movements to a CSV file."""

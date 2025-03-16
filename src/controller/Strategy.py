@@ -542,9 +542,13 @@ class FollowBeaconStrategy(AsyncCommand):
             self.last_beacon_pos = beacon_pos
             self.waiting_for_beacon_change = False
             self.collision_count = 0
-            
-        beacon_x, beacon_y = beacon_pos
-        beacon_z = 0  # Assume beacon is at ground level
+        
+        # Handle 3D or 2D beacon position
+        if len(beacon_pos) == 3:
+            beacon_x, beacon_y, beacon_z = beacon_pos
+        else:
+            beacon_x, beacon_y = beacon_pos
+            beacon_z = 0  # Assume beacon is at ground level
         
         # Calculate distance to beacon
         dx = beacon_x - x
