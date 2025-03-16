@@ -125,7 +125,7 @@ class SimulationController:
             current_time = time.time()
             delta_time = (current_time - last_time) * SPEED_MULTIPLIER
             last_time = current_time
-            
+
             # Update physics for the robot
             if self.is_3d_mode:
                 self.update_physics_3d(delta_time)
@@ -144,7 +144,7 @@ class SimulationController:
                 
             # Sleep to maintain the desired update rate
             time.sleep(self.update_interval)
-            
+
     def update_physics_2d(self, delta_time):
         """Updates the 2D physics for backward compatibility."""
         # Get the current position and orientation
