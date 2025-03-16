@@ -81,9 +81,9 @@ The 3D simulation offers several control methods:
 - **Ctrl+T**: Clear the robot's trail
 
 #### Movement Patterns:
-- **Triangle**: Draw an equilateral triangle
-- **Square**: Draw a square
-- **Pentagon**: Draw a pentagon
+- **Draw Polygon**: Create regular polygons with any number of sides (3 or more)
+  - When clicked, a dialog will appear asking for the number of sides
+  - The robot will then draw the specified polygon
 
 #### Beacon Following:
 1. Click anywhere in the 3D view to set a beacon position
@@ -91,6 +91,12 @@ The 3D simulation offers several control methods:
 3. Click again to set a new beacon position, and the robot will update its path
 
 ## Advanced Features
+
+### Polygon Drawing
+The simulation includes a flexible polygon drawing feature that allows the robot to:
+- Draw any regular polygon with 3 or more sides
+- Automatically calculate the angles needed for each corner
+- Maintain consistent side lengths and movement speeds
 
 ### Beacon Following
 The simulation includes a dynamic beacon following strategy that allows the robot to:
@@ -119,7 +125,7 @@ The simulation includes a dynamic beacon following strategy that allows the robo
 ## Development
 
 ### Adding New Features:
-1. For new movement strategies, extend the `AsyncCommand` class in `src/controller/Strategy.py`
+1. For new movement strategies, extend the `AsyncCommand` class in `src/controller/strategy.py`
 2. For UI components, modify or extend classes in the `src/view/` directory
 
 ### Testing:

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The LAFC-Projet-Robotique is a robot simulation program that allows users to control and simulate a robot's movement in a 2D environment. The application follows the Model-View-Controller (MVC) architecture pattern and can run in both GUI (graphical user interface) and CLI (command-line interface) modes.
+The LAFC-Projet-Robotique is a robot simulation program that allows users to control and simulate a robot's movement in a 3D environment. The application follows the Model-View-Controller (MVC) architecture pattern and can run in both GUI (graphical user interface) and CLI (command-line interface) modes.
 
 ## Code Structure
 
@@ -13,17 +13,20 @@ src/
 ├── controller/     # Contains simulation control logic
 │   ├── map_controller.py
 │   ├── robot_controller.py
-│   └── simulation_controller.py
+│   ├── simulation_controller.py
+│   └── strategy.py           # Movement strategies implementation
 ├── model/          # Contains data models
 │   ├── clock.py
 │   ├── map_model.py
 │   └── robot.py
 ├── utils/          # Utility functions
-│   └── geometry.py
+│   ├── geometry.py
+│   └── geometry3d.py
 ├── view/           # UI components
 │   ├── control_panel.py
 │   ├── map_view.py
-│   └── robot_view.py
+│   ├── robot_view.py
+│   └── robot_view_3d.py
 ├── cli_main.py     # CLI mode entry point
 ├── gui_main.py     # GUI mode entry point
 └── main.py         # Application entry point
@@ -106,6 +109,11 @@ Visualization of the robot:
 - Updates position and angle labels
 - Receives state updates from the simulation controller
 
+#### `view/robot_view_3d.py` - `RobotView3D`
+Visualization of the robot in 3D:
+- Renders the robot in a 3D environment
+- Handles 3D transformations and rendering
+
 #### `view/map_view.py` - `MapView`
 Visualization of the environment:
 - Renders obstacles, start position, and end position
@@ -124,6 +132,11 @@ User interface for controlling the simulation:
 Contains mathematical utility functions:
 - `point_in_polygon`: Determines if a point is inside a polygon (for collision detection)
 - `normalize_angle`: Keeps angles within the range of [-π, π]
+
+#### `utils/geometry3d.py`
+Contains 3D geometry utility functions:
+- `rotate_point`: Rotates a point around a given axis
+- `translate_point`: Translates a point in 3D space
 
 ## Functionality Flow
 
@@ -189,20 +202,20 @@ Robot control is implemented through:
 ### Special Features
 
 #### Square Drawing
-The application includes a special feature for drawing a square:
-1. `draw_square(side_length)` method initiates the process
+The application includes a flexible polygon drawing feature:
+1. `draw_polygon(sides, side_length)` method enables drawing any regular polygon
 2. The robot follows a sequence of moves:
    - Move forward to draw a side
-   - Rotate 90 degrees
-   - Repeat for all four sides
-3. The square drawing process is tracked and verified
-4. Position logs are maintained for verification
+   - Rotate by the appropriate angle (360°/sides)
+   - Repeat for all sides
+3. The polygon drawing process is tracked in real-time
+4. The user interface provides a dialog to specify the number of sides
 
 ## Key Design Patterns
 
 ### MVC Architecture
 - **Models**: Represent data structures and business logic (RobotModel, MapModel)
-- **Views**: Handle the visual representation (RobotView, MapView)
+- **Views**: Handle the visual representation (RobotView, RobotView3D, MapView)
 - **Controllers**: Coordinate between models and views (SimulationController, RobotController)
 
 ### Observer Pattern
@@ -215,10 +228,11 @@ The application includes a special feature for drawing a square:
 
 ## Logging and Traceability
 
-The application includes robust logging for traceability:
-- `traceability_positions.log`: Records robot positions during simulation
-- `traceability_square.log`: Specifically logs square drawing data
-- Console logging during simulation execution
+The application includes console logging for key operations:
+- Robot movements and position tracking
+- Polygon drawing progress
+- Beacon following status
+- Collision detection
 
 ## User Interaction
 
