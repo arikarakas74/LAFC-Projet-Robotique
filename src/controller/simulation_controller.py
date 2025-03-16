@@ -10,16 +10,6 @@ from utils.geometry import normalize_angle
 from utils.geometry3d import normalize_angle_3d
 from controller.strategy import StrategyManager
 
-# --- Configuration des loggers ---
-
-# Logger pour la traçabilité du dessin du carré
-square_logger = logging.getLogger('traceability.square')
-square_logger.setLevel(logging.INFO)
-square_handler = logging.FileHandler('traceability_square.log')
-square_formatter = logging.Formatter('%(asctime)s - %(message)s')
-square_handler.setFormatter(square_formatter)
-square_logger.addHandler(square_handler)
-
 # Multiplicateur pour accélérer la simulation
 SPEED_MULTIPLIER = 8.0
 
@@ -56,23 +46,6 @@ class SimulationController:
         self.simulation_lock = threading.Lock()
         self.target_fps = 60
         self.physics_substeps = 10
-        self.log_data = []
-        self.MAX_LOG_ENTRIES = 1000  # Maximum number of log entries to keep
-
-        # Logger for robot position traceability
-        self.position_logger = logging.getLogger('traceability.position')
-        self.position_logger.setLevel(logging.INFO)
-        position_handler = logging.FileHandler('traceability_positions.log')
-        position_formatter = logging.Formatter('%(asctime)s - %(message)s')
-        position_handler.setFormatter(position_formatter)
-        self.position_logger.addHandler(position_handler)
-
-        # Console logger
-        if not cli_mode:
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
-            console_handler.setFormatter(position_formatter)
-            self.position_logger.addHandler(console_handler)
 
         # Create the strategy manager
         self.strategy_manager = StrategyManager(self.robot_model)
@@ -192,10 +165,6 @@ class SimulationController:
             
             # Notify listeners about the updated state
             self._notify_listeners()
-            
-            # Log the robot state periodically (every 0.1 seconds of simulation time)
-            if int(self.simulation_time * 10) > int((self.simulation_time - frame_time) * 10):
-                self._log_robot_state()
 
     def _update_physics(self, delta_time):
         """
@@ -281,26 +250,6 @@ class SimulationController:
                     # Log collision
                     self.logger.info(f"Collision with obstacle {obstacle_id}")
 
-    def _log_robot_state(self):
-        """Log the current robot state for analysis."""
-        state = self.robot_model.get_state().copy()
-        state['time'] = self.simulation_time
-        
-        # Add to log data, maintaining maximum size
-        self.log_data.append(state)
-        if len(self.log_data) > self.MAX_LOG_ENTRIES:
-            self.log_data.pop(0)
-
-    def get_log_data(self):
-        """
-        Get the logged robot state data.
-        
-        Returns:
-            list: List of logged robot states
-        """
-        with self.simulation_lock:
-            return self.log_data.copy()
-            
     def is_simulation_running(self):
         """
         Check if the simulation is running.
