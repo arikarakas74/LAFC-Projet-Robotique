@@ -8,7 +8,7 @@ from model.robot import RobotModel
 from controller.robot_controller import RobotController
 from utils.geometry import normalize_angle
 from utils.geometry3d import normalize_angle_3d
-from controller.strategy import StrategyManager
+from controller.Strategy import StrategyManager
 
 # Multiplicateur pour accélérer la simulation
 SPEED_MULTIPLIER = 8.0
@@ -84,7 +84,7 @@ class SimulationController:
                 # We have a 2D position, set z to 0
                 self.robot_model.set_position(start_pos[0], start_pos[1], 0.0)
                 self.logger.info(f"Positioned robot at 2D start: ({start_pos[0]}, {start_pos[1]}, 0.0)")
-        
+
         self.simulation_running = True
         self.simulation_thread = threading.Thread(target=self._simulation_loop, daemon=True)
         self.simulation_thread.start()
@@ -131,7 +131,7 @@ class SimulationController:
             current_time = time.time()
             frame_time = current_time - last_time
             last_time = current_time
-            
+
             # Cap frame time to avoid large jumps
             frame_time = min(frame_time, 0.1)
             
