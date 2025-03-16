@@ -39,6 +39,10 @@ class MapController:
         self.mode = 'set_start'
         self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
 
+    def set_end_mode(self):
+        """Activates start position setting mode."""
+        self.mode = 'set_end'
+        self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
     def set_obstacles_mode(self):
         """Activates obstacle placement mode."""
         self.mode = 'set_obstacles'
@@ -51,6 +55,8 @@ class MapController:
         x, y = event.x, event.y
         if self.mode == 'set_start':
             self.map_model.set_start_position((x, y))  # Call set_start_position on the map model
+        elif self.mode == 'set_end' :
+            self.map_model.set_end_position((x, y))  # Call set_start_position on the map model
         elif self.mode == 'set_obstacles':
             if not self.map_model.current_shape:  # Access map_model
                 # Check if the user clicked on an existing obstacle to start dragging

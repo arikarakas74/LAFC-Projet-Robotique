@@ -4,6 +4,7 @@ class MapModel:
     """Stocke les données de la carte (obstacles, positions de départ/arrivée)."""
 
     def __init__(self):
+        
         self.obstacles = {}  # Format: {obstacle_id: points}
         self.start_position = (0,0)
         self.end_position = None
@@ -31,6 +32,10 @@ class MapModel:
         self.start_position = position
         self.notify_event_listeners("start_position_changed", position=position)
 
+    def set_end_position(self, position):
+        self.end_position = position
+        self.notify_event_listeners("end_position_changed", position=position)
+
     def add_obstacle(self, obstacle_id, points, polygon_id, line_ids):
         """Adds an obstacle and notifies listeners."""
         self.obstacles[obstacle_id] = (points, polygon_id, line_ids)
@@ -55,14 +60,15 @@ class MapModel:
     
     def is_out_of_bounds(self, x, y):
         """Vérifie si le robot sort des limites de la carte."""
-        MAP_WIDTH = 800
-        MAP_HEIGHT = 600
+        MAP_WIDTH = 800  
+        MAP_HEIGHT = 600  
+         
 
         if x  < 0:
-            return True 
+                return True 
         if x > MAP_WIDTH:
-            return True
+                return True
         if y < 0:
-            return True
+                return True
         if y > MAP_HEIGHT:
-            return True
+                return True
