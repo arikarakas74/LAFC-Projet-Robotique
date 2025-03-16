@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import simpledialog, messagebox
 import math
 import time
 import logging
@@ -32,9 +33,7 @@ class ControlPanel:
         # Simulation and strategy buttons
         buttons = [
             ("Run Simulation", self.simulation_controller.run_simulation),
-            ("Triangle", self.draw_triangle),
-            ("Square", self.draw_square),
-            ("Pentagon", self.draw_pentagon),
+            ("Draw Polygon", self.draw_polygon),
             ("Stop", self.stop_strategy),
             ("Reset", self.reset_all),
         ]
@@ -86,20 +85,20 @@ class ControlPanel:
         # Auto-close after 10 seconds
         self.parent.after(10000, instruction_window.destroy)
     
-    def draw_triangle(self):
-        """Draw an equilateral triangle."""
-        logging.info("Starting to draw a triangle")
-        self.strategy_manager.draw_triangle(side_length=100)
-    
-    def draw_square(self):
-        """Draw a square."""
-        logging.info("Starting to draw a square")
-        self.strategy_manager.draw_square(side_length=100)
-    
-    def draw_pentagon(self):
-        """Draw a pentagon."""
-        logging.info("Starting to draw a pentagon")
-        self.strategy_manager.draw_pentagon(side_length=100)
+    def draw_polygon(self):
+        """Open a dialog to input sides and draw a polygon."""
+        sides = simpledialog.askinteger(
+            "Draw Polygon", 
+            "Enter number of sides (minimum 3):",
+            minvalue=3,
+            maxvalue=20,
+            initialvalue=4,
+            parent=self.parent
+        )
+        
+        if sides is not None:  # User didn't cancel
+            logging.info(f"Starting to draw a {sides}-sided polygon")
+            self.strategy_manager.draw_polygon(sides, side_length=100)
     
     def stop_strategy(self):
         """Stop the current strategy."""
