@@ -1,0 +1,207 @@
+import tkinter as tk
+from tkinter import ttk
+from view.robot_view_3d import RobotView3D
+from view.control_panel import ControlPanel
+from model.map_model import MapModel
+from model.robot import RobotModel
+from controller.simulation_controller import SimulationController
+import time
+
+class MainApplication(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Robot Simulation 3D")
+        self._create_menu()
+
+        # Main container
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill="both", expand=True)
+
+        # Canvas frame (for drawing)
+        canvas_frame = ttk.Frame(main_frame)
+        canvas_frame.pack(side="top", fill="both", expand=True)
+
+        # Controls frame
+        controls_frame = ttk.Frame(main_frame, padding=10)
+        controls_frame.pack(side="bottom", fill="x")
+
+        # Initialize models and simulation controller
+        self.map_model = MapModel()
+        self.robot_model = RobotModel(self.map_model)
+        
+        # Set default starting position
+        self.map_model.set_start_position((400, 300))
+        
+        # Create a 3D obstacle for testing
+        self.map_model.add_obstacle_3d(
+            "cube1", 
+            (100, 100, 0),   # min point
+            (150, 150, 50),  # max point
+        )
+        
+        # Pass cli_mode=False to avoid launching the CLI input thread.
+        self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
+        
+        # Create 3D view
+        self.robot_view = RobotView3D(canvas_frame, self.sim_controller)
+
+        # Create a sub-frame to center the control panel
+        inner_frame = ttk.Frame(controls_frame)
+        inner_frame.pack(anchor='center')
+
+        # Control panel for simulation commands (start, reset, etc.)
+        self.control_panel = ControlPanel(inner_frame, None, self.sim_controller)
+        self.control_panel.control_frame.pack(pady=5)
+
+        # Create clear trail button for 3D view
+        self.clear_trail_button = ttk.Button(
+            inner_frame,
+            text="Clear Trail",
+            command=self.clear_robot_trail
+        )
+        self.clear_trail_button.pack(pady=5)
+
+        # Bind keyboard events for 3D control
+        self._bind_3d_keys()
+
+    def _create_menu(self):
+        menubar = tk.Menu(self)
+        self.config(menu=menubar)
+        file_menu = tk.Menu(menubar, tearoff=False)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Reset", command=self.reset_simulation)
+        file_menu.add_command(label="Quit", command=self.quit)
+
+    def reset_simulation(self):
+        """Reset the simulation with a complete hard stop."""
+        # Hard stop the simulation
+        self.sim_controller.stop_simulation()
+        
+        # Small pause to ensure everything stops
+        time.sleep(0.1)
+        
+        # FORCE COMPLETE STOP: Reset ALL possible motion variables
+        robot_model = self.robot_model
+        
+        # -- Primary motion variables --
+        # Handle both possible ways motor speeds might be stored
+        if hasattr(robot_model, 'motor_speeds'):
+            # If motor_speeds is a dictionary
+            if isinstance(robot_model.motor_speeds, dict):
+                robot_model.motor_speeds["left"] = 0
+                robot_model.motor_speeds["right"] = 0
+            # If motor_speeds is something else but has left/right attributes
+            elif hasattr(robot_model.motor_speeds, 'left') and hasattr(robot_model.motor_speeds, 'right'):
+                robot_model.motor_speeds.left = 0
+                robot_model.motor_speeds.right = 0
+            else:
+                # Just reset it to an appropriate default structure
+                robot_model.motor_speeds = {"left": 0, "right": 0}
+                
+        # Also reset left_speed and right_speed for compatibility
+        if hasattr(robot_model, 'left_speed'):
+            robot_model.left_speed = 0
+        if hasattr(robot_model, 'right_speed'):
+            robot_model.right_speed = 0
+        
+        # -- Ensure any internal velocity tracking is reset --
+        if hasattr(robot_model, 'left_wheel_pos'):
+            robot_model.left_wheel_pos = 0
+        if hasattr(robot_model, 'right_wheel_pos'):
+            robot_model.right_wheel_pos = 0
+        if hasattr(robot_model, 'linear_velocity'):
+            robot_model.linear_velocity = 0
+        if hasattr(robot_model, 'angular_velocity'):
+            robot_model.angular_velocity = 0
+            
+        # -- Additional velocity components that might exist --
+        for attr in dir(robot_model):
+            # Skip motor_speeds, methods, functions, and special attributes
+            if (attr != 'motor_speeds' and 
+                not attr.startswith('__') and 
+                not callable(getattr(robot_model, attr)) and
+                ('velocity' in attr or 'speed' in attr or 'momentum' in attr or 'accel' in attr)):
+                try:
+                    setattr(robot_model, attr, 0)
+                except:
+                    pass
+        
+        # -- Reset 3D specific variables --
+        if hasattr(robot_model, 'pitch'):
+            robot_model.pitch = 0
+        if hasattr(robot_model, 'roll'):
+            robot_model.roll = 0
+        if hasattr(robot_model, 'yaw'):
+            robot_model.yaw = 0
+        if hasattr(robot_model, 'z'):
+            robot_model.z = 0  # Reset height to ground level
+            
+        # -- Force robot back to start position --
+        if hasattr(self.map_model, 'start_position') and self.map_model.start_position:
+            # Handle 3D or 2D start position
+            start_pos = self.map_model.start_position
+            if len(start_pos) == 3:
+                start_x, start_y, start_z = start_pos
+            else:
+                start_x, start_y = start_pos
+                start_z = 0
+            
+            robot_model.x = start_x
+            robot_model.y = start_y
+            robot_model.z = start_z
+            
+        # -- Ensure the robot knows it's not moving --
+        if hasattr(robot_model, 'is_moving'):
+            robot_model.is_moving = False
+            
+        # Clear robot view but preserve the trail by default
+        if hasattr(self.robot_view, 'clear_robot'):
+            self.robot_view.clear_robot(clear_trail=False)
+        
+        # Clear any cached motion data or trail history
+        if hasattr(self.sim_controller, 'clear_cache'):
+            self.sim_controller.clear_cache()
+            
+        # Restart the simulation only after confirming all motion is stopped
+        self.sim_controller.run_simulation()
+        
+        # Force update all views if controller has this method
+        if hasattr(self.sim_controller, 'update_views'):
+            self.sim_controller.update_views()
+
+    def _bind_3d_keys(self):
+        """Bind keyboard events for 3D robot control."""
+        # WASD for basic movement
+        self.bind("<w>", lambda event: self.sim_controller.robot_controller.move_forward())
+        self.bind("<s>", lambda event: self.sim_controller.robot_controller.move_backward())
+        self.bind("<a>", lambda event: self.sim_controller.robot_controller.decrease_right_speed())
+        self.bind("<d>", lambda event: self.sim_controller.robot_controller.increase_right_speed())
+        
+        # QE for left wheel control
+        self.bind("<q>", lambda event: self.sim_controller.robot_controller.increase_left_speed())
+        self.bind("<e>", lambda event: self.sim_controller.robot_controller.decrease_left_speed())
+        
+        # RF for up/down in 3D
+        self.bind("<r>", lambda event: self.sim_controller.robot_controller.move_up())
+        self.bind("<f>", lambda event: self.sim_controller.robot_controller.move_down())
+        
+        # Arrow keys for 3D rotation
+        self.bind("<Up>", lambda event: self.sim_controller.robot_controller.pitch_up())
+        self.bind("<Down>", lambda event: self.sim_controller.robot_controller.pitch_down())
+        self.bind("<Left>", lambda event: self.sim_controller.robot_controller.roll_left())
+        self.bind("<Right>", lambda event: self.sim_controller.robot_controller.roll_right())
+        
+        # Add a key for clearing the trail (Ctrl+T)
+        self.bind("<Control-t>", lambda event: self.clear_robot_trail())
+
+    def clear_robot_trail(self):
+        """Clears only the robot's trail, preserving its position."""
+        if hasattr(self.robot_view, 'clear_robot'):
+            self.robot_view.clear_robot(clear_trail=True)
+
+def run_gui():
+    app = MainApplication()
+    app.mainloop()
+
+if __name__ == "__main__":
+    run_gui()

@@ -1,145 +1,260 @@
-from model.robot import Robot  # Adjusted the import path
-from view.control_panel import ControlPanel
-from controller.map_controller import MapController  # Import MapController
-from controller.robot_controller import RobotController  # Import RobotController
-from model.map_model import MapModel
-from view.robot_view import RobotView
-import time
 import threading
-from model.robot import Robot
-from model.clock import Clock
+import time
+import math
+import logging
+import numpy as np
+from typing import Callable, List
+from model.robot import RobotModel
+from controller.robot_controller import RobotController
+from utils.geometry import normalize_angle
+from utils.geometry3d import normalize_angle_3d
+from controller.strategy import StrategyManager
+
+# Multiplicateur pour accélérer la simulation
+SPEED_MULTIPLIER = 8.0
 
 class SimulationController:
-    """Handles the simulation flow and interactions between model and view."""
+    """
+    Simulation controller for 3D robot movement and pattern following.
+    
+    Manages real-time updates of the robot's 3D position and handles the physics
+    simulation for robot movement. Core responsibility is managing the simulation
+    loop and physics calculations.
+    """
+    WHEEL_BASE_WIDTH = 20.0  # Distance between wheels (cm)
+    WHEEL_DIAMETER = 5.0     # Wheel diameter (cm)
+    WHEEL_RADIUS = WHEEL_DIAMETER / 2
+    GRAVITY = 9.81           # Gravity acceleration (m/s²)
 
-    def __init__(self, map_instance, map_model, robot_view, control_panel=None,cli_mode=False):
+    def __init__(self, map_model, robot_model, cli_mode=False):
+        """
+        Initializes the simulation controller.
+        
+        Args:
+            map_model: Map model (containing the start position, etc.)
+            robot_model: Robot model (position, motors, etc.)
+            cli_mode: Whether the simulation is running in CLI mode
+        """
+        self.robot_model = robot_model
         self.map_model = map_model
-        self.robot_view = robot_view
+        self.robot_controller = RobotController(self.robot_model, self.map_model, cli_mode)
         self.simulation_running = False
-        self.robot = None
+        self.listeners: List[Callable[[dict], None]] = []
+        self.update_interval = 0.02  # Update interval: 50 Hz
+        self.simulation_time = 0.0
+        self.simulation_thread = None
+        self.simulation_lock = threading.Lock()
+        self.target_fps = 60
+        self.physics_substeps = 10
 
-        if not cli_mode:  
-            self.map = map_instance
-            self.map_controller = MapController(self.map.map_model, self.map.map_view, self.map.window)
-            self.robot_controller = None
+        # Create the strategy manager
+        self.strategy_manager = StrategyManager(self.robot_model)
+        
+        # Set up logging
+        self.logger = logging.getLogger("SimulationController")
+        self.logger.info("Simulation controller initialized")
 
-        self.control_panel = control_panel  # Use the provided control_panel
-        self.cli_mode = cli_mode
-    
-    def update_view(self):
-        pass 
+    def add_state_listener(self, callback: Callable[[dict], None]):
+        """Adds a callback that will be notified on each robot state update."""
+        self.listeners.append(callback)
 
-    def run_simulation_cli(self, robot):
-        """Mode CLI pour exécuter la simulation et mettre à jour la position après chaque mouvement"""
-        self.robot = robot
-        self.simulation_running = True
+    def _notify_listeners(self):
+        """Notifies all listeners with the current robot state."""
+        state = self.robot_model.get_state()
+        for callback in self.listeners:
+            callback(state)
 
-        print("Simulation started in CLI mode.")
-        print("Use 'w' to move forward, 's' to move backward, 'a' to turn left, 'd' to turn right, 'q' to quit.")
-
-        last_time = time.time()
-
-        while self.simulation_running:
-            command = input("Enter command: ").strip().lower()
-            
-            current_time = time.time()
-            delta_time = current_time - last_time
-            last_time = current_time
-
-            if command == 'w':
-                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 50)
-                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 50)
-            elif command == 's':
-                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, -50)
-                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, -50)
-            elif command == 'a':
-                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, -30)
-                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 30)
-            elif command == 'd':
-                self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 30)
-                self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, -30)
-            elif command == 'q':
-                print("Stopping simulation.")
-                self.simulation_running = False
-                break
-            else:
-                print("Invalid command! Use w/s/a/d/q.")
-                continue  
-            
-            self.robot.move_motors(delta_time)
-            print(f" Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
-
-    
     def run_simulation(self):
-        """Starts the robot simulation."""
-        if self.map_model.start_position:
-            print("Simulation started")
-            start_x, start_y = self.map_model.start_position
-            self.robot_view.x = start_x
-            self.robot_view.y = start_y
+        """
+        Start the simulation if it's not already running.
+        """
         if self.simulation_running:
-            self.map.map_view.update_message_label(text="Simulation already running.") # Access map_view
+            self.logger.warning("Simulation is already running")
             return
 
-        if not self.map.map_model.start_position: # Access map_model
-            self.map.map_view.update_message_label(text="Please set the start position.") # Access map_view
-            return
-
-        self.map.robot = Robot(self.map.map_model)  # Create robot instance with map dimensions
-        self.update_view()
-        self.map.robot.add_event_listener(lambda event, **kwargs: self.update_view())
-        self.map.robot.start_movement()
-        self.map.map_view.create_speed_label()  # Create speed label in the view
-        self.control_panel.set_speed_label(self.map.map_view.speed_label)  # Set the speed label to control panel
-        self.robot_controller = RobotController(self.map.robot, self.map.map_view.robot_view, self.control_panel, self.map.window,self.map_model)  # Pass window to RobotController
-        self.map.map_view.update_message_label(text="Use W/S to move forward/backward and A/D to turn left/right.") # Access map_view
+        # Check if we have a starting position
+        start_pos = self.map_model.start_position
+        if start_pos:
+            # Handle 3D vs 2D start position
+            if len(start_pos) == 3:
+                # We have a 3D position with z-coordinate
+                self.robot_model.set_position(start_pos[0], start_pos[1], start_pos[2])
+                self.logger.info(f"Positioned robot at 3D start: ({start_pos[0]}, {start_pos[1]}, {start_pos[2]})")
+            else:
+                # We have a 2D position, set z to 0
+                self.robot_model.set_position(start_pos[0], start_pos[1], 0.0)
+                self.logger.info(f"Positioned robot at 2D start: ({start_pos[0]}, {start_pos[1]}, 0.0)")
+        
         self.simulation_running = True
+        self.simulation_thread = threading.Thread(target=self._simulation_loop, daemon=True)
+        self.simulation_thread.start()
+        self.logger.info("Simulation started")
 
-    def reset_map(self, include_robot=False):
+        # If we have a beacon position, set a timer to follow it automatically
+        if self.map_model.beacon_position:
+            beacon_pos = self.map_model.beacon_position
+            timer = threading.Timer(1.0, self.strategy_manager.follow_beacon, args=[beacon_pos])
+            timer.daemon = True
+            timer.start()
+            
+            # Log beacon position (2D or 3D)
+            if len(beacon_pos) == 3:
+                self.logger.info(f"Set to follow 3D beacon at ({beacon_pos[0]}, {beacon_pos[1]}, {beacon_pos[2]})")
+            else:
+                self.logger.info(f"Set to follow 2D beacon at ({beacon_pos[0]}, {beacon_pos[1]})")
+
+    def stop_simulation(self):
+        """
+        Stop the simulation if it's running.
+        """
+        if not self.simulation_running:
+            self.logger.warning("Simulation is not running")
+            return
 
         self.simulation_running = False
-        self.map.map_view.delete_all()  # Access map_view
-        self.map.map_model.reset()  # Access map_model
-        self.map.map_view.update_message_label(text="Map reset.")  # Access map_view
-        if self.map.map_view.speed_label:
-            self.map.map_view.speed_label.destroy()
-            self.map.map_view.speed_label = None
-        self.map.window.update()
+        if self.simulation_thread:
+            self.simulation_thread.join(timeout=1.0)
+        
+        # Stop any running strategy
+        self.strategy_manager.stop_strategy()
+        self.logger.info("Simulation stopped")
 
-        self.map.map_view.robot_view.clear_robot()  # Clear the robot from the canvas
+    def _simulation_loop(self):
+        """
+        Main simulation loop.
+        """
+        self.logger.debug("Simulation loop started")
+        last_time = time.time()
+        
+        while self.simulation_running:
+            # Calculate frame time
+            current_time = time.time()
+            frame_time = current_time - last_time
+            last_time = current_time
+            
+            # Cap frame time to avoid large jumps
+            frame_time = min(frame_time, 0.1)
+            
+            # Update simulation
+            self._update_simulation(frame_time)
+            
+            # Sleep to maintain target FPS
+            target_frame_time = 1.0 / self.target_fps
+            sleep_time = max(0, target_frame_time - (time.time() - current_time))
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+                
+        self.logger.debug("Simulation loop ended")
 
-        if include_robot:
-            self.reset_robot()
+    def _update_simulation(self, frame_time):
+        """
+        Update the simulation state.
+        
+        Args:
+            frame_time: The time elapsed since the last frame
+        """
+        # Perform physics updates in substeps for stability
+        substep_time = frame_time / self.physics_substeps
+        
+        with self.simulation_lock:
+            for _ in range(self.physics_substeps):
+                self._update_physics(substep_time)
+                
+            # Update total simulation time
+            self.simulation_time += frame_time
+            
+            # Notify listeners about the updated state
+            self._notify_listeners()
 
-    def reset_robot(self):
-        """Resets the robot to its initial state."""
-        if self.map.robot:
-            self.map.robot.stop_simulation()
-            self.map.robot = None
+    def _update_physics(self, delta_time):
+        """
+        Update the physics state.
+        
+        Args:
+            delta_time: The time elapsed since the last physics update
+        """
+        # Update robot physics
+        self.robot_model.update(delta_time)
+        
+        # Check for collisions with map boundaries
+        self._check_map_boundaries()
+        
+        # Check for collisions with obstacles
+        self._check_obstacle_collisions()
 
-        if self.robot_controller:
-            self.robot_controller.cleanup()
-            self.robot_controller = None
+    def _check_map_boundaries(self):
+        """Check and handle collisions with map boundaries."""
+        map_width = self.map_model.width
+        map_height = self.map_model.height
+        
+        state = self.robot_model.get_state()
+        x, y = state['x'], state['y']
+        
+        # Simple boundary checking - clamp position and stop movement in that direction
+        if x < 0:
+            self.robot_model.set_position(0, y, state['z'])
+            self.robot_model.stop_movement_x()
+        elif x > map_width:
+            self.robot_model.set_position(map_width, y, state['z'])
+            self.robot_model.stop_movement_x()
+            
+        if y < 0:
+            self.robot_model.set_position(x, 0, state['z'])
+            self.robot_model.stop_movement_y()
+        elif y > map_height:
+            self.robot_model.set_position(x, map_height, state['z'])
+            self.robot_model.stop_movement_y()
 
-        self.map.map_view.robot_view.clear_robot()
-        self.map.map_view.canvas.delete("robot")
+    def _check_obstacle_collisions(self):
+        """Check and handle collisions with obstacles."""
+        # Get robot state
+        state = self.robot_model.get_state()
+        robot_x, robot_y, robot_z = state['x'], state['y'], state['z']
+        robot_radius = self.robot_model.radius
+        
+        # Check for collisions with 3D obstacles
+        for obstacle_id, (min_point, max_point, _) in self.map_model.obstacles_3d.items():
+            # Simple collision detection with bounding box
+            # Check if robot sphere intersects with obstacle box
+            
+            # Calculate closest point on box to robot center
+            closest_x = max(min_point[0], min(robot_x, max_point[0]))
+            closest_y = max(min_point[1], min(robot_y, max_point[1]))
+            closest_z = max(min_point[2], min(robot_z, max_point[2]))
+            
+            # Calculate distance from closest point to robot center
+            dx = robot_x - closest_x
+            dy = robot_y - closest_y
+            dz = robot_z - closest_z
+            distance = math.sqrt(dx*dx + dy*dy + dz*dz)
+            
+            # If distance is less than robot radius, we have a collision
+            if distance < robot_radius:
+                # Simple collision response - push robot away
+                if distance > 0:  # Avoid division by zero
+                    push_factor = (robot_radius - distance) / distance
+                    push_x = dx * push_factor
+                    push_y = dy * push_factor
+                    push_z = dz * push_factor
+                    
+                    # Update robot position
+                    self.robot_model.update_position(
+                        robot_x + push_x,
+                        robot_y + push_y,
+                        robot_z + push_z,
+                        state['pitch'],
+                        state['yaw'],
+                        state['roll']
+                    )
+                    
+                    # Log collision
+                    self.logger.info(f"Collision with obstacle {obstacle_id}")
 
-    def draw_square(self):
-        """Starts the robot drawing a square."""
-        if not self.map.robot:
-            self.map.map_view.update_message_label(text="Start the simulation first.") # Access map_view
-            return
-        self.robot_controller.start_draw_square()
-
-    def update_simulation_cli(self, delta_time):
-        """Mode CLI met à jour l'émulation"""
-        if not self.simulation_running:
-            return
-
-        last_x, last_y = self.robot.x, self.robot.y
-        self.robot.move_motors(delta_time)
-
-        if (self.robot.x, self.robot.y) != (last_x, last_y):
-            print(f"Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={self.robot.direction_angle:.2f}°")
-
-
+    def is_simulation_running(self):
+        """
+        Check if the simulation is running.
+        
+        Returns:
+            bool: True if the simulation is running, False otherwise
+        """
+        return self.simulation_running

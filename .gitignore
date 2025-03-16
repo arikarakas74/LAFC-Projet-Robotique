@@ -1,3 +1,8 @@
 # Ignore all .pyc files
 *.pyc
 __pycache__/
+*/__pycache__/
+**/__pycache__/
+
+# Ignore traceability logs
+traceability_*.log

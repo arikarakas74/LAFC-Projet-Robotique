@@ -1,6 +1,7 @@
 from model.map_model import MapModel
 from view.map_view import MapView
 from utils.geometry import point_in_polygon  # Import point_in_polygon
+from model.robot import RobotModel
 
 class MapController:
     """Handles user input and updates the map model and view."""
@@ -11,6 +12,11 @@ class MapController:
         self.map_view = map_view
         self.window = window  # Store the window object
         self.map_model.add_event_listener(self.handle_map_event)
+        self.map_view.canvas.bind("<Button-1>", self.handle_click)
+        self.map_view.canvas.bind("<B1-Motion>", self.handle_drag)
+        self.map_view.canvas.bind("<Double-Button-1>", self.finalize_shape)
+        self.map_view.canvas.bind("<Button-3>", self.delete_obstacle)
+        self.map_view.canvas.bind("<ButtonRelease-1>", self.stop_drag)
 
     def handle_map_event(self, event_type, **kwargs):
         """Handles events from the map model."""
@@ -33,6 +39,11 @@ class MapController:
         self.mode = 'set_start'
         self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
 
+    def set_end_mode(self):
+        """Activates end position (beacon) setting mode."""
+        self.mode = 'set_end'
+        self.map_view.update_message_label(text="Click on the grid to set the beacon position.")
+
     def set_obstacles_mode(self):
         """Activates obstacle placement mode."""
         self.mode = 'set_obstacles'
@@ -45,6 +56,8 @@ class MapController:
         x, y = event.x, event.y
         if self.mode == 'set_start':
             self.map_model.set_start_position((x, y))  # Call set_start_position on the map model
+        elif self.mode == 'set_end':
+            self.map_model.set_end_position((x, y))  # Call set_end_position on the map model
         elif self.mode == 'set_obstacles':
             if not self.map_model.current_shape:  # Access map_model
                 # Check if the user clicked on an existing obstacle to start dragging
@@ -121,3 +134,6 @@ class MapController:
         """Stops dragging an obstacle."""
         self.map_model.dragging_obstacle = None  # Access map_model
         self.map_model.drag_start = None  # Access map_model
+
+    def reset(self):
+        self.map_view.delete_all()

@@ -1,151 +1,98 @@
 import math
+import numpy as np
 from model.map_model import MapModel
-import time
+from utils.geometry3d import normalize_angle_3d, rotation_matrix_from_angles
 
-class Robot:
-    WHEEL_BASE_WIDTH = 10.0  # Distance entre les roues (cm)
-    WHEEL_DIAMETER = 5.0     # Diamètre des roues (cm)
+class RobotModel:
+    """3D robot model with physics properties."""
+    
+    # Physical constants
+    WHEEL_BASE_WIDTH = 20.0  # Distance between wheels (cm)
+    WHEEL_DIAMETER = 5.0     # Wheel diameter (cm)
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
-    
-    MOTOR_LEFT = "left"
-    MOTOR_RIGHT = "right"
-    
+    HEIGHT = 15.0            # Height of the robot (cm)
+
     def __init__(self, map_model: MapModel):
+        """Initialize the robot model with default values."""
         self.map_model = map_model
-        self.x, self.y = map_model.start_position  # Position stockée dans le modèle
-        self.direction_angle = 0.0
-        self.motor_speeds = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}
-        self.motor_positions = {self.MOTOR_LEFT: 0, self.MOTOR_RIGHT: 0}
-        self.event_listeners = []
-        self.moving = False
-    
-    def update_position(self, new_x, new_y, new_angle):
-        """Met à jour la position du robot"""
-        print(f"Before update: x={self.x}, y={self.y}, angle={self.direction_angle}")
+        
+        # 3D position (x, y, z)
+        self.x = 400  # Default position center of map
+        self.y = 300
+        self.z = 0.0  # Start at ground level
+        
+        # Use the start position from map model if available
+        if map_model.start_position:
+            self.x, self.y, self.z = map_model.start_position
+        
+        # 3D orientation (pitch, yaw, roll)
+        self.pitch = 0.0  # X-axis rotation (up/down)
+        self.yaw = 0.0    # Y-axis rotation (left/right) - primary direction
+        self.roll = 0.0   # Z-axis rotation (tilt)
+        
+        # Motor speeds in degrees per second
+        self.motor_speeds = {"left": 0, "right": 0}
+        
+        # Motor positions in degrees (for tracking rotation)
+        self.motor_positions = {"left": 0, "right": 0}
 
-        self.x = new_x
-        self.y = new_y
-        self.direction_angle = new_angle
+    def update_position(self, new_x: float, new_y: float, new_z: float, 
+                         new_pitch: float, new_yaw: float, new_roll: float):
+        """Updates the robot's 3D position and orientation after checking for collisions."""
+        if not (self.map_model.is_collision_3d(new_x, new_y, new_z) or 
+                self.map_model.is_out_of_bounds_3d(new_x, new_y, new_z)):
+            self.x = new_x
+            self.y = new_y
+            self.z = new_z
+            self.pitch, self.yaw, self.roll = normalize_angle_3d(new_pitch, new_yaw, new_roll)
 
-        print(f"After update: x={self.x}, y={self.y}, angle={self.direction_angle}")
+    def set_motor_speed(self, motor: str, dps: float):
+        """Sets the speed of a motor in degrees per second with validation."""
+        if motor in ["left", "right"]:
+            self.motor_speeds[motor] = max(-1000, min(1000, dps))
 
-    def add_event_listener(self, listener):
-        """Ajoute un écouteur d'événements"""
-        self.event_listeners.append(listener)
-    
-    def trigger_event(self, event_type, **kwargs):
-        """Déclenche un événement"""
-        valid_events = {"update_view", "update_speed_label"}
-        if event_type not in valid_events:
-            raise ValueError(f"Événement invalide: {event_type}")
-        for listener in self.event_listeners:
-            listener(event_type, **kwargs)
+    def update_motors(self, delta_time: float):
+        """Updates the motor positions based on current speeds."""
+        self.motor_positions["left"] += self.motor_speeds["left"] * delta_time
+        self.motor_positions["right"] += self.motor_speeds["right"] * delta_time
+        
+        # Normalize motor positions to keep them in a reasonable range
+        self.motor_positions["left"] %= 360.0
+        self.motor_positions["right"] %= 360.0
 
-    def set_motor_dps(self, port, dps):
-        """Définit la vitesse des moteurs"""
-        if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
-            self.motor_speeds[port] = dps
+    def get_state(self) -> dict:
+        """Returns the current state of the robot."""
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z,
+            "pitch": self.pitch,
+            "yaw": self.yaw,
+            "roll": self.roll,
+            "left_speed": self.motor_speeds["left"],
+            "right_speed": self.motor_speeds["right"],
+            "left_position": self.motor_positions["left"],
+            "right_position": self.motor_positions["right"]
+        }
 
-        # Gestion de l'état de mouvement
-        if self.motor_speeds[self.MOTOR_LEFT] == 0 and self.motor_speeds[self.MOTOR_RIGHT] == 0:
-            self.moving = False
-        else:
-            self.moving = True
-            
-        self.trigger_event("update_speed_label", 
-        left_speed=self.motor_speeds[self.MOTOR_LEFT],
-        right_speed=self.motor_speeds[self.MOTOR_RIGHT],
-        direction_angle=0)
+    def get_position(self) -> tuple:
+        """Returns the current 3D position as a tuple."""
+        return (self.x, self.y, self.z)
 
-    def update_motors(self, delta_time):
-        """Met à jour les positions des moteurs avec le temps écoulé"""
-        for motor in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
-            self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
-            self.motor_positions[motor] %= 360  # Normalisation à 
-    
-    def move_motors(self, delta_time):
-        left_speed = self.motor_speeds[self.MOTOR_LEFT]
-        right_speed = self.motor_speeds[self.MOTOR_RIGHT]
+    def get_orientation(self) -> tuple:
+        """Returns the current 3D orientation as Euler angles."""
+        return (self.pitch, self.yaw, self.roll)
 
-        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-
-        v = (left_velocity + right_velocity) / 2
-        omega = (right_velocity - left_velocity) / self.WHEEL_BASE_WIDTH
-
-        new_x = self.x + v * math.cos(self.direction_angle) * delta_time
-        new_y = self.y + v * math.sin(self.direction_angle) * delta_time
-        new_angle = self.direction_angle + omega * delta_time
-
-        self.update_position(new_x, new_y, new_angle)
-
-
-    def stop_simulation(self):
-        """Arrête la simulation"""
-        self.moving = False
-
-
-    def start_movement(self):
-        """Démarre le mouvement du robot"""
-        if not self.moving:
-            self.moving = True
-
-    # Méthodes utilitaires
-    def get_motor_speed(self):
-        return (self.motor_speeds[self.MOTOR_LEFT], 
-                self.motor_speeds[self.MOTOR_RIGHT])
-    
-    def offset_motor_encoder(self, port, offset):
-        """Réinitialise l'encodeur du moteur"""
-        if port in [self.MOTOR_LEFT, self.MOTOR_RIGHT]:
-            self.motor_positions[port] -= offset
-    
-    def get_position(self):
-        return self.x, self.y ,self.direction_angle
-    
-    def draw_square(self):
-        """Fait avancer le robot en dessinant un carré"""
-        print("Démarrage du dessin du carré...")  
-
-        for x in range(4):
-            start_left_pos = self.motor_positions[self.MOTOR_LEFT]
-            start_right_pos = self.motor_positions[self.MOTOR_RIGHT]
-
-            self.set_motor_dps(self.MOTOR_LEFT, 60)
-            self.set_motor_dps(self.MOTOR_RIGHT, 60)  
-
-            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) < 300:
-                time.sleep(0.05)
-
-            self.offset_motor_encoder(self.MOTOR_LEFT, self.motor_positions[self.MOTOR_LEFT])
-            self.offset_motor_encoder(self.MOTOR_RIGHT, self.motor_positions[self.MOTOR_RIGHT])
-
-            self.set_motor_dps(self.MOTOR_LEFT, 0)
-            self.set_motor_dps(self.MOTOR_RIGHT, 0)
-
-            time.sleep(0.2)
-
-            start_left_pos = self.motor_positions[self.MOTOR_LEFT]
-            start_right_pos = self.motor_positions[self.MOTOR_RIGHT]
-
-            self.set_motor_dps(self.MOTOR_LEFT, 30)
-            self.set_motor_dps(self.MOTOR_RIGHT, -30)
-            
-
-            while abs(self.motor_positions[self.MOTOR_LEFT] - start_left_pos) <= 90:
-                time.sleep(0.05)
-
-            self.offset_motor_encoder(self.MOTOR_LEFT, self.motor_positions[self.MOTOR_LEFT])
-            self.offset_motor_encoder(self.MOTOR_RIGHT, self.motor_positions[self.MOTOR_RIGHT])
-
-            self.set_motor_dps(self.MOTOR_LEFT, 0)
-            self.set_motor_dps(self.MOTOR_RIGHT, 0)
-
-            time.sleep(0.2)
-            
-        print("Carré complété !")
-
-    @staticmethod
-    def normalize_angle(angle):
-        """Normalise l'angle entre -π et π"""
-        return angle % (2 * math.pi)
+    def get_forward_vector(self) -> np.ndarray:
+        """Returns a unit vector pointing in the robot's forward direction."""
+        # Create rotation matrix from current orientation
+        rotation = rotation_matrix_from_angles(self.pitch, self.yaw, self.roll)
+        
+        # Forward vector is along the X-axis in the robot's local frame
+        forward = np.array([1.0, 0.0, 0.0])
+        
+        # Transform to world coordinates
+        world_forward = np.dot(rotation, forward)
+        
+        # Normalize to unit length
+        return world_forward / np.linalg.norm(world_forward)

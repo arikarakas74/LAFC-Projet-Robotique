@@ -1,6 +1,10 @@
 import math
 def point_in_polygon(x, y, polygon):
     """ Use ray casting to check if a point is inside a polygon """
+
+    if isinstance(polygon, tuple):  
+        polygon = polygon[0]
+
     n = len(polygon)
     inside = False
     p1x, p1y = polygon[0]

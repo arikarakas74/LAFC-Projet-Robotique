@@ -1,162 +1,169 @@
-from model.robot import Robot
-from view.robot_view import RobotView
-from view.control_panel import ControlPanel
-from model.map_model import MapModel
-from model.clock import Clock
 import math
 import threading
-from utils.geometry import normalize_angle
+import numpy as np
 
-SPEED_STEP = 30  # Incrément/décrément de vitesse
-SPEED_MULTIPLIER = 8.0  # Pour augmenter la vitesse du robot
 
 class RobotController:
-    WHEEL_BASE_WIDTH = 20.0  # Distance entre les roues (cm)
-    WHEEL_DIAMETER = 5.0     # Diamètre des roues (cm)
-    WHEEL_RADIUS = WHEEL_DIAMETER / 2
+    """Controller for robot movement in 3D space."""
     
-    MOTOR_LEFT = "left"
-    MOTOR_RIGHT = "right"
-
-    def __init__(self, robot: Robot, robot_view: RobotView, control_panel: ControlPanel, window, map_model: MapModel):
-        self.robot = robot
-        self.robot_view = robot_view
-        self.control_panel = control_panel
-        self.window = window
+    SPEED_STEP = 30.0
+    
+    def __init__(self, robot_model, map_model, cli_mode=False):
+        """
+        Initializes the robot controller.
+        
+        Args:
+            robot_model: The robot model to control
+            map_model: The map model for environment data
+            cli_mode: Whether the controller is running in CLI mode
+        """
+        self.robot_model = robot_model
         self.map_model = map_model
-        self.running = True
-        
-        # Configuration de l'horloge temps-réel
-        self.clock = Clock()
-        self.clock.add_subscriber(self.update_simulation)
-        self.clock_thread = threading.Thread(target=self.clock.start)
-        self.clock_thread.daemon = True
-        self.last_printed_position = (self.robot.x, self.robot.y)
-        self.clock_thread.start()
-        
-        # Événements robot
-        self.robot.add_event_listener(self.handle_robot_event)
 
-    def handle_robot_event(self, event_type, **kwargs):
-        """Gère les événements du robot"""
-        if event_type == "update_view":
-            self.robot_view.draw(
-                kwargs["x"], 
-                kwargs["y"], 
-                kwargs["direction_angle"]
-            )
-        elif event_type == "update_speed_label":
-            self.control_panel.update_speed_label(
-                kwargs.get("left_speed", 0),
-                kwargs.get("right_speed", 0),
-                kwargs.get("direction_angle", 0)
-            )
+        # Start the input thread only in CLI mode
+        if cli_mode:
+            self._start_input_thread()
 
-    def update_simulation(self, delta_time):
-        """Met à jour la simulation avec le temps écoulé"""
-        if delta_time <= 0:
-            return
+    def _start_input_thread(self):
+        """Starts a separate thread for keyboard input in CLI mode."""
+        threading.Thread(target=self._read_input, daemon=True).start()
 
-        # Récupération des vitesses
-        left_speed = self.robot.motor_speeds.get(self.MOTOR_LEFT, 0)
-        right_speed = self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0)
-        
-        # Calcul des vitesses linéaire/angulaire
-        left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        right_velocity = (right_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
-        
-        linear_velocity = (left_velocity + right_velocity) / 2
-        angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
+    def _read_input(self):
+        """Continuously reads and processes keyboard input in CLI mode."""
+        while True:
+            key = input("Press a key (q/a/e/d/w/s/r/f/arrows): ").strip().lower()
+            if key == 'q':
+                self.increase_left_speed()
+            elif key == 'a':
+                self.decrease_left_speed()
+            elif key == 'e':
+                self.increase_right_speed()
+            elif key == 'd':
+                self.decrease_right_speed()
+            elif key == 'w':
+                self.move_forward()
+            elif key == 's':
+                self.move_backward()
+            elif key == 'r':  # Raise (increase Z)
+                self.move_up()
+            elif key == 'f':  # Fall (decrease Z)
+                self.move_down()
+            elif key == 'up':
+                self.pitch_up()
+            elif key == 'down':
+                self.pitch_down()
+            elif key == 'left':
+                self.roll_left()
+            elif key == 'right':
+                self.roll_right()
 
-        if left_velocity == right_velocity:
-            new_x = self.robot.x + SPEED_MULTIPLIER * linear_velocity * math.cos(self.robot.direction_angle) * delta_time
-            new_y = self.robot.y + SPEED_MULTIPLIER * linear_velocity * math.sin(self.robot.direction_angle) * delta_time
-            new_angle = self.robot.direction_angle
-        else:
-            R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
-            delta_theta = angular_velocity * delta_time * SPEED_MULTIPLIER/2
-            
-            Cx = self.robot.x - R * math.sin(self.robot.direction_angle)
-            Cy = self.robot.y + R * math.cos(self.robot.direction_angle)
+    def stop(self):
+        """Stops all motor movement."""
+        self.robot_model.set_motor_speed("left", 0)
+        self.robot_model.set_motor_speed("right", 0)
 
-            new_x = Cx + R * math.sin(self.robot.direction_angle + delta_theta)
-            new_y = Cy - R * math.cos(self.robot.direction_angle + delta_theta)
-            new_angle = self.robot.direction_angle + delta_theta
-
-        # Vérification des collisions
-        if not (self.map_model.is_collision(new_x, new_y) or self.map_model.is_out_of_bounds(new_x, new_y)):
-            self.robot.x = new_x
-            self.robot.y = new_y
-            self.robot.direction_angle = normalize_angle(new_angle)
-
-            # contrôle à distance basé sur le nouvel emplacement
-            last_x, last_y = self.last_printed_position
-            distance_moved = math.sqrt((self.robot.x - last_x)**2 + (self.robot.y - last_y)**2)
-
-            if distance_moved >= 0.1:
-                print(f"Robot Position: x={self.robot.x:.2f}, y={self.robot.y:.2f}, angle={math.degrees(self.robot.direction_angle):.2f}°")
-                self.last_printed_position = (self.robot.x, self.robot.y)
-        
-        # Mise à jour des encodeurs
-        self.robot.update_motors(delta_time)
-
-        # Synchronisation avec l'interface
-        self.window.after(0, self._sync_view)
-
-    def _sync_view(self):
-        """Synchronise la vue avec le thread principal"""
-        self.robot.trigger_event("update_view", 
-                               x=self.robot.x,
-                               y=self.robot.y,
-                               direction_angle=self.robot.direction_angle)
-        
-        self.control_panel.update_speed_label(
-            self.robot.motor_speeds.get(self.MOTOR_LEFT, 0),
-            self.robot.motor_speeds.get(self.MOTOR_RIGHT, 0),
-            math.degrees(normalize_angle(self.robot.direction_angle))
-        )
-
-    # Commandes de contrôle
     def increase_left_speed(self):
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 
-        self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
+        """Increases the speed of the left motor."""
+        new_speed = self.robot_model.motor_speeds["left"] + self.SPEED_STEP
+        self.robot_model.set_motor_speed("left", new_speed)
 
     def decrease_left_speed(self):
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 
-        self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
+        """Decreases the speed of the left motor."""
+        new_speed = self.robot_model.motor_speeds["left"] - self.SPEED_STEP
+        self.robot_model.set_motor_speed("left", new_speed)
 
     def increase_right_speed(self):
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 
-        self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+        """Increases the speed of the right motor."""
+        new_speed = self.robot_model.motor_speeds["right"] + self.SPEED_STEP
+        self.robot_model.set_motor_speed("right", new_speed)
 
     def decrease_right_speed(self):
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 
-        self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
-
-    def stop_rotation(self):
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, 0)
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, 0)
+        """Decreases the speed of the right motor."""
+        new_speed = self.robot_model.motor_speeds["right"] - self.SPEED_STEP
+        self.robot_model.set_motor_speed("right", new_speed)
 
     def move_forward(self):
-        """Increase both motor speeds to move forward."""
-        print("Moving forward") 
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] + SPEED_STEP)
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] + SPEED_STEP)
+        """Moves the robot forward by increasing both motor speeds."""
+        self.robot_model.set_motor_speed("left", self.robot_model.motor_speeds["left"] + self.SPEED_STEP)
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] + self.SPEED_STEP)
 
     def move_backward(self):
-        """Decrease both motor speeds to move backward."""
-        print("Moving backward")
-        self.robot.set_motor_dps(self.robot.MOTOR_LEFT, self.robot.motor_speeds[self.robot.MOTOR_LEFT] - SPEED_STEP)
-        self.robot.set_motor_dps(self.robot.MOTOR_RIGHT, self.robot.motor_speeds[self.robot.MOTOR_RIGHT] - SPEED_STEP)
-
-
-    def cleanup(self):
-        """Nettoyage des ressources"""
-        self.clock.stop()
-        self.clock_thread.join()
-    
-    def start_draw_square(self):
-        """Lance le dessin du carré dans un thread séparé"""
-        draw_thread = threading.Thread(target=self.robot.draw_square)
-        draw_thread.daemon = True
-        draw_thread.start()
+        """Moves the robot backward by decreasing both motor speeds."""
+        self.robot_model.set_motor_speed("left", self.robot_model.motor_speeds["left"] - self.SPEED_STEP)
+        self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] - self.SPEED_STEP)
+        
+    # 3D-specific movement methods
+        
+    def move_up(self):
+        """Moves the robot upward in 3D space."""
+        # In a real robot, this might control propellers, jump mechanism, etc.
+        # Here we directly modify the z-coordinate for demonstration
+        new_z = self.robot_model.z + 5.0
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            new_z,
+            self.robot_model.pitch,
+            self.robot_model.yaw,
+            self.robot_model.roll
+        )
+        
+    def move_down(self):
+        """Moves the robot downward in 3D space."""
+        new_z = max(0, self.robot_model.z - 5.0)  # Don't go below ground
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            new_z,
+            self.robot_model.pitch,
+            self.robot_model.yaw,
+            self.robot_model.roll
+        )
+        
+    def pitch_up(self):
+        """Rotates the robot up around the X-axis."""
+        new_pitch = self.robot_model.pitch + math.radians(5.0)
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            self.robot_model.z,
+            new_pitch,
+            self.robot_model.yaw,
+            self.robot_model.roll
+        )
+        
+    def pitch_down(self):
+        """Rotates the robot down around the X-axis."""
+        new_pitch = self.robot_model.pitch - math.radians(5.0)
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            self.robot_model.z,
+            new_pitch,
+            self.robot_model.yaw,
+            self.robot_model.roll
+        )
+        
+    def roll_left(self):
+        """Rotates the robot left around the Z-axis."""
+        new_roll = self.robot_model.roll + math.radians(5.0)
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            self.robot_model.z,
+            self.robot_model.pitch,
+            self.robot_model.yaw,
+            new_roll
+        )
+        
+    def roll_right(self):
+        """Rotates the robot right around the Z-axis."""
+        new_roll = self.robot_model.roll - math.radians(5.0)
+        self.robot_model.update_position(
+            self.robot_model.x, 
+            self.robot_model.y, 
+            self.robot_model.z,
+            self.robot_model.pitch,
+            self.robot_model.yaw,
+            new_roll
+        )
