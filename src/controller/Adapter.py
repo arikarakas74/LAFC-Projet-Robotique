@@ -8,6 +8,7 @@ class RobotReelAdapter:
         self.robot = robot
         self.last_left_encoder = robot.motor_positions["left"]
         self.last_right_encoder = robot.motor_positions["right"]
+        self.current_angle = initial_angle  # L'angle du robot en radians
         self.current_position = initial_position
         self.wheel_radius = robot.WHEEL_RADIUS
         self.track_width = robot.WHEEL_BASE_WIDTH
