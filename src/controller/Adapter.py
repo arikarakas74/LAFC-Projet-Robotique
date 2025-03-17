@@ -4,7 +4,7 @@ from model.robot import RobotModel
 class RobotReelAdapter:
     """
     """
-    def __init__(self, robot: RobotModel, initial_position=(0, 0)):
+    def __init__(self, robot: RobotModel, initial_position=(0, 0), initial_angle=0.0):
         self.robot = robot
         self.last_left_encoder = robot.motor_positions["left"]
         self.last_right_encoder = robot.motor_positions["right"]
