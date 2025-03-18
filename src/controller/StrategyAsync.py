@@ -67,8 +67,6 @@ class Freiner(AsyncCommande):
     def is_finished(self):
         return self.finished
 
-import math
-import logging
 
 class Avancer:
     """
