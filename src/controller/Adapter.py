@@ -93,6 +93,61 @@ class RobotReelAdapter:
 
         return self.current_angle  
 
+class Accelerer:
+    """
+    Commande pour accélérer le robot progressivement jusqu'à une vitesse cible.
+    """
+
+    def __init__(self, target_speed, duration):
+        """
+        Initialise la commande d'accélération.
+        :param target_speed: Vitesse cible à atteindre
+        :param duration: Durée pour atteindre la vitesse cible (en secondes)
+        """
+        self.target_speed = target_speed  # Vitesse maximale à atteindre
+        self.duration = duration  # Temps nécessaire pour atteindre la vitesse
+        self.elapsed = 0  # Temps écoulé depuis le début de l'accélération
+        self.started = False
+        self.finished = False
+        self.logger = logging.getLogger("strategy.Accelerer")
+
+    def start(self, robot):
+        """
+        Démarre la commande d'accélération.
+        :param robot: Instance du modèle de robot
+        """
+        self.elapsed = 0  # Réinitialise le temps écoulé
+        self.started = True
+        self.logger.info("Acceleration started.")
+
+    def step(self, robot, delta_time):
+        """
+        Met à jour l'état de l'accélération en fonction du temps écoulé.
+        :param robot: Instance du modèle de robot
+        :param delta_time: Temps écoulé depuis la dernière mise à jour
+        """
+        if not self.started:
+            self.start(robot)
+
+        self.elapsed += delta_time
+        fraction = min(self.elapsed / self.duration, 1.0)  # Calcul du pourcentage d'accélération
+        speed = self.target_speed * fraction  # Augmente progressivement la vitesse
+
+        robot.set_motor_speed("left", speed)
+        robot.set_motor_speed("right", speed)
+
+        if self.elapsed >= self.duration:
+            self.finished = True
+            self.logger.info("Acceleration finished.")
+
+        return self.finished
+
+    def is_finished(self):
+        """
+        Vérifie si la commande est terminée.
+        """
+        return self.finished
+
 class Avancer:
     """
     Commande pour faire avancer le robot d'une certaine distance
