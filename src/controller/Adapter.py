@@ -70,8 +70,8 @@ class RobotReelAdapter:
         right_motor_pos = self.robot.motor_positions["right"]
 
         # Calcul des variations des encodeurs
-        delta_left = left_motor_pos - self.last_motor_positions["left"]
-        delta_right = right_motor_pos - self.last_motor_positions["right"]
+        delta_left = left_motor_pos - self.last_left_encoder["left"]
+        delta_right = right_motor_pos - self.last_right_encoder["right"]
 
         # Conversion des rotations en distance parcourue
         left_distance = (delta_left / 360.0) * (2 * math.pi * self.robot.WHEEL_RADIUS)
