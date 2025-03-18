@@ -4,7 +4,7 @@ import time
 import math
 
 class VpythonView:
-    def __init__(self, simulation_controller):
+    def __init__(self, simulation_controller, key_handler):
         """ 初始化 3D 视图 """
         self.simulation_controller = simulation_controller
 
@@ -13,6 +13,9 @@ class VpythonView:
         self.scene.center = vector(0, 0, 0)
         self.scene.background = color.white
         self.scene.forward = vector(0, -1, -1)  # 调整视角角度
+
+        # 绑定键盘事件
+        self.scene.bind("keydown", key_handler)
 
         # 创建 地面
         self.floor = box(pos=vector(0, 0, 0), size=vector(400, 1, 300), color=color.green)

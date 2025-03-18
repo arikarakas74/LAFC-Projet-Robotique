@@ -1,0 +1,114 @@
+from vpython import *
+from model.map_model import MapModel
+from view.vpython_view import VpythonView
+import threading
+import time
+
+class VPythonControlPanel:
+    """Panneau de contrôle VPython, adapté à la version GUI de ControlPanel"""
+
+    def __init__(self, map_controller, simulation_controller,vpython_view,map_model):
+        self.map_model = map_model
+        self.map_controller = map_controller
+        self.simulation_controller = simulation_controller
+        self.vpython_view = vpython_view
+        self.start_box = None  # VPython 画面中的起始点
+        self.end_box = None  # VPython 画面中的起始点
+        self.mode = None
+
+        # 创建 VPython 控制面板按钮
+        self._create_buttons()
+
+        # 监听 VPython 画布的点击事件
+        self.vpython_view.scene.bind("click", self.handle_click)
+
+    def _create_buttons(self):
+        """ Ajout de boutons dans l'interface VPython  """
+        wtext(text="  Control Panel  ")
+        
+        buttons = [
+            ("Set Start", self.create_start_box),  
+            ("Run Simulation", self.simulation_controller.run_simulation),
+            ("Draw Square", self.draw_square), 
+            ("Set Balise", self.create_end_box),
+            ("Follow Balise", self.suivre), 
+            ("Reset", self.reset_all) 
+        ]
+
+        for text, cmd in buttons:
+            button(text=text, bind=cmd)
+
+    def handle_click(self):
+        """ Traitement des événements de clic sur le canevas VPython, calcul de l’intersection du rayon avec le plan de fond """
+        print("🔹 Click event detected in VpythonView!")
+
+        ray_origin = self.vpython_view.scene.camera.pos  # Position de la caméra
+        ray_direction = norm(self.vpython_view.scene.mouse.pos - ray_origin)  # Calcul de la direction du rayon
+        # 地面（背景）在 y = -1 处
+        ground_y = -1
+        t = (ground_y - ray_origin.y) / ray_direction.y  # Calcul du paramètre d'intersection du rayon avec le plan 
+        click_pos = ray_origin + t * ray_direction  # Calcul du point d'intersection
+
+        if -200 <= click_pos.x <= 200 and -150 <= click_pos.z <= 150:
+            if self.mode == 'set_start':
+                self.start_box.pos = vector(click_pos.x, ground_y + 1 , click_pos.z)
+                self.start_box.visible = True
+                self.map_model.set_start_position((click_pos.x, click_pos.z))  # Call set_start_position on the map model
+            elif self.mode == 'set_end' :
+                self.end_box.pos = vector(click_pos.x, ground_y + 1 , click_pos.z)
+                self.end_box.visible = True
+                self.map_model.set_end_position((click_pos.x, click_pos.z))  # Call set_start_position on the map model
+
+    def create_start_box(self):
+        """ Création du point de départ dans l'affichage VPython """
+        if self.start_box is None:  
+            self.start_box = box(pos=vector(0, 0, 0), size=vector(2, 2, 2), color=vector(1, 0, 0))
+        self.mode = 'set_start'
+        print("Start box created. Click anywhere to set the start position.")
+
+    def create_end_box(self):
+        """ Création des points de départ et d'arrivée dans l'affichage VPython  """
+        if self.end_box is None: 
+            self.end_box = box(pos=vector(0, 0, 0), size=vector(2, 2, 2), color=vector(0, 0, 1))
+        self.mode = 'set_end'
+        print("Start box created. Click anywhere to set the start position.")
+    
+    def draw_square(self):
+        """ exécution de la stratégie de dessin de carré par le robot """
+        from controller.StrategyAsync import PolygonStrategy
+        
+        square_strategy = PolygonStrategy(n=4, side_length_cm=100, vitesse_avance=350, vitesse_rotation=260)
+        
+        def run_strategy():
+            delta_time = 0.02  # 每 20ms 更新一次
+            square_strategy.start(self.simulation_controller.robot_model)
+            while not square_strategy.is_finished():
+                square_strategy.step(self.simulation_controller.robot_model, delta_time)
+        
+        run_strategy()
+
+    def suivre(self):
+        """ permettant au robot de suivre la balise """
+        from controller.StrategyAsync import FollowMovingBeaconStrategy
+        
+        strategy = FollowMovingBeaconStrategy(vitesse_rotation=90, vitesse_avance=250)
+        
+        def run_strategy():
+            delta_time = 0.02
+            strategy.start(self.simulation_controller.robot_model)
+            while not strategy.is_finished():
+                strategy.step(self.simulation_controller.robot_model, delta_time)
+                time.sleep(delta_time)
+
+        threading.Thread(target=run_strategy, daemon=True).start()
+
+
+    def reset_all(self):
+        """ Adaptation de la version GUI de Reset, réinitialisation de l'affichage VPython """
+        if self.start_box:
+            self.end_box.visible = False
+            self.start_box.visible = False
+            self.start_box = None
+            self.end_box = None
+        self.simulation_controller.reset_simulation()
+        print("Simulation reset.")

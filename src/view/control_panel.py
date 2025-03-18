@@ -71,8 +71,6 @@ class ControlPanel:
         # Lancer la boucle d'update dans un thread séparé pour ne pas bloquer l'interface
         threading.Thread(target=run_strategy, daemon=True).start()
 
-
-
     def reset_all(self):
         """Réinitialise l'application."""
         self.simulation_controller.reset_simulation()
