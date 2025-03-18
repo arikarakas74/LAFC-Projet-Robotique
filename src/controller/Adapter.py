@@ -1,10 +1,10 @@
 import math
-from model.robot import RobotModel
+import time
 
 class RobotReelAdapter:
     """
     """
-    def __init__(self, robot: RobotModel, initial_position=(0, 0), initial_angle=0.0):
+    def __init__(self, robot, initial_position=[0, 0], initial_angle=0.0):
         self.robot = robot
         self.last_left_encoder = robot.motor_positions["left"]
         self.last_right_encoder = robot.motor_positions["right"]
@@ -28,15 +28,7 @@ class RobotReelAdapter:
         left_distance = math.radians(delta_left) * self.wheel_radius
         right_distance = math.radians(delta_right) * self.wheel_radius
 
-        delta_theta = (right_distance - left_distance) / self.track_width
-
-        # En cas de rotation significatif
-        if abs(delta_theta) > 1e-6:
-            R = (left_distance + right_distance) / (2 * delta_theta)
-            traveled_distance = abs(delta_theta * R)
-        else:
-            # S'il n'y a pas de rotation significatif, utiliser la distance moyenne
-            traveled_distance = (left_distance + right_distance) / 2.0
+        traveled_distance = (left_distance + right_distance) / 2.0
 
         self.last_left_encoder = left_motor_pos
         self.last_right_encoder = right_motor_pos
@@ -48,36 +40,33 @@ class RobotReelAdapter:
         Met à jour et renvoie la position actuelle (x, y) du robot en fonction des différences entre les lectures des roues.
         """
         distance_moved = self.calculate_distance_traveled()
-        angle_change = self.calculate_angle_change()
 
-        self.current_angle += angle_change
+        current_angle_deg = self.calculate_angle()
+        current_angle_rad = math.radians(current_angle_deg)
 
-        delta_x = distance_moved * math.cos(self.current_angle)
-        delta_y = distance_moved * math.sin(self.current_angle)
+        delta_x = distance_moved * math.cos(current_angle_rad)
+        delta_y = distance_moved * math.sin(current_angle_rad)
 
         self.current_position[0] += delta_x
         self.current_position[1] += delta_y
 
-        return tuple(self.current_position)
+        return self.current_position
 
-    def calculate_angle_change(self):
+    def calculate_angle(self):
         """
         Calcule le changement d'angle en fonction des rotations des moteurs.
         Retourne la variation d'angle en radians.
         """
-        # Lire les positions actuelles des moteurs
-        left_motor_pos = self.robot.motor_positions["left"]
-        right_motor_pos = self.robot.motor_positions["right"]
-
-        # Calcul des variations des encodeurs
-        delta_left = left_motor_pos - self.last_left_encoder["left"]
-        delta_right = right_motor_pos - self.last_right_encoder["right"]
+        delta_left = self.robot.motor_positions["left"] - self.last_left_encoder
+        delta_right = self.robot.motor_positions["right"] - self.last_right_encoder
 
         # Conversion des rotations en distance parcourue
-        left_distance = (delta_left / 360.0) * (2 * math.pi * self.robot.WHEEL_RADIUS)
-        right_distance = (delta_right / 360.0) * (2 * math.pi * self.robot.WHEEL_RADIUS)
+        left_distance = math.radians(delta_left) * self.wheel_radius
+        right_distance = math.radians(delta_right) * self.wheel_radius
 
         # Calcul du changement d'angle du robot
         angle_change = (right_distance - left_distance) / self.track_width
 
-        return angle_change  # Retourne uniquement la variation d'angle en radians
+        self.current_angle += angle_change
+
+        return math.degrees(self.current_angle)
