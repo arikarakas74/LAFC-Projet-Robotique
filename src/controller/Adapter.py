@@ -48,6 +48,18 @@ class RobotReelAdapter:
         Updates and returns the current (x, y) position of the robot based on the
         differences in wheel encoder readings.
         """
+        distance_moved = self.calculate_distance_traveled()
+        angle_change = self.calculate_angle_change()
+
+        self.current_angle += angle_change
+
+        delta_x = distance_moved * math.cos(self.current_angle)
+        delta_y = distance_moved * math.sin(self.current_angle)
+
+        self.current_position[0] += delta_x
+        self.current_position[1] += delta_y
+
+        return tuple(self.current_position)
 
     def calculate_angle_change(self):
         """
