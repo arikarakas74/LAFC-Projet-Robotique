@@ -143,36 +143,56 @@ class Avancer:
 
 
 class Tourner(AsyncCommande):
-    def __init__(self, angle_rad, vitesse_deg_s):
+    
+    def __init__(self, angle_rad, vitesse_deg_s, forward_speed):
+        """
+        :param angle_rad: Angle à tourner (en radians)
+        :param vitesse_deg_s: Vitesse maximale de correction de la rotation (en degrés/s)
+        :param forward_speed: Vitesse de déplacement en avant (en unités compatibles avec set_motor_speed)
+        """
         self.angle_rad = angle_rad
         self.vitesse_deg_s = vitesse_deg_s
+        self.forward_speed = forward_speed
         self.started = False
         self.finished = False
         self.logger = logging.getLogger("strategy.Tourner")
+        
     def start(self, robot):
+        # Calcul de l'angle cible en fonction de l'angle courant du robot
         self.target_angle = normalize_angle(robot.direction_angle + self.angle_rad)
         self.started = True
         self.logger.info("Tourner started.")
+        
     def step(self, robot, delta_time):
         if not self.started:
             self.start(robot)
-        tol = math.radians(0.1)
+            
+        tol = math.radians(0.001)  # Tolérance (ici environ 0.1° en radians)
         current_angle = normalize_angle(robot.direction_angle)
         error = normalize_angle(self.target_angle - current_angle)
+        
         if abs(error) < tol:
-            robot.set_motor_speed("left", 0)
-            robot.set_motor_speed("right", 0)
+            # Une fois le virage réalisé, on supprime la correction pour continuer tout droit
+            robot.set_motor_speed("left", self.forward_speed)
+            robot.set_motor_speed("right", self.forward_speed)
             self.finished = True
             self.logger.info("Tourner finished.")
         else:
-            Kp = 5.0
+            # Correction proportionnelle : on calcule une vitesse de correction en fonction de l'erreur
+            Kp = 8.0
             correction_speed = Kp * math.degrees(error)
+            # Limitation de la correction à la vitesse maximale définie
             correction_speed = max(-self.vitesse_deg_s, min(self.vitesse_deg_s, correction_speed))
-            robot.set_motor_speed("left", correction_speed)
-            robot.set_motor_speed("right", -correction_speed)
+            # Application d'une vitesse de base forward_speed à chaque moteur
+            # avec un ajustement différentiel pour effectuer le virage
+            robot.set_motor_speed("left", self.forward_speed + correction_speed)
+            robot.set_motor_speed("right", self.forward_speed - correction_speed)
+            
         return self.finished
+        
     def is_finished(self):
         return self.finished
+
 
 class Arreter(AsyncCommande):
     def __init__(self):
@@ -198,10 +218,10 @@ class PolygonStrategy(AsyncCommande):
             raise ValueError("At least 3 sides required.")
         self.logger = logging.getLogger("strategy.PolygonStrategy")
         self.commands = []
-        turning_angle = 2 * math.pi / n
+        turning_angle = math.radians(90)
         for i in range(n):
             self.commands.append(Avancer(side_length_cm, vitesse_avance))
-            self.commands.append(Tourner(turning_angle, vitesse_rotation))
+            self.commands.append(Tourner(turning_angle, vitesse_rotation,100))
             self.logger.info(f"Side {i+1} added.")
         self.commands.append(Arreter())
         self.current_index = 0
