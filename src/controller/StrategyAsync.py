@@ -67,33 +67,82 @@ class Freiner(AsyncCommande):
     def is_finished(self):
         return self.finished
 
-class Avancer(AsyncCommande):
+import math
+import logging
+
+class Avancer:
+    """
+    Adaptateur pour la commande "Avancer" pour un robot réel sans positions (x, y).
+    La distance parcourue est calculée à partir des encodeurs des moteurs.
+    """
     def __init__(self, distance_cm, vitesse):
-        self.distance_cm = distance_cm
-        self.vitesse = vitesse
+        self.distance_cm = distance_cm      # Distance à parcourir en cm
+        self.vitesse = vitesse              # Vitesse en dps (degrés par seconde)
+        self.wheel_radius = 2.5    # Rayon de la roue en cm
         self.started = False
         self.finished = False
-        self.start_x = None
-        self.start_y = None
-        self.logger = logging.getLogger("strategy.Avancer")
+        self.initial_left = None            # Position initiale de l'encodeur gauche
+        self.initial_right = None           # Position initiale de l'encodeur droit
+        self.logger = logging.getLogger("AvancerRealAdapter")
+
     def start(self, robot):
-        self.start_x, self.start_y = robot.x, robot.y
-        robot.set_motor_speed("left", self.vitesse)
-        robot.set_motor_speed("right", self.vitesse)
+        """
+        Enregistre les positions initiales des encodeurs et démarre les moteurs.
+        """
+        self.initial_left = robot.motor_positions["left"]
+        self.initial_right = robot.motor_positions["right"]
+
+        # Utilisation de set_motor_dps si disponible, sinon set_motor_speed
+        if hasattr(robot, "set_motor_dps"):
+            robot.set_motor_dps(robot.MOTOR_LEFT, self.vitesse)
+            robot.set_motor_dps(robot.MOTOR_RIGHT, self.vitesse)
+        else:
+            robot.set_motor_speed("left", self.vitesse)
+            robot.set_motor_speed("right", self.vitesse)
+
         self.started = True
-        self.logger.info("Avancer started.")
+        self.logger.info("Commande AvancerRealAdapter démarrée.")
+
     def step(self, robot, delta_time):
+        """
+        Appelée périodiquement pour mettre à jour la commande.
+        La distance parcourue est calculée à partir des différences d'encodeur.
+        """
         if not self.started:
             self.start(robot)
-        current_distance = math.hypot(robot.x - self.start_x, robot.y - self.start_y)
-        if current_distance >= self.distance_cm:
-            robot.set_motor_speed("left", 0)
-            robot.set_motor_speed("right", 0)
+
+        # Récupérer les valeurs actuelles des encodeurs
+        current_left = robot.motor_positions["left"]
+        current_right = robot.motor_positions["right"]
+
+        # Calculer la variation par rapport aux valeurs initiales
+        delta_left = current_left - self.initial_left
+        delta_right = current_right - self.initial_right
+
+        # Conversion des rotations (en degrés) en distance (cm)
+        left_distance = math.radians(delta_left) * self.wheel_radius
+        right_distance = math.radians(delta_right) * self.wheel_radius
+
+        # On fait la moyenne des deux distances pour estimer la distance parcourue
+        traveled_distance = (left_distance + right_distance) / 2.0
+
+        if traveled_distance >= self.distance_cm:
+            # Arrêter les moteurs une fois la distance désirée atteinte
+            if hasattr(robot, "set_motor_dps"):
+                robot.set_motor_dps(robot.MOTOR_LEFT, 0)
+                robot.set_motor_dps(robot.MOTOR_RIGHT, 0)
+            else:
+                robot.set_motor_speed("left", 0)
+                robot.set_motor_speed("right", 0)
             self.finished = True
-            self.logger.info("Avancer finished.")
+            self.logger.info(f"Commande terminée, distance parcourue: {traveled_distance:.2f} cm")
+
         return self.finished
+
     def is_finished(self):
+        """Retourne True si la commande est terminée."""
         return self.finished
+
 
 class Tourner(AsyncCommande):
     def __init__(self, angle_rad, vitesse_deg_s):
