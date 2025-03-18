@@ -45,8 +45,7 @@ class RobotReelAdapter:
 
     def real_position_calc(self):
         """
-        Updates and returns the current (x, y) position of the robot based on the
-        differences in wheel encoder readings.
+        Met à jour et renvoie la position actuelle (x, y) du robot en fonction des différences entre les lectures des roues.
         """
         distance_moved = self.calculate_distance_traveled()
         angle_change = self.calculate_angle_change()
