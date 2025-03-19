@@ -12,14 +12,14 @@ class VPythonControlPanel:
         self.map_controller = map_controller
         self.simulation_controller = simulation_controller
         self.vpython_view = vpython_view
-        self.start_box = None  # VPython 画面中的起始点
-        self.end_box = None  # VPython 画面中的起始点
+        self.start_box = None  # VPython point start
+        self.end_box = None  # VPython point end
         self.mode = None
 
-        # 创建 VPython 控制面板按钮
+        # Création des boutons du panneau de contrôle VPython
         self._create_buttons()
 
-        # 监听 VPython 画布的点击事件
+        # Écoute des événements de clic sur le canevas VPython
         self.vpython_view.scene.bind("click", self.handle_click)
 
     def _create_buttons(self):
@@ -32,24 +32,25 @@ class VPythonControlPanel:
             ("Draw Square", self.draw_square), 
             ("Set Balise", self.create_end_box),
             ("Follow Balise", self.suivre), 
-            ("Reset", self.reset_all) 
+            ("Reset", self.reset_all),
+            ("stop", self.vpython_view.stop) 
         ]
 
         for text, cmd in buttons:
             button(text=text, bind=cmd)
 
     def handle_click(self):
-        """ Traitement des événements de clic sur le canevas VPython, calcul de l’intersection du rayon avec le plan de fond """
+        """ Traitement des événements de clic sur le canevas VPython, calcul de l'intersection du rayon avec le plan de fond """
         print("🔹 Click event detected in VpythonView!")
 
         ray_origin = self.vpython_view.scene.camera.pos  # Position de la caméra
         ray_direction = norm(self.vpython_view.scene.mouse.pos - ray_origin)  # Calcul de la direction du rayon
-        # 地面（背景）在 y = -1 处
+
         ground_y = -1
         t = (ground_y - ray_origin.y) / ray_direction.y  # Calcul du paramètre d'intersection du rayon avec le plan 
         click_pos = ray_origin + t * ray_direction  # Calcul du point d'intersection
 
-        if -200 <= click_pos.x <= 200 and -150 <= click_pos.z <= 150:
+        if 0 <= click_pos.x <= 800 and 0 <= click_pos.z <= 600:
             if self.mode == 'set_start':
                 self.start_box.pos = vector(click_pos.x, ground_y + 1 , click_pos.z)
                 self.start_box.visible = True
@@ -62,14 +63,14 @@ class VPythonControlPanel:
     def create_start_box(self):
         """ Création du point de départ dans l'affichage VPython """
         if self.start_box is None:  
-            self.start_box = box(pos=vector(0, 0, 0), size=vector(2, 2, 2), color=vector(1, 0, 0))
+            self.start_box = box(pos=vector(400, 0, 300.5), size=vector(10, 10, 10), color=vector(1, 0, 0))
         self.mode = 'set_start'
         print("Start box created. Click anywhere to set the start position.")
 
     def create_end_box(self):
         """ Création des points de départ et d'arrivée dans l'affichage VPython  """
         if self.end_box is None: 
-            self.end_box = box(pos=vector(0, 0, 0), size=vector(2, 2, 2), color=vector(0, 0, 1))
+            self.end_box = box(pos=vector(400, 0, 300.5), size=vector(10, 10, 10), color=vector(0, 0, 1))
         self.mode = 'set_end'
         print("Start box created. Click anywhere to set the start position.")
     
@@ -80,7 +81,7 @@ class VPythonControlPanel:
         square_strategy = PolygonStrategy(n=4, side_length_cm=100, vitesse_avance=350, vitesse_rotation=260)
         
         def run_strategy():
-            delta_time = 0.02  # 每 20ms 更新一次
+            delta_time = 0.02  # renouvelement 20 ms par fois
             square_strategy.start(self.simulation_controller.robot_model)
             while not square_strategy.is_finished():
                 square_strategy.step(self.simulation_controller.robot_model, delta_time)
@@ -106,9 +107,13 @@ class VPythonControlPanel:
     def reset_all(self):
         """ Adaptation de la version GUI de Reset, réinitialisation de l'affichage VPython """
         if self.start_box:
-            self.end_box.visible = False
             self.start_box.visible = False
             self.start_box = None
+        if self.end_box: 
+            self.end_box.visible = False
             self.end_box = None
+
         self.simulation_controller.reset_simulation()
+        self.vpython_view.reset_vpython_view()
+
         print("Simulation reset.")

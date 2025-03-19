@@ -27,7 +27,6 @@ class MainApplication:
         
         # Liaison des événements du clavier
         scene.bind("keydown", self.handle_keydown)
-        print(self.sim_controller.robot_controller)
     
     def handle_keydown(self, evt):
         """ Traitement des événements de pression de touches du clavier """

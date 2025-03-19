@@ -5,56 +5,75 @@ import math
 
 class VpythonView:
     def __init__(self, simulation_controller, key_handler):
-        """ 初始化 3D 视图 """
+        """ Initialisation de la vue 3D """
         self.simulation_controller = simulation_controller
 
-        # 创建 3D 场景
+        # Création de la scène 3D
         self.scene = canvas(title="3D Robot Simulation", width=800, height=600)
-        self.scene.center = vector(0, 0, 0)
+        self.scene.center = vector(400, 0, 300)
         self.scene.background = color.white
-        self.scene.forward = vector(0, -1, -1)  # 调整视角角度
+        self.scene.forward = vector(0, -1, -1)  # Ajustement de l'angle de la caméra
 
-        # 绑定键盘事件
+        # Liaison des événements du clavier
         self.scene.bind("keydown", key_handler)
 
-        # 创建 地面
-        self.floor = box(pos=vector(0, 0, 0), size=vector(400, 1, 300), color=color.green)
+        # Création du sol
+        self.floor = box(pos=vector(400, -1, 300), size=vector(800, 1, 600), color=color.green)
 
-        # 创建 机器人主体
-        self.robot_body = cylinder(pos=vector(0, 5, 0), axis=vector(0, 10, 0), radius=10, color=color.blue)
+         # Création du corps du robot
+        self.robot_body = cylinder(pos=vector(400, 5, 300), axis=vector(0, 10, 0), radius=10, color=color.blue)
 
-        # 机器人轮子
-        self.wheel_left = cylinder(pos=vector(-10, 3, 0), axis=vector(0, 6, 0), radius=3, color=color.black)
-        self.wheel_right = cylinder(pos=vector(10, 3, 0), axis=vector(0, 6, 0), radius=3, color=color.black)
+        # Roues du robot
+        self.wheel_left = cylinder(pos=vector(390, 3, 300), axis=vector(0, 6, 0), radius=3, color=color.black)
+        self.wheel_right = cylinder(pos=vector(410, 3, 300), axis=vector(0, 6, 0), radius=3, color=color.black)
 
-        # 监听机器人状态
+        # Surveillance de l'état du robot
         self.simulation_controller.add_state_listener(self.update_robot)
 
-        # 启动渲染线程
+        # Trajectoire du robot
+        self.path = curve(color=color.red, radius=1)
+
+        # Lancement du thread de rendu
         self.running = True
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
     def update_robot(self, state):
-        """更新机器人在3D场景中的位置"""
+        """Mise à jour de la position du robot dans la scène 3D"""
         x, y = state['x'], state['y']
-        angle = state['angle']  # 弧度制
+        angle = state['angle']  
 
-        # 更新 机器人位置
+        # Mise à jour de la position du robot
         self.robot_body.pos = vector(x, 5, y)
         
-        # 旋转机器人
+        # Rotation du robot
         self.robot_body.axis = vector(10 * math.cos(angle), 0, 10 * math.sin(angle))
 
-        # 轮子跟随旋转
+        # Les roues suivent la rotation
         self.wheel_left.pos = vector(x - 10 * math.sin(angle), 3, y + 10 * math.cos(angle))
         self.wheel_right.pos = vector(x + 10 * math.sin(angle), 3, y - 10 * math.cos(angle))
 
+        self.path.append(vector(x, 0, y))
+
     def run(self):
-        """ 持续刷新 3D 画面 """
+        """ Rafraîchissement continu de l'affichage 3D """
         while self.running:
             rate(50)  # 50 FPS
 
     def stop(self):
-        """ 停止 3D 视图更新 """
+        import os
+        """ Arrêt de la mise à jour de la vue 3D et sortie complète du processus """
         self.running = False
+
+        # Forcer la sortie du processus Python
+        os._exit(0)
+
+
+    def reset_vpython_view(self):
+        self.robot_body.pos = vector(400, 5, 300)
+        self.robot_body.axis=vector(0, 10, 0)
+        self.wheel_left.pos = vector(390, 3, 300)
+        self.wheel_left.axis=vector(0, 6, 0)
+        self.wheel_right.pos = vector(410, 3, 300)
+        self.wheel_right.axis=vector(0, 6, 0)
+        self.path.clear()
