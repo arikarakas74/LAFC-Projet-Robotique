@@ -108,10 +108,10 @@ class VPythonControlPanel:
         """ Adaptation de la version GUI de Reset, réinitialisation de l'affichage VPython """
         if self.start_box:
             self.start_box.visible = False
-            self.start_box = None
+            self.start_box.pos=vector(400, 0, 300.5)
         if self.end_box: 
             self.end_box.visible = False
-            self.end_box = None
+            self.end_box.pos=vector(400, 0, 300.5)
 
         self.simulation_controller.reset_simulation()
         self.vpython_view.reset_vpython_view()

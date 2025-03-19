@@ -53,6 +53,5 @@ def run_vpython():
     while True:
         time.sleep(0.1)  # Maintenir le processus VPython en cours d'exécution
 
-
 if __name__ == "__main__":
     run_vpython()

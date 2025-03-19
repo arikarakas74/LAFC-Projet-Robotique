@@ -27,6 +27,8 @@ class VpythonView:
         self.wheel_left = cylinder(pos=vector(390, 3, 300), axis=vector(0, 6, 0), radius=3, color=color.black)
         self.wheel_right = cylinder(pos=vector(410, 3, 300), axis=vector(0, 6, 0), radius=3, color=color.black)
 
+        self.direction_marker = sphere(pos=vector(400, 10, 310),radius=3,color=color.red)
+
         # Surveillance de l'état du robot
         self.simulation_controller.add_state_listener(self.update_robot)
 
@@ -47,11 +49,14 @@ class VpythonView:
         self.robot_body.pos = vector(x, 5, y)
         
         # Rotation du robot
-        self.robot_body.axis = vector(10 * math.cos(angle), 0, 10 * math.sin(angle))
+ 
 
         # Les roues suivent la rotation
         self.wheel_left.pos = vector(x - 10 * math.sin(angle), 3, y + 10 * math.cos(angle))
         self.wheel_right.pos = vector(x + 10 * math.sin(angle), 3, y - 10 * math.cos(angle))
+
+        self.direction_marker.pos = vector(x + 10 * math.cos(angle), 10, y + 10 * math.sin(angle))
+        print(vector(x + 15 * math.cos(angle), 10, y + 15 * math.sin(angle)))
 
         self.path.append(vector(x, 0, y))
 
@@ -76,4 +81,5 @@ class VpythonView:
         self.wheel_left.axis=vector(0, 6, 0)
         self.wheel_right.pos = vector(410, 3, 300)
         self.wheel_right.axis=vector(0, 6, 0)
+        self.direction_marker.pos=vector(400, 10, 310)
         self.path.clear()
