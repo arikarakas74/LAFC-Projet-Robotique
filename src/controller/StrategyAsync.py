@@ -278,7 +278,7 @@ class FollowMovingBeaconStrategy(AsyncCommande):
             target_angle = math.atan2(dy, dx)
             angle_to_turn = normalize_angle(target_angle - robot.direction_angle)
             if abs(math.degrees(angle_to_turn)) > 2:
-                turn_cmd = Tourner(angle_to_turn, self.vitesse_rotation)
+                turn_cmd = Tourner(angle_to_turn, self.vitesse_rotation,100)
                 turn_cmd.start(robot)
                 turn_cmd.step(robot, delta_time)
             else:
