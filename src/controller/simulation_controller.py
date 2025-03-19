@@ -110,7 +110,7 @@ class SimulationController:
         angular_velocity = (left_velocity - right_velocity) / self.WHEEL_BASE_WIDTH
 
         # Application du multiplicateur de vitesse pour la simulation
-        effective_delta = delta_time * SPEED_MULTIPLIER
+        effective_delta = delta_time 
 
         # --- Mise à jour de la position en fonction du type de mouvement ---
         if left_velocity == right_velocity:

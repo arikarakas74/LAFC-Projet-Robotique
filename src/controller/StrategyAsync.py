@@ -141,57 +141,86 @@ class Avancer:
         """Retourne True si la commande est terminée."""
         return self.finished
 
+import math
+import logging
+from controller.StrategyAsync import AsyncCommande
 
 class Tourner(AsyncCommande):
-    
-    def __init__(self, angle_rad, vitesse_deg_s, forward_speed):
+    def __init__(self, angle_rad, vitesse_deg_s):
         """
-        :param angle_rad: Angle à tourner (en radians)
-        :param vitesse_deg_s: Vitesse maximale de correction de la rotation (en degrés/s)
-        :param forward_speed: Vitesse de déplacement en avant (en unités compatibles avec set_motor_speed)
+        :param angle_rad: Angle de rotation cible en radians 
+                         (positif = droite, négatif = gauche)
+        :param vitesse_deg_s: Vitesse de référence en degrés/s
         """
         self.angle_rad = angle_rad
-        self.vitesse_deg_s = vitesse_deg_s
-        self.forward_speed = forward_speed
+        self.base_speed = vitesse_deg_s
         self.started = False
         self.finished = False
         self.logger = logging.getLogger("strategy.Tourner")
         
+        # Configuration du rapport de vitesse entre roues
+        self.speed_ratio = 0.5  # 50% de différence de vitesse entre roues
+
     def start(self, robot):
-        # Calcul de l'angle cible en fonction de l'angle courant du robot
-        self.target_angle = normalize_angle(robot.direction_angle + self.angle_rad)
+        """Initialisation des moteurs pour un virage en arc"""
+        self.robot = robot
+        self.left_initial = robot.motor_positions["left"]
+        self.right_initial = robot.motor_positions["right"]
+
+        # Détermination de la roue rapide/lente selon le sens
+        if self.angle_rad > 0:  # Droite
+            self.fast_wheel = "left"
+            self.slow_wheel = "right"
+        else:  # Gauche
+            self.fast_wheel = "right"
+            self.slow_wheel = "left"
+
+        # Application des vitesses initiales
+        robot.set_motor_speed(self.fast_wheel, self.base_speed)
+        robot.set_motor_speed(self.slow_wheel, self.base_speed * self.speed_ratio)
+
         self.started = True
-        self.logger.info("Tourner started.")
-        
+        self.logger.info(f"Début virage en arc: {math.degrees(self.angle_rad):.1f}°")
+
     def step(self, robot, delta_time):
-        if not self.started:
-            self.start(robot)
-            
-        tol = math.radians(0.001)  # Tolérance (ici environ 0.1° en radians)
-        current_angle = normalize_angle(robot.direction_angle)
-        error = normalize_angle(self.target_angle - current_angle)
+        """Contrôle proportionnel de la rotation"""
+        # Calcul angle actuel
+        delta_left = robot.motor_positions["left"] - self.left_initial
+        delta_right = robot.motor_positions["right"] - self.right_initial
         
-        if abs(error) < tol:
-            # Une fois le virage réalisé, on supprime la correction pour continuer tout droit
-            robot.set_motor_speed("left", self.forward_speed)
-            robot.set_motor_speed("right", self.forward_speed)
+        wheel_circumference = 2 * math.pi * robot.WHEEL_DIAMETER/2
+        angle = (delta_left - delta_right) * wheel_circumference / (360 * robot.WHEEL_BASE_WIDTH)
+        
+        # Calcul erreur et correction
+        error = self.angle_rad - angle
+        tol = math.radians(0.5)  # Tolérance de 0.5°
+        
+        if abs(error) <= tol:
+            robot.set_motor_speed("left", 0)
+            robot.set_motor_speed("right", 0)
+
             self.finished = True
-            self.logger.info("Tourner finished.")
-        else:
-            # Correction proportionnelle : on calcule une vitesse de correction en fonction de l'erreur
-            Kp = 8.0
-            correction_speed = Kp * math.degrees(error)
-            # Limitation de la correction à la vitesse maximale définie
-            correction_speed = max(-self.vitesse_deg_s, min(self.vitesse_deg_s, correction_speed))
-            # Application d'une vitesse de base forward_speed à chaque moteur
-            # avec un ajustement différentiel pour effectuer le virage
-            robot.set_motor_speed("left", self.forward_speed + correction_speed)
-            robot.set_motor_speed("right", self.forward_speed - correction_speed)
-            
-        return self.finished
+            self.logger.info(f"Virage terminé | Erreur: {math.degrees(error):.2f}°")
+            return True
+
+        # Correction proportionnelle (seulement sur la roue lente)
+        Kp = 0.8  # Gain plus doux
+        correction = Kp * math.degrees(error)
         
+        # Application de la correction
+        new_slow_speed = self.base_speed * self.speed_ratio + correction
+        new_slow_speed = max(min(new_slow_speed, self.base_speed), 0)  # Bornage
+        
+        robot.set_motor_speed(self.slow_wheel, new_slow_speed)
+        
+        return False
+
     def is_finished(self):
         return self.finished
+
+    def calculer_angle_par_encodages(self, pos_init_l, pos_init_r, pos_l, pos_r, rayon, entraxe):
+        """Version simplifiée du calcul d'angle"""
+        return ((pos_l - pos_init_l) - (pos_r - pos_init_r)) * (math.pi * rayon) / (180 * entraxe)
 
 
 class Arreter(AsyncCommande):
@@ -221,7 +250,7 @@ class PolygonStrategy(AsyncCommande):
         turning_angle = math.radians(90)
         for i in range(n):
             self.commands.append(Avancer(side_length_cm, vitesse_avance))
-            self.commands.append(Tourner(turning_angle, vitesse_rotation,100))
+            self.commands.append(Tourner(turning_angle, vitesse_rotation))
             self.logger.info(f"Side {i+1} added.")
         self.commands.append(Arreter())
         self.current_index = 0
