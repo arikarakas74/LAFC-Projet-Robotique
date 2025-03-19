@@ -72,26 +72,32 @@ class RobotReelAdapter:
 
     def calculate_angle(self):
         """
-        Calcule le changement d'angle en fonction des rotations des moteurs.
-        Retourne l'angle en radian.
+        Calcule l'angle actuel du robot en radians à partir des encodeurs moteurs.
         """
-        if self.delta_left is None or self.delta_right is None:
-            self.delta_left = self.robot.motor_positions["left"] - self.last_left_encoder
-            self.delta_right = self.robot.motor_positions["right"] - self.last_right_encoder
+        # Calculer la différence entre les valeurs actuelles et précédentes des encodeurs
+        delta_left = self.robot.motor_positions["left"] - self.last_left_encoder
+        delta_right = self.robot.motor_positions["right"] - self.last_right_encoder
 
-        if self.delta_left == 0 and self.delta_right == 0:
+        # Si le robot n'a pas bougé, ne pas changer l'angle
+        if delta_left == 0 and delta_right == 0:
             return self.current_angle
-        
-        # Conversion des rotations en distance parcourue
-        left_distance = math.radians(self.delta_left) * self.wheel_radius
-        right_distance = math.radians(self.delta_right) * self.wheel_radius
 
-        # Calcul du changement d'angle du robot
-        angle_change = (left_distance - right_distance) / self.track_width
+        # Calculer la circonférence de la roue
+        wheel_circumference = 2 * math.pi * self.wheel_radius  
 
+        # Calcul de la variation d'angle (selon la logique de la stratégie Tourner)
+        angle_change = (delta_left - delta_right) * wheel_circumference / (360 * self.track_width)
+
+        # Mise à jour de l'angle actuel
         self.current_angle += angle_change
 
-        return self.current_angle  
+        # Mise à jour des valeurs des encodeurs (pour une prochaine mesure correcte)
+        self.last_left_encoder = self.robot.motor_positions["left"]
+        self.last_right_encoder = self.robot.motor_positions["right"]
+
+        return self.current_angle
+
+  
 
 class Accelerer:
     """

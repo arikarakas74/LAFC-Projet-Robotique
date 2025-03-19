@@ -144,6 +144,7 @@ class Avancer:
 import math
 import logging
 from controller.StrategyAsync import AsyncCommande
+from controller.Adapter import RobotReelAdapter
 
 class Tourner(AsyncCommande):
     def __init__(self, angle_rad, vitesse_deg_s):
@@ -164,6 +165,7 @@ class Tourner(AsyncCommande):
     def start(self, robot):
         """Initialisation des moteurs pour un virage en arc"""
         self.robot = robot
+        self.adapter = RobotReelAdapter(robot, [0,0], 0)
         self.left_initial = robot.motor_positions["left"]
         self.right_initial = robot.motor_positions["right"]
 
@@ -184,12 +186,7 @@ class Tourner(AsyncCommande):
 
     def step(self, robot, delta_time):
         """Contrôle proportionnel de la rotation"""
-        # Calcul angle actuel
-        delta_left = robot.motor_positions["left"] - self.left_initial
-        delta_right = robot.motor_positions["right"] - self.right_initial
-        
-        wheel_circumference = 2 * math.pi * robot.WHEEL_DIAMETER/2
-        angle = (delta_left - delta_right) * wheel_circumference / (360 * robot.WHEEL_BASE_WIDTH)
+        angle = self.adapter.calculate_angle()
         
         # Calcul erreur et correction
         error = self.angle_rad - angle
