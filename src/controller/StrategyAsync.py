@@ -186,39 +186,57 @@ class FollowMovingBeaconStrategy(AsyncCommande):
         self.logger = logging.getLogger("strategy.FollowMovingBeaconStrategy")
         self.started = False
         self.finished = False
+        self.last_detection = None
+        self.search_direction = 1  # 1 for clockwise, -1 for counterclockwise
+        self.search_speed = 45  # degrees per second for searching
+
     def start(self, robot):
         self.started = True
         self.logger.info("FollowMovingBeacon started.")
+        self.last_detection = None
+        self.search_direction = 1
+
     def step(self, robot, delta_time):
         if not self.started:
             self.start(robot)
-        end_pos = robot.map_model.end_position  # Beacon position
-        if end_pos is None:
-            self.logger.error("Beacon position not defined.")
-            self.finished = True
+
+        # Get camera view
+        camera_data = robot.get_camera_view()
+        
+        if camera_data is None:
+            # Beacon not in view, search for it
+            self.logger.info("Beacon not detected, searching...")
+            robot.set_motor_speed("left", self.search_speed * self.search_direction)
+            robot.set_motor_speed("right", -self.search_speed * self.search_direction)
             return self.finished
-        target_x, target_y = end_pos
-        current_x, current_y = robot.x, robot.y
-        dx = target_x - current_x
-        dy = target_y - current_y
-        distance = math.hypot(dx, dy)
+
+        # Beacon detected
+        self.last_detection = camera_data
+        distance = camera_data['distance']
+        relative_angle = camera_data['angle']
+
         if distance <= self.tolerance_distance:
             robot.set_motor_speed("left", 0)
             robot.set_motor_speed("right", 0)
             self.logger.info("Beacon reached.")
             self.finished = True
         else:
-            target_angle = math.atan2(dy, dx)
-            angle_to_turn = normalize_angle(target_angle - robot.direction_angle)
-            if abs(math.degrees(angle_to_turn)) > 2:
-                turn_cmd = Tourner(angle_to_turn, self.vitesse_rotation)
-                turn_cmd.start(robot)
-                turn_cmd.step(robot, delta_time)
+            # Convert relative angle to degrees for rotation
+            angle_deg = math.degrees(relative_angle)
+            
+            if abs(angle_deg) > 2:  # If beacon is not centered
+                # Adjust rotation speed based on angle
+                rotation_speed = min(self.vitesse_rotation, max(-self.vitesse_rotation, angle_deg * 2))
+                robot.set_motor_speed("left", rotation_speed)
+                robot.set_motor_speed("right", -rotation_speed)
             else:
+                # Beacon is centered, move forward
                 advance_cmd = Avancer(min(self.step_distance, distance), self.vitesse_avance)
                 advance_cmd.start(robot)
                 advance_cmd.step(robot, delta_time)
+
         return self.finished
+
     def is_finished(self):
         return self.finished
 
