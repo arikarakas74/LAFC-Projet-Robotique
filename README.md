@@ -1,126 +1,138 @@
-# LAFC-Projet-Robotique - LU2IN013
+# LAFC-Projet-Robotique
 
-A robot simulation program that allows users to control and simulate a robot in both graphical (GUI) and command-line (CLI) modes. The robot can navigate through an environment while providing real-time position and angle information.
+A 3D robot simulation project with multiple visualization options (VPython 3D, GUI, and CLI interfaces).
+
+## Project Overview
+
+This project implements a robot simulation environment with the following key features:
+- 3D visualization using VPython
+- Multiple control interfaces (3D, GUI, CLI)
+- Advanced movement strategies (polygon drawing, beacon following)
+- Real-time robot control and monitoring
+- Configurable simulation environment
 
 ## Project Structure
 
-The project follows an MVC (Model-View-Controller) architecture:
+```
+LAFC-Projet-Robotique/
+├── src/
+│   ├── model/                 # Core data models
+│   │   ├── robot.py          # Robot state and behavior
+│   │   ├── map_model.py      # Environment and obstacles
+│   │   └── clock.py          # Simulation timing
+│   ├── controller/           # Control logic
+│   │   ├── simulation_controller.py  # Main simulation control
+│   │   ├── robot_controller.py      # Robot movement control
+│   │   ├── map_controller.py        # Environment control
+│   │   └── StrategyAsync.py         # Movement strategies
+│   ├── view/                 # Visualization components
+│   │   ├── vpython_view.py          # 3D visualization
+│   │   ├── vpython_control_panel.py # 3D control interface
+│   │   ├── control_panel.py         # GUI control interface
+│   │   ├── robot_view.py            # Robot visualization
+│   │   └── map_view.py              # Environment visualization
+│   ├── utils/                # Utility functions
+│   │   └── geometry.py      # Geometric calculations
+│   ├── vpython_main.py      # 3D visualization entry point
+│   ├── gui_main.py          # GUI interface entry point
+│   ├── cli_main.py          # CLI interface entry point
+│   └── main.py              # Main program entry point
+├── Documentation/           # Project documentation
+└── requirements.txt        # Project dependencies
+```
 
-```
-src/
-├── controller/     # Contains simulation control logic
-├── model/         # Contains robot and map models
-├── utils/         # Utility functions
-├── view/          # GUI and visualization components
-└── main.py        # Main entry point
-```
+## Core Components
+
+### Model Layer (`src/model/`)
+- `RobotModel`: Manages robot state, position, and movement
+- `MapModel`: Handles environment, obstacles, and positions
+- `Clock`: Controls simulation timing and updates
+
+### Controller Layer (`src/controller/`)
+- `SimulationController`: Orchestrates the simulation
+- `RobotController`: Manages robot movement and control
+- `MapController`: Handles environment interactions
+- `StrategyAsync`: Implements movement patterns (polygon drawing, beacon following)
+
+### View Layer (`src/view/`)
+- `VpythonView`: 3D visualization using VPython
+- `VPythonControlPanel`: 3D interface controls
+- `ControlPanel`: GUI interface controls
+- `RobotView`: Robot visualization components
+- `MapView`: Environment visualization components
 
 ## Requirements
+
 - Python 3.x
-- Required Python packages (will be added automatically)
+- VPython for 3D visualization
+- PyQt5 for GUI interface
+- Additional dependencies listed in requirements.txt
 
 ## Installation
 
 1. Clone the repository:
-    ```bash
-    git clone https://github.com/arikarakas74/LAFC-Projet-Robotique.git
-    ```
+```bash
+git clone https://github.com/arikarakas74/LAFC-Projet-Robotique.git
+cd LAFC-Projet-Robotique
+```
 
-2. Navigate to the project directory:
-    ```bash
-    cd LAFC-Projet-Robotique
-    ```
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ## Running the Program
 
-The program can be run in two modes:
-
-### 1. GUI Mode (Graphical Interface)
-This is the default mode that provides a visual interface for robot simulation:
-
+### 3D Visualization (VPython)
 ```bash
-python3 src/main.py
-```
-or explicitly:
-```bash
-python3 src/main.py --gui
+python3 src/vpython_main.py
 ```
 
-In GUI mode, you can control the robot using:
-- W key: Move forward
-- S key: Move backward
-- (Additional controls may be available)
-
-The simulation will display real-time updates of the robot's position and angle.
-
-### 2. CLI Mode (Command Line Interface)
-For command-line operation without graphical interface:
-
+### GUI Interface
 ```bash
-python3 src/main.py --cli
+python3 src/gui_main.py
 ```
 
-In CLI mode:
-1. You'll be prompted to enter start position coordinates (X: 0-800, Y: 0-600)
-2. The simulation will run and display robot position updates in the terminal
-
-## Features
-- Real-time position and angle tracking
-- Multiple operation modes (GUI/CLI)
-- Interactive robot control in GUI mode
-- Coordinate-based positioning system
-- Robot movement simulation with precise angle calculations
-
-## Development
-
-The project uses Git for version control. Main branches:
-- `main`: Primary development branch
-- `src2`: Alternative development branch
-
-To switch between branches:
+### CLI Interface
 ```bash
-git checkout main  # or src2
+python3 src/cli_main.py
 ```
 
-## Troubleshooting
+## Key Features
 
-If you encounter the "python: command not found" error, try using `python3` instead of `python` in all commands.
+### Movement Strategies
+- Polygon Drawing: Draw regular polygons with configurable sides and size
+- Beacon Following: Follow a moving beacon with adjustable parameters
+- Basic Movements: Forward, backward, rotation, acceleration, deceleration
+
+### Control Interfaces
+- 3D Visualization: Interactive 3D view with real-time control
+- GUI Interface: Traditional window-based control panel
+- CLI Interface: Command-line control and monitoring
+
+### Environment Features
+- Configurable obstacles
+- Position tracking
+- Collision detection
+- Real-time updates
+
+## Development Guidelines
+
+1. Follow the MVC architecture pattern
+2. Implement new features as separate strategies
+3. Maintain compatibility across all interfaces
+4. Document new functions and classes
+5. Test changes across all visualization modes
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/YourFeature`)
-3. Commit your changes (`git commit -m 'Add some feature'`)
-4. Push to the branch (`git push origin feature/YourFeature`)
-5. Create a new Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-## Trello
-[Project Trello Board](https://trello.com/invite/b/6790cac1e266a0256f541dae/ATTIf9a8031f4e259cceb72fa6d61ba8627b61608668/robot-project)
+## License
 
-## Files Overview
-The code is divided into several components following the MVC pattern:
-
-- **`model/map_model.py`**: Contains the `MapModel` class that handles the environment representation
-- **`model/robot.py`**: Contains the `Robot` class, which defines the robot's movement logic
-- **`controller/simulation_controller.py`**: Contains the simulation control logic
-- **`view/app_view.py`**: Handles the graphical user interface (GUI)
-- **`main.py`**: The entry point of the program
-
-## How It Works
-- The program provides a simulation environment for a robot
-- In GUI mode, the robot can be controlled using keyboard inputs (W for forward, S for backward)
-- The simulation provides real-time feedback of the robot's position (X, Y) and angle
-- The robot's movement is simulated with precise calculations for position and orientation
-
-## Example Usage
-
-1. Start the program in GUI mode:
-   ```bash
-   python3 src/main.py
-   ```
-2. The simulation window will open
-3. Use the following controls:
-   - Press W to move the robot forward
-   - Press S to move the robot backward
-4. Watch the real-time updates of the robot's position and angle in the terminal
+[Add your license information here]
 
