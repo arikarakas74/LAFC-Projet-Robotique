@@ -1,8 +1,9 @@
 import math
 from model.map_model import MapModel
 from utils.geometry import normalize_angle
+from controller.adapter import RobotAdapter
 
-class RobotModel:
+class RobotModel(RobotAdapter):
     WHEEL_BASE_WIDTH = 20.0  # cm
     WHEEL_DIAMETER = 5.0     # cm
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
@@ -25,7 +26,7 @@ class RobotModel:
     def set_motor_speed(self, motor: str, dps: int):
         """Définit la vitesse d'un moteur avec validation"""
         if motor in ["left", "right"]:
-            self.motor_speeds[motor] = max(-1000, min(1000, dps))
+            self.motor_speeds[motor] = dps
 
     def get_state(self) -> dict:
         """Retourne un snapshot de l'état courant"""
@@ -40,3 +41,14 @@ class RobotModel:
         """Met à jour les positions des moteurs avec le temps écoulé"""
         for motor in ["left", "right"]:
             self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
+
+
+    
+    def get_motor_positions(self) -> dict:
+        return self.motor_positions
+    
+
+    
+    def get_distance(self) -> float:
+        return 0.0  # À implémenter selon le modèle
+    

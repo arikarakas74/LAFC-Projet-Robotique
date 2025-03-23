@@ -40,7 +40,7 @@ class ControlPanel:
         import threading
         import time
 
-        square_strategy = PolygonStrategy(n=4, side_length_cm=100, vitesse_avance=1000, vitesse_rotation=460)
+        square_strategy = PolygonStrategy(n=4, side_length_cm=100, vitesse_avance=2000, vitesse_rotation=1000)
         
         def run_strategy():
             delta_time = 0.02  # intervalle de mise à jour (20ms)
