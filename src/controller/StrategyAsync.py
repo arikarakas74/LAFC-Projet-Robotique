@@ -188,13 +188,16 @@ class FollowMovingBeaconStrategy(AsyncCommande):
         self.finished = False
         self.last_detection = None
         self.search_direction = 1  # 1 for clockwise, -1 for counterclockwise
-        self.search_speed = 45  # degrees per second for searching
+        self.search_speed = 90  # degrees per second for searching
+        self.last_search_time = 0
+        self.search_duration = 2.0  # seconds to search in one direction before switching
 
     def start(self, robot):
         self.started = True
         self.finished = False
         self.last_detection = None
         self.search_direction = 1
+        self.last_search_time = 0
         robot.current_strategy = self  # Store reference to current strategy
         self.logger.info("FollowMovingBeacon started.")
 
@@ -204,6 +207,7 @@ class FollowMovingBeaconStrategy(AsyncCommande):
         self.finished = True
         self.last_detection = None
         self.search_direction = 1
+        self.last_search_time = 0
         if hasattr(self, 'robot') and self.robot:
             self.robot.current_strategy = None
         self.logger.info("FollowMovingBeacon stopped.")
@@ -217,7 +221,13 @@ class FollowMovingBeaconStrategy(AsyncCommande):
         
         if camera_data is None:
             # Beacon not in view, search for it
-            self.logger.info("Beacon not detected, searching...")
+            current_time = time.time()
+            if current_time - self.last_search_time > self.search_duration:
+                self.search_direction *= -1  # Switch search direction
+                self.last_search_time = current_time
+                self.logger.info(f"Switching search direction to {'clockwise' if self.search_direction > 0 else 'counterclockwise'}")
+            
+            # Rotate in place
             robot.set_motor_speed("left", self.search_speed * self.search_direction)
             robot.set_motor_speed("right", -self.search_speed * self.search_direction)
             return self.finished
@@ -236,16 +246,15 @@ class FollowMovingBeaconStrategy(AsyncCommande):
             # Convert relative angle to degrees for rotation
             angle_deg = math.degrees(relative_angle)
             
-            if abs(angle_deg) > 2:  # If beacon is not centered
+            if abs(angle_deg) > 5:  # Increased threshold for rotation
                 # Adjust rotation speed based on angle
-                rotation_speed = min(self.vitesse_rotation, max(-self.vitesse_rotation, angle_deg * 2))
+                rotation_speed = min(self.vitesse_rotation, max(-self.vitesse_rotation, angle_deg * 1.5))
                 robot.set_motor_speed("left", rotation_speed)
                 robot.set_motor_speed("right", -rotation_speed)
             else:
                 # Beacon is centered, move forward
-                advance_cmd = Avancer(min(self.step_distance, distance), self.vitesse_avance)
-                advance_cmd.start(robot)
-                advance_cmd.step(robot, delta_time)
+                robot.set_motor_speed("left", self.vitesse_avance)
+                robot.set_motor_speed("right", self.vitesse_avance)
 
         return self.finished
 
