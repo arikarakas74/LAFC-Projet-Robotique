@@ -6,7 +6,7 @@ class MapModel:
     def __init__(self):
         
         self.obstacles = {}  # Format: {obstacle_id: points}
-        self.start_position = (0,0)
+        self.start_position = (400, 300)  # Start in the middle of the map
         self.end_position = None
         self.current_shape = None
         self.current_points = []
@@ -24,7 +24,7 @@ class MapModel:
 
     def reset(self):
         self.obstacles.clear()
-        self.start_position = None
+        self.start_position = (400, 300)  # Reset to middle of map
         self.end_position = None
         self.notify_event_listeners("map_reset")
 

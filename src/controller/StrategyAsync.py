@@ -192,9 +192,21 @@ class FollowMovingBeaconStrategy(AsyncCommande):
 
     def start(self, robot):
         self.started = True
-        self.logger.info("FollowMovingBeacon started.")
+        self.finished = False
         self.last_detection = None
         self.search_direction = 1
+        robot.current_strategy = self  # Store reference to current strategy
+        self.logger.info("FollowMovingBeacon started.")
+
+    def stop(self):
+        """Stop the strategy and reset its state"""
+        self.started = False
+        self.finished = True
+        self.last_detection = None
+        self.search_direction = 1
+        if hasattr(self, 'robot') and self.robot:
+            self.robot.current_strategy = None
+        self.logger.info("FollowMovingBeacon stopped.")
 
     def step(self, robot, delta_time):
         if not self.started:

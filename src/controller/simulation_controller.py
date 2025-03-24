@@ -154,5 +154,15 @@ class SimulationController:
         à la position de départ.
         """
         self.stop_simulation()
+        # Stop all motors
+        self.robot_model.set_motor_speed("left", 0)
+        self.robot_model.set_motor_speed("right", 0)
+        # Reset robot position and angle
         self.robot_model.x, self.robot_model.y = self.map_model.start_position
         self.robot_model.direction_angle = 0.0
+        # Reset motor positions
+        self.robot_model.motor_positions = {"left": 0, "right": 0}
+        # Reset any running strategy
+        if hasattr(self.robot_model, 'current_strategy') and self.robot_model.current_strategy:
+            self.robot_model.current_strategy.stop()
+            self.robot_model.current_strategy = None
