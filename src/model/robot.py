@@ -51,4 +51,18 @@ class RobotModel(RobotAdapter):
     
     def get_distance(self) -> float:
         return 0.0  # À implémenter selon le modèle
-    
+    def calculer_distance_parcourue(self) -> float:
+
+        old_positions = self.last_motor_positions
+        new_positions = self.motor_positions
+        delta_left = new_positions["left"] - old_positions["left"]
+        delta_right = new_positions["right"] - old_positions["right"]
+
+        left_distance = math.radians(delta_left) * self.WHEEL_RADIUS
+        right_distance = math.radians(delta_right) * self.WHEEL_RADIUS
+
+        # Mettre à jour les anciennes positions avec les nouvelles
+        self.last_motor_positions = new_positions.copy()
+        self.distance+=(left_distance + right_distance) / 2 
+        # Retourne la distance moyenne parcourue
+        return self.distance
