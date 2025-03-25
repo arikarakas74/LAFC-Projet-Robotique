@@ -83,3 +83,16 @@ class RobotModel(RobotAdapter):
         self.set_motor_speed(self.fast_wheel,base_speed)
         self.set_motor_speed(self.slow_wheel, base_speed * speed_ratio)
 
+    def calcule_angle(self):
+        positions = self.get_motor_positions()
+        delta_left = positions["left"] - self.left_initial
+        delta_right = positions["right"] - self.right_initial
+
+        # On suppose que l'adaptateur fournit WHEEL_DIAMETER et WHEEL_BASE_WIDTH
+        wheel_circumference = 2 * math.pi * self.WHEEL_DIAMETER / 2
+        angle = (delta_left - delta_right) * wheel_circumference / (360 * self.WHEEL_BASE_WIDTH)
+        return angle
+    
+    def slow_speed(self,new_slow_speed):
+        self.set_motor_speed(self.slow_wheel, new_slow_speed)
+
