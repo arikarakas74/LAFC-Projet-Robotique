@@ -66,3 +66,20 @@ class RobotModel(RobotAdapter):
     
     def resetDistance(self):
         self.distance=0
+
+    def decide_turn_direction(self,angle_rad,base_speed):
+
+        speed_ratio = 0.5
+        positions = self.get_motor_positions()
+        self.left_initial = positions["left"]
+        self.right_initial = positions["right"]
+
+        if angle_rad > 0:  # Virage à droite
+            self.fast_wheel = "left"
+            self.slow_wheel = "right"
+        else:  # Virage à gauche
+            self.fast_wheel = "right"
+            self.slow_wheel = "left"
+        self.set_motor_speed(self.fast_wheel,base_speed)
+        self.set_motor_speed(self.slow_wheel, base_speed * speed_ratio)
+
