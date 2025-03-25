@@ -15,9 +15,17 @@ class RobotAdapter(ABC):
         pass
     
     @abstractmethod
-    def get_distance(self) -> float:
+    def calculer_distance_parcourue(self):
         pass
-    
+    @abstractmethod
+    def resetDistance(self):
+        pass
+    @abstractmethod
+    def decide_turn_direction(self, adapter):
+        pass
+    @abstractmethod
+    def calcule_angle(self):
+        pass
 
 
 # Adaptateur pour le robot simulé
