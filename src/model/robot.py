@@ -15,6 +15,10 @@ class RobotModel(RobotAdapter):
         self.direction_angle = 0.0
         self.motor_speeds = {"left": 0, "right": 0}
         self.motor_positions = {"left": 0, "right": 0}
+        self.last_motor_positions = self.motor_positions.copy()
+        self.distance=0
+        self.fast_wheel = None
+        self.slow_wheel=None
 
     def update_position(self, new_x: float, new_y: float, new_angle: float):
         """Met à jour la position après vérification des collisions"""
@@ -48,6 +52,12 @@ class RobotModel(RobotAdapter):
         return self.motor_positions
     
 
+    
+    def get_distance(self) -> float:
+        return 0.0  # À implémenter selon le modèle
+    
+
+
     def calculer_distance_parcourue(self) -> float:
 
         old_positions = self.last_motor_positions
@@ -66,7 +76,6 @@ class RobotModel(RobotAdapter):
     
     def resetDistance(self):
         self.distance=0
-
     def decide_turn_direction(self,angle_rad,base_speed):
 
         speed_ratio = 0.5
@@ -83,6 +92,7 @@ class RobotModel(RobotAdapter):
         self.set_motor_speed(self.fast_wheel,base_speed)
         self.set_motor_speed(self.slow_wheel, base_speed * speed_ratio)
 
+
     def calcule_angle(self):
         positions = self.get_motor_positions()
         delta_left = positions["left"] - self.left_initial
@@ -96,3 +106,4 @@ class RobotModel(RobotAdapter):
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)
 
+    
