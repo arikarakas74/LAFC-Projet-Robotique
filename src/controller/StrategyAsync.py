@@ -14,68 +14,6 @@ class AsyncCommande:
     def is_finished(self):
         raise NotImplementedError
 
-# Commande d'accélération : augmente progressivement la vitesse jusqu'à une vitesse cible
-class Accelerer(AsyncCommande):
-    def __init__(self, target_speed, duration):
-        self.target_speed = target_speed
-        self.duration = duration
-        self.elapsed = 0
-        self.started = False
-        self.finished = False
-        self.logger = logging.getLogger("strategy.Accelerer")
-
-    def start(self, adapter):
-        self.interval = self.duration / 10.0
-        self.started = True
-        self.logger.info("Acceleration started.")
-
-    def step(self, adapter, delta_time):
-        if not self.started:
-            self.start(adapter)
-        self.elapsed += delta_time
-        fraction = min(self.elapsed / self.duration, 1.0)
-        speed = self.target_speed * fraction
-        adapter.set_motor_speed("left", speed)
-        adapter.set_motor_speed("right", speed)
-        if self.elapsed >= self.duration:
-            self.finished = True
-            self.logger.info("Acceleration finished.")
-        return self.finished
-
-    def is_finished(self):
-        return self.finished
-
-# Commande de décélération : diminue progressivement la vitesse jusqu'à l'arrêt
-class Freiner(AsyncCommande):
-    def __init__(self, current_speed, duration):
-        self.current_speed = current_speed
-        self.duration = duration
-        self.elapsed = 0
-        self.started = False
-        self.finished = False
-        self.logger = logging.getLogger("strategy.Freiner")
-
-    def start(self, adapter):
-        self.started = True
-        self.logger.info("Deceleration started.")
-
-    def step(self, adapter, delta_time):
-        if not self.started:
-            self.start(adapter)
-        self.elapsed += delta_time
-        fraction = max(1 - self.elapsed / self.duration, 0)
-        speed = self.current_speed * fraction
-        adapter.set_motor_speed("left", speed)
-        adapter.set_motor_speed("right", speed)
-        if self.elapsed >= self.duration:
-            adapter.set_motor_speed("left", 0)
-            adapter.set_motor_speed("right", 0)
-            self.finished = True
-            self.logger.info("Deceleration finished.")
-        return self.finished
-
-    def is_finished(self):
-        return self.finished
 
 # Commande pour avancer d'une distance donnée (en cm) en se basant sur les encodeurs
 class Avancer(AsyncCommande):
@@ -85,15 +23,9 @@ class Avancer(AsyncCommande):
         self.wheel_radius = 2.5             # Rayon de la roue en cm
         self.started = False
         self.finished = False
-        self.initial_left = None
-        self.initial_right = None
         self.logger = logging.getLogger("AvancerAdapter")
 
     def start(self, adapter):
-        positions = adapter.get_motor_positions()
-        self.initial_left = positions["left"]
-        self.initial_right = positions["right"]
-
         adapter.set_motor_speed("left", self.vitesse)
         adapter.set_motor_speed("right", self.vitesse)
         self.started = True
@@ -102,25 +34,14 @@ class Avancer(AsyncCommande):
     def step(self, adapter, delta_time):
         if not self.started:
             self.start(adapter)
-
-        positions = adapter.get_motor_positions()
-        current_left = positions["left"]
-        current_right = positions["right"]
-
-        delta_left = current_left - self.initial_left
-        delta_right = current_right - self.initial_right
-
-        # Conversion des degrés en distance (cm)
-        left_distance = math.radians(delta_left) * self.wheel_radius
-        right_distance = math.radians(delta_right) * self.wheel_radius
-
-        traveled_distance = (left_distance + right_distance) / 2.0
+        traveled_distance = adapter.calculer_distance_parcourue()
 
         if traveled_distance >= self.distance_cm:
             adapter.set_motor_speed("left", 0)
             adapter.set_motor_speed("right", 0)
             self.finished = True
             self.logger.info(f"Commande terminée, distance parcourue: {traveled_distance:.2f} cm")
+            adapter.resetDistance()
 
         return self.finished
 
@@ -143,30 +64,12 @@ class Tourner(AsyncCommande):
 
     def start(self, adapter):
         self.adapter = adapter
-        positions = adapter.get_motor_positions()
-        self.left_initial = positions["left"]
-        self.right_initial = positions["right"]
-
-        if self.angle_rad > 0:  # Virage à droite
-            self.fast_wheel = "left"
-            self.slow_wheel = "right"
-        else:  # Virage à gauche
-            self.fast_wheel = "right"
-            self.slow_wheel = "left"
-
-        adapter.set_motor_speed(self.fast_wheel, self.base_speed)
-        adapter.set_motor_speed(self.slow_wheel, self.base_speed * self.speed_ratio)
+        self.adapter.decide_turn_direction(self.angle_rad,self.base_speed)
         self.started = True
         self.logger.info(f"Début virage: {math.degrees(self.angle_rad):.1f}°")
 
     def step(self, adapter, delta_time):
-        positions = adapter.get_motor_positions()
-        delta_left = positions["left"] - self.left_initial
-        delta_right = positions["right"] - self.right_initial
-
-        # On suppose que l'adaptateur fournit WHEEL_DIAMETER et WHEEL_BASE_WIDTH
-        wheel_circumference = 2 * math.pi * adapter.WHEEL_DIAMETER / 2
-        angle = (delta_left - delta_right) * wheel_circumference / (360 * adapter.WHEEL_BASE_WIDTH)
+        angle=adapter.calcule_angle()
 
         error = self.angle_rad - angle
         tol = math.radians(0.5)  # Tolérance de 0.5°
@@ -182,7 +85,8 @@ class Tourner(AsyncCommande):
         correction = Kp * math.degrees(error)
         new_slow_speed = self.base_speed * self.speed_ratio + correction
         new_slow_speed = max(min(new_slow_speed, self.base_speed), 0)
-        adapter.set_motor_speed(self.slow_wheel, new_slow_speed)
+        adapter.slow_speed(new_slow_speed)
+        
         return False
 
     def is_finished(self):
