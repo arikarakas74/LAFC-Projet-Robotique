@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+import math
 # Interface d'adaptateur abstraite
 class RobotAdapter(ABC):
     @abstractmethod
@@ -27,36 +27,6 @@ class RobotAdapter(ABC):
     def calcule_angle(self):
         pass
 
-
-# Adaptateur pour le robot simulé
-"""class SimulatedRobotAdapter(RobotAdapter):
-    def __init__(self, robot_model):
-        self.robot = robot_model
-    
-    def set_motor_speed(self, motor: str, speed: float):
-        self.robot.set_motor_speed(motor, speed)
-    
-    def get_motor_positions(self) -> dict:
-        return self.robot.motor_positions
-    
-    def update_motors(self, delta_time: float):
-        self.robot.update_motors(delta_time)
-    
-    def get_distance(self) -> float:
-        return 0.0  # À implémenter selon le modèle
-    
-    @property
-    def x(self) -> float:
-        return self.robot.x
-    
-    @property
-    def y(self) -> float:
-        return self.robot.y
-    
-    @property
-    def direction_angle(self) -> float:
-        return self.robot.direction_angle
-"""
 # Adaptateur pour le robot réel
 class RealRobotAdapter(RobotAdapter):
     def __init__(self, real_robot):
