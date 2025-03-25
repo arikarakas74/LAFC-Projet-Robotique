@@ -48,8 +48,6 @@ class RealRobotAdapter(RobotAdapter):
     def update_motors(self, delta_time: float):
         pass  # Le robot réel gère cela automatiquement
     
-    def calculer_distance_parcourue(self):
-        import math
 
     def calculer_distance_parcourue(self) -> float:
         # Récupère les positions actuelles des encodeurs (en degrés)
