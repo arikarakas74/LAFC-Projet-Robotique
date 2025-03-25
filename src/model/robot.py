@@ -48,9 +48,6 @@ class RobotModel(RobotAdapter):
         return self.motor_positions
     
 
-    
-    def get_distance(self) -> float:
-        return 0.0  # À implémenter selon le modèle
     def calculer_distance_parcourue(self) -> float:
 
         old_positions = self.last_motor_positions
@@ -66,3 +63,6 @@ class RobotModel(RobotAdapter):
         self.distance+=(left_distance + right_distance) / 2 
         # Retourne la distance moyenne parcourue
         return self.distance
+    
+    def resetDistance(self):
+        self.distance=0
