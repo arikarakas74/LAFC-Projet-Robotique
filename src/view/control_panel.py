@@ -41,7 +41,7 @@ class ControlPanel:
         from controller.StrategyAsync import PolygonStrategy
         import threading
         import time
-
+        #adapteRobot=RealRobotAdapter(MockRobot2IN013())
         square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=100, vitesse_avance=2000, vitesse_rotation=500)
         
         def run_strategy():

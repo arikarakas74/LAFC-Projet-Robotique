@@ -43,12 +43,6 @@ class SimulationController:
         position_handler.setFormatter(position_formatter)
         self.position_logger.addHandler(position_handler)
 
-        # Logger pour afficher en console
-        if not cli_mode:
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
-            console_handler.setFormatter(position_formatter)
-            self.position_logger.addHandler(console_handler)
 
         self.simulation_thread = None
 
