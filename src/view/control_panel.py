@@ -1,6 +1,8 @@
 import tkinter as tk
 import math
 import threading
+from controller.adapter import RealRobotAdapter
+from robot.robot import MockRobot2IN013
 
 class ControlPanel:
     """Panneau de contrôle pour les interactions utilisateur."""
@@ -40,13 +42,13 @@ class ControlPanel:
         import threading
         import time
 
-        square_strategy = PolygonStrategy(n=4, side_length_cm=100, vitesse_avance=2000, vitesse_rotation=500)
+        square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=100, vitesse_avance=2000, vitesse_rotation=500)
         
         def run_strategy():
             delta_time = 0.02  # intervalle de mise à jour (20ms)
-            square_strategy.start(self.simulation_controller.robot_model)
+            square_strategy.start()
             while not square_strategy.is_finished():
-                square_strategy.step(self.simulation_controller.robot_model, delta_time)
+                square_strategy.step( delta_time)
                 time.sleep(delta_time)
         
         threading.Thread(target=run_strategy, daemon=True).start()
