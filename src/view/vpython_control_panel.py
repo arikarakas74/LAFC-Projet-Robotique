@@ -106,7 +106,7 @@ class VPythonControlPanel:
             vitesse_avance=1500,
             tolerance_angle=1,
             tolerance_radius=20,
-            step_distance=5,
+            step_distance=10,
             adapter=self.simulation_controller.robot_model,
             vpython_view=self.vpython_view
         )

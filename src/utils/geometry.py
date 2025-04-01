@@ -1,12 +1,13 @@
 import math
 def point_in_polygon(x, y, polygon):
     """ Use ray casting to check if a point is inside a polygon """
-
+    
     if isinstance(polygon, tuple):  
         polygon = polygon[0]
 
     n = len(polygon)
     inside = False
+    polygon=scale_polygon(polygon,1.5)
     p1x, p1y = polygon[0]
     for i in range(n + 1):
         p2x, p2y = polygon[i % n]
@@ -19,6 +20,21 @@ def point_in_polygon(x, y, polygon):
                         inside = not inside
         p1x, p1y = p2x, p2y
     return inside
+def scale_polygon(polygon, factor):
+    # Calculer le centroïde
+    cx = sum(x for x, y in polygon) / len(polygon)
+    cy = sum(y for x, y in polygon) / len(polygon)
+    
+    # Appliquer le facteur d'échelle à chaque sommet par rapport au centroïde
+    scaled_polygon = [
+        (cx + factor * (x - cx), cy + factor * (y - cy))
+        for x, y in polygon
+    ]
+    
+    return scaled_polygon
+
+
+
 
 def normalize_angle( angle):
     """ Normalizes an angle to the range [-pi, pi] """
