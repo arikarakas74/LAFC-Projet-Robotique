@@ -91,6 +91,7 @@ class VpythonView:
         """Boucle de capture réaliste avec timing précis"""
         while self._running:
             start_time = time.time()
+            self.capture_embedded_image()
             sleep_time = 0.02
             if sleep_time > 0:
                 time.sleep(sleep_time)
@@ -107,9 +108,10 @@ class VpythonView:
     def capture_embedded_image(self):
             
             # Définir le dossier de destination et le créer s'il n'existe pas
-            directory = r"C:\Users\PC01\Downloads"
+            directory = os.path.join(os.environ["USERPROFILE"], "Downloads")
+            if not os.path.exists(directory):
+                os.makedirs(directory)
             
-     
             # Générer un nom de fichier unique (seulement le nom, sans chemin)
             filename = f"capture_{time.strftime('%Y%m%d-%H%M%S')}"
             
