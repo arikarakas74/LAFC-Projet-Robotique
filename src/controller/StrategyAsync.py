@@ -154,9 +154,9 @@ class PolygonStrategy(AsyncCommande):
         return self.finished
 
 # Stratégie pour suivre une balise mobile
-"""class FollowBeaconByImageStrategy(AsyncCommande):
+class FollowBeaconByImageStrategy(AsyncCommande):
     def __init__(self, vitesse_rotation, vitesse_avance, tolerance_angle=2, tolerance_radius=20, step_distance=5, adapter=None, vpython_view=None):
-        \"""
+        """
         vitesse_rotation : vitesse de rotation du robot (en degrés ou rad/s, à calibrer)
         vitesse_avance : vitesse d'avancement du robot
         tolerance_angle : seuil en degrés pour considérer que la balise est centrée
@@ -164,7 +164,7 @@ class PolygonStrategy(AsyncCommande):
         step_distance : distance d'avancée par commande
         adapter : interface de commande (doit disposer de set_motor_speed, etc.)
         vpython_view : instance de VpythonView qui contient la fonction analyze_image modifiée
-        \"""
+        """
         super().__init__(adapter)
         self.vitesse_rotation = vitesse_rotation
         self.vitesse_avance = vitesse_avance
@@ -243,7 +243,7 @@ class PolygonStrategy(AsyncCommande):
 
     def is_finished(self):
         return self.finished
-"""
+
 
 
 # Commande composite pour regrouper plusieurs commandes asynchrones
