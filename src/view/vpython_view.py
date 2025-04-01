@@ -82,7 +82,6 @@ class VpythonView:
         """Boucle de capture réaliste avec timing précis"""
         while self._running:
             start_time = time.time()
-            self.capture_embedded_image()
             sleep_time = 0.02
             if sleep_time > 0:
                 time.sleep(sleep_time)
