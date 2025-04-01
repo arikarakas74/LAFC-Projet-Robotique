@@ -10,9 +10,7 @@ class RobotAdapter(ABC):
     def get_motor_positions(self) -> dict:
         pass
     
-    @abstractmethod
-    def update_motors(self, delta_time: float):
-        pass
+  
     
     @abstractmethod
     def calculer_distance_parcourue(self):
@@ -38,41 +36,41 @@ class RealRobotAdapter(RobotAdapter):
         self.distance=0
     
     def set_motor_speed(self, motor: str, speed: float):
-        port = self.robot.MOTOR_LEFT if motor == "left" else self.robot.MOTOR_RIGHT
-        self.robot.set_motor_dps(port, int(speed))
+        port = "MOTOR_LEFT" if motor == "left" else "MOTOR_RIGHT"
+        self.robot.set_motor_dps(port, speed)
     
     def get_motor_positions(self) -> dict:
         left, right = self.robot.get_motor_position()
         return {"left": left, "right": right}
     
-    def update_motors(self, delta_time: float):
-        pass  # Le robot réel gère cela automatiquement
-    
-
+ 
     def calculer_distance_parcourue(self) -> float:
         # Récupère les positions actuelles des encodeurs (en degrés)
-        # Ici, on suppose que get_motor_position() renvoie un tuple (position_gauche, position_droite)
-        new_positions = self.robot.get_motor_position()  
-
-        # Calcul des variations d'angle pour chaque roue
+        new_positions = self.robot.get_motor_position()
+        # Calcul des variations d'angle pour chaque roue 
         delta_left = new_positions[0] - self.last_motor_positions[0]
         delta_right = new_positions[1] - self.last_motor_positions[1]
-
         # Conversion des variations d'angle en distance parcourue (en mètres)
         # math.radians() convertit les degrés en radians
-        left_distance = math.radians(delta_left) * self.robot.WHEEL_RADIUS
-        right_distance = math.radians(delta_right) * self.robot.WHEEL_RADIUS
+        left_distance = math.radians(delta_left) * self.robot.WHEEL_DIAMETER / 2.0
+        right_distance = math.radians(delta_right) * self.robot.WHEEL_DIAMETER / 2.0
 
         # Mise à jour de la distance totale parcourue : moyenne des distances des deux roues
+        print(f" Avant Distance parcourue (m) : {self.distance:.2f}")
         self.distance += (left_distance + right_distance) / 2
 
         # Mise à jour des positions précédentes pour la prochaine lecture
         self.last_motor_positions = new_positions
 
+        # Affiche la distance cumulée parcourue par le robot
+        print(f"Distance parcourue (m) : {self.distance:.2f}")
+
         # Retourne la distance cumulée parcourue par le robot
         return self.distance
 
+
     def resetDistance(self):
+       print(f"Distance parcourue (m) a la fin de la phase avancer : {self.distance:.2f}")
        self.distance=0
 
     def decide_turn_direction(self,angle_rad,base_speed):
@@ -83,11 +81,11 @@ class RealRobotAdapter(RobotAdapter):
         self.right_initial = positions["right"]
 
         if angle_rad > 0:  # Virage à droite
-            self.fast_wheel = "left"
-            self.slow_wheel = "right"
+            self.fast_wheel = "MOTOR_LEFT"
+            self.slow_wheel = "MOTOR_RIGHT"
         else:  # Virage à gauche
-            self.fast_wheel = "right"
-            self.slow_wheel = "left"
+            self.fast_wheel = "MOTOR_RIGHT"
+            self.slow_wheel = "MOTOR_LEFT"
         self.robot.set_motor_dps(self.fast_wheel,base_speed)
         self.robot.set_motor_dps(self.slow_wheel, base_speed * speed_ratio)
 
@@ -97,8 +95,8 @@ class RealRobotAdapter(RobotAdapter):
         delta_right = positions["right"] - self.right_initial
 
         # On suppose que l'adaptateur fournit WHEEL_DIAMETER et WHEEL_BASE_WIDTH
-        wheel_circumference = 2 * math.pi * self.WHEEL_DIAMETER / 2
-        angle = (delta_left - delta_right) * wheel_circumference / (360 * self.WHEEL_BASE_WIDTH)
+        wheel_circumference = 2 * math.pi * self.robot.WHEEL_DIAMETER / 2
+        angle = (delta_left - delta_right) * wheel_circumference / (360 * self.robot.WHEEL_BASE_WIDTH)
         return angle
     
     def slow_speed(self,new_slow_speed):
