@@ -21,6 +21,7 @@ class VpythonView:
         self.scene.background = color.white
         self.scene.forward = vector(0, -1, -1)  # Angle de la caméra globale
         self.scene.bind("keydown", key_handler)
+        self.scene.caption = "Left: 0.0°/s, Right: 0.0°/s, Angle: 0.0°"
 
         # Création du sol
         self.floor = box(pos=vector(400, -1, 300), size=vector(800, 1, 600), color=color.green)
@@ -65,6 +66,14 @@ class VpythonView:
         self.embedded_view.camera.pos = cam_pos
         self.embedded_view.camera.axis = cam_forward * 20  # "20" définit la distance de vision
         self.embedded_view.camera.up = vector(0, 1, 0)
+
+        #Mise à jour de label de la vitesse et l'angle
+        speed_text = (
+            f"Left: {state['left_speed']:.1f}°/s, "
+            f"Right: {state['right_speed']:.1f}°/s, "
+            f"Angle: {math.degrees(state['angle']):.1f}°"
+        )
+        self.scene.caption = speed_text
 
 
     def start_capture(self):
@@ -184,3 +193,4 @@ class VpythonView:
         self.wheel_right.axis = vector(0, 6, 0)
         self.direction_marker.pos = vector(400, 10, 310)
         self.path.clear()
+        self.scene.caption = "Left: 0.0°/s, Right: 0.0°/s, Angle: 0.0°"
