@@ -11,12 +11,14 @@ class MapController:
         self.map_model = map_model
         self.map_view = map_view
         self.window = window  # Store the window object
-        self.map_model.add_event_listener(self.handle_map_event)
-        self.map_view.canvas.bind("<Button-1>", self.handle_click)
-        self.map_view.canvas.bind("<B1-Motion>", self.handle_drag)
-        self.map_view.canvas.bind("<Double-Button-1>", self.finalize_shape)
-        self.map_view.canvas.bind("<Button-3>", self.delete_obstacle)
-        self.map_view.canvas.bind("<ButtonRelease-1>", self.stop_drag)
+        if self.map_view:
+            self.map_model.add_event_listener(self.handle_map_event)
+            self.map_view.canvas.bind("<Button-1>", self.handle_click)
+            self.map_view.canvas.bind("<B1-Motion>", self.handle_drag)
+            self.map_view.canvas.bind("<Double-Button-1>", self.finalize_shape)
+            self.map_view.canvas.bind("<Button-3>", self.delete_obstacle)
+            self.map_view.canvas.bind("<ButtonRelease-1>", self.stop_drag)
+        
 
     def handle_map_event(self, event_type, **kwargs):
         """Handles events from the map model."""
@@ -37,18 +39,21 @@ class MapController:
     def set_start_mode(self):
         """Activates start position setting mode."""
         self.mode = 'set_start'
-        self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
+        if self.map_view:
+            self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
 
     def set_end_mode(self):
         """Activates start position setting mode."""
         self.mode = 'set_end'
-        self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
+        if self.map_view:
+            self.map_view.update_message_label(text="Click on the grid to set the start position.")  # Access map_view
     def set_obstacles_mode(self):
         """Activates obstacle placement mode."""
         self.mode = 'set_obstacles'
         self.map_model.current_points = []  # Clear current obstacle points
         self.map_model.current_lines = []  # Clear current obstacle lines
-        self.map_view.update_message_label(text="Click and drag to draw obstacles. Double-click to finish.")  # Access map_view
+        if self.map_view:
+            self.map_view.update_message_label(text="Click and drag to draw obstacles. Double-click to finish.")  # Access map_view
 
     def handle_click(self, event):
         """Handles mouse clicks based on active mode."""
