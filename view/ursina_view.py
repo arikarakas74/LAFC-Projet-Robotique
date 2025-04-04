@@ -103,3 +103,7 @@ class UrsinaView(Entity):
 
     def reset_ursina_view(self):
         self.robot_entity.position = (0, 1, 0)
+        self.trail_points = []
+        if self.trail_entity is not None:
+            self.trail_entity.disable()
+            self.trail_entity = None
