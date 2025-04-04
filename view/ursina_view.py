@@ -1,4 +1,4 @@
-from ursina import Entity, EditorCamera, color, mouse
+from ursina import Entity, EditorCamera, color, Mesh, mouse
 from ursina import held_keys  
 import time
 from controller.StrategyAsync import FollowBeaconByImageStrategy
@@ -65,15 +65,19 @@ class UrsinaView(Entity):
             end = self.simulation_controller.map_model.end_position
             if self.control_panel.end_box:
                 self.control_panel.end_box.position = (end[0] / 100 - 40, 1, end[1] / 100 - 30)
+                
         current_pos = (self.robot_entity.position.x, 1, self.robot_entity.position.z)
-        
         if not self.trail_points or self.trail_points[-1] != current_pos:
             self.trail_points.append(current_pos)
             if len(self.trail_points) >= 2:
-                self.trail_entity = Entity(
-                    model=Mesh(vertices=self.trail_points, mode='line'),
-                    color=color.red
-                )
+                if self.trail_entity is None:
+                    self.trail_entity = Entity(
+                        model=Mesh(vertices=self.trail_points, mode='line'),
+                        color=color.red
+                    )
+                else:
+                    self.trail_entity.model.vertices = self.trail_points
+                    self.trail_entity.model.generate()
 
     def handle_floor_click(self):
         pos = mouse.world_point
