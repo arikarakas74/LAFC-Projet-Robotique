@@ -32,7 +32,6 @@ class MainApplication:
         self.last_time = time.time()
 
         if self.control_panel.running:
-            self.sim_controller.step_simulation(delta_time)
             self.control_panel.step_strategy(delta_time)
 
 

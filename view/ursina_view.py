@@ -1,5 +1,4 @@
-from ursina import Entity, EditorCamera, color, Mesh, mouse
-from ursina import held_keys  
+from ursina import *
 import time
 from controller.StrategyAsync import FollowBeaconByImageStrategy
 from ursina import Mesh
@@ -35,30 +34,26 @@ class UrsinaView(Entity):
         robot_posy = self.simulation_controller.robot_model.y 
         self.robot_entity.position = (robot_posx / 100 - 40, 1, robot_posy / 100 - 30)
 
-        #  Logique de contrôle QWEASD 
-        dt = time.dt
-        rc = self.simulation_controller.robot_controller  # RobotController
-
         if not self.simulation_controller.simulation_running:
             return
             
-        # Ajustement de la vitesse de la roue gauche
-        if held_keys['q']:
-            rc.increase_left_speed()
-        if held_keys['a']:
-            rc.decrease_left_speed()
+        # # Ajustement de la vitesse de la roue gauche
+        # if held_keys['q']:
+        #     self.simulation_controller.robot_controller.increase_left_speed()
+        # if held_keys['a']:
+        #     self.simulation_controller.robot_controller.decrease_left_speed()
 
-        # Ajustement de la vitesse de la roue droit
-        if held_keys['e']:
-            rc.increase_right_speed()
-        if held_keys['d']:
-            rc.decrease_right_speed()
+        # # Ajustement de la vitesse de la roue droit
+        # if held_keys['e']:
+        #     self.simulation_controller.robot_controller.increase_right_speed()
+        # if held_keys['d']:
+        #     self.simulation_controller.robot_controller.decrease_right_speed()
 
-        # Avancer et reculer
-        if held_keys['w']:
-            rc.move_forward()
-        if held_keys['s']:
-            rc.move_backward()
+        # # Avancer et reculer
+        # if held_keys['w']:
+        #     self.simulation_controller.robot_controller.move_forward()
+        # if held_keys['s']:
+        #     self.simulation_controller.robot_controller.move_backward()
 
         #Synchronisation dynamique du mode Follow Balise
         if isinstance(self.control_panel.current_strategy, FollowBeaconByImageStrategy):
@@ -79,6 +74,20 @@ class UrsinaView(Entity):
                     self.trail_entity.model.vertices = self.trail_points
                     self.trail_entity.model.generate()
 
+    def input(self, key):
+        if key == 'w':
+            self.simulation_controller.robot_controller.move_forward()
+        elif key == 's':
+            self.simulation_controller.robot_controller.move_backward()
+        elif key == 'q':
+            self.simulation_controller.robot_controller.increase_left_speed()
+        elif key == 'a':
+            self.simulation_controller.robot_controller.decrease_left_speed()
+        elif key == 'e':
+            self.simulation_controller.robot_controller.increase_right_speed()
+        elif key == 'd':
+            self.simulation_controller.robot_controller.decrease_right_speed()
+    
     def handle_floor_click(self):
         pos = mouse.world_point
         x = (pos.x + 40) * 100
