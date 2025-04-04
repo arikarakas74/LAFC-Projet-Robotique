@@ -14,6 +14,8 @@ class UrsinaView(Entity):
         self.trail_points = []
         self.trail_entity = None
 
+        self.speed_label = Text(text='Speed: L=0°/s  R=0°/s\nAngle: 0°', position=(-0.68,-0.45), origin=(0,0), scale=1, color=color.black)
+
     def create_scene(self):
         # le sol
         self.floor = Entity(model='quad', scale=(80, 60), rotation=(90, 0, 0),
@@ -33,6 +35,11 @@ class UrsinaView(Entity):
         robot_posx = self.simulation_controller.robot_model.x
         robot_posy = self.simulation_controller.robot_model.y 
         self.robot_entity.position = (robot_posx / 100 - 40, 1, robot_posy / 100 - 30)
+
+        left_speed = self.simulation_controller.robot_model.motor_speeds.get("left", 0)
+        right_speed = self.simulation_controller.robot_model.motor_speeds.get("right", 0)
+        angle_deg = math.degrees(self.simulation_controller.robot_model.direction_angle)
+        self.speed_label.text = f"Speed: L={left_speed:.2f}°/s  R={right_speed:.2f}°/s\nAngle: {angle_deg:.1f}°"
 
         if not self.simulation_controller.simulation_running:
             return
@@ -75,18 +82,19 @@ class UrsinaView(Entity):
                     self.trail_entity.model.generate()
 
     def input(self, key):
-        if key == 'w':
-            self.simulation_controller.robot_controller.move_forward()
-        elif key == 's':
-            self.simulation_controller.robot_controller.move_backward()
-        elif key == 'q':
-            self.simulation_controller.robot_controller.increase_left_speed()
-        elif key == 'a':
-            self.simulation_controller.robot_controller.decrease_left_speed()
-        elif key == 'e':
-            self.simulation_controller.robot_controller.increase_right_speed()
-        elif key == 'd':
-            self.simulation_controller.robot_controller.decrease_right_speed()
+        if self.simulation_controller.simulation_running:
+            if key == 'w':
+                self.simulation_controller.robot_controller.move_forward()
+            elif key == 's':
+                self.simulation_controller.robot_controller.move_backward()
+            elif key == 'q':
+                self.simulation_controller.robot_controller.increase_left_speed()
+            elif key == 'a':
+                self.simulation_controller.robot_controller.decrease_left_speed()
+            elif key == 'e':
+                self.simulation_controller.robot_controller.increase_right_speed()
+            elif key == 'd':
+                self.simulation_controller.robot_controller.decrease_right_speed()
     
     def handle_floor_click(self):
         pos = mouse.world_point
