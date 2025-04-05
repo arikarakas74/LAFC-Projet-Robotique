@@ -9,7 +9,7 @@ import time
 
 class MainApplication:
     def __init__(self):
-        self.app = Ursina()
+        self.app = Ursina(borderless=False)
 
         # initialiser le modèle
         self.map_model = MapModel()
