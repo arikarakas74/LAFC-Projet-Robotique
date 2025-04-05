@@ -1,4 +1,6 @@
 from ursina import *
+from panda3d.core import Texture, GraphicsOutput, GraphicsPipe, WindowProperties, FrameBufferProperties
+from direct.showbase.ShowBase import ShowBase
 import time
 from controller.StrategyAsync import FollowBeaconByImageStrategy
 from ursina import Mesh
@@ -13,6 +15,7 @@ class UrsinaView(Entity):
         self.create_scene()
         self.trail_points = []
         self.trail_entity = None
+        self.create_robot_camera_window()
 
         self.speed_label = Text(text='Speed: L=0°/s  R=0°/s\nAngle: 0°', position=(-0.68,-0.45), origin=(0,0), scale=1, color=color.black)
 
@@ -22,19 +25,87 @@ class UrsinaView(Entity):
                             color=color.green, collider='box')
         self.floor.on_click = self.handle_floor_click
 
-        # la boule du robot
-        self.robot_entity = Entity(model='sphere', color=color.red, scale=1, position=(0, 1, 0))
+        # Créer le conteneur principal du robot
+        self.robot_entity = Entity(model=None, position=(0, 1, 0))
+
+        # le corps en parallélépipède rectangle
+        self.robot_body = Entity(
+            parent=self.robot_entity,
+            model='cube',
+            color=color.red,
+            scale=(1, 0.5, 1),
+            position=(0, 0, 0)
+        )
+
+        # la roue gauche
+        self.wheel_left = Entity(
+            parent=self.robot_entity,
+            model='cube',
+            color=color.black,
+            scale=(0.2, 0.2, 0.5),
+            position=(0, -0.15, 0.6),
+            rotation=(90, 0, 0)
+        )
+
+        # la roue droite
+        self.wheel_right = Entity(
+            parent=self.robot_entity,
+            model='cube',
+            color=color.black,
+            scale=(0.2, 0.2, 0.5),
+            position=(0, -0.15, -0.6),
+            rotation=(90, 0, 0)
+        )
+
+        # le cube de repère frontal
+        self.front_marker = Entity(
+            parent=self.robot_entity,
+            model='cube',
+            color=color.blue,
+            scale=(0.2, 0.2, 0.2),
+            position=(0.6, 0.1, 0)
+        )
 
         # camera
         self.camera = EditorCamera(rotation_x=90, rotation_y=0)
         self.camera.position = (0, 60, 0)
 
+    def create_robot_camera_window(self):
+        props = WindowProperties()
+        props.setSize(400, 300)
+        props.setTitle("🤖 Robot First-Person View")
+
+        fb_props = FrameBufferProperties()
+        fb_props.setRgbColor(True)
+        fb_props.setDepthBits(1)
+
+        self.robot_cam_texture = Texture()
+
+        self.robot_cam_window = base.graphicsEngine.makeOutput(
+            base.pipe, "RobotView", -2,
+            fb_props, props,
+            0,  
+            base.win.getGsg(), base.win
+        )
+
+        self.robot_cam = base.makeCamera(self.robot_cam_window)
+        self.robot_cam.reparentTo(self.robot_entity)
+        self.robot_cam.setPos(1.0, 0.5, 0.0)
+        self.robot_cam.setHpr(-90, 0, 0)
+        self.robot_cam_window.addRenderTexture(self.robot_cam_texture, GraphicsOutput.RTMCopyRam)
 
     def update(self):
         # Mettre à jour la position de l'entité du robot
-        robot_posx = self.simulation_controller.robot_model.x
-        robot_posy = self.simulation_controller.robot_model.y 
+        robot_model = self.simulation_controller.robot_model
+        robot_posx = robot_model.x
+        robot_posy = robot_model.y
+        robot_angle = robot_model.direction_angle
+
+        # Translation globale du robot
         self.robot_entity.position = (robot_posx / 100 - 40, 1, robot_posy / 100 - 30)
+
+        # Rotation globale du robot
+        self.robot_entity.rotation_y = -math.degrees(robot_angle)
 
         left_speed = self.simulation_controller.robot_model.motor_speeds.get("left", 0)
         right_speed = self.simulation_controller.robot_model.motor_speeds.get("right", 0)
@@ -44,25 +115,20 @@ class UrsinaView(Entity):
         if not self.simulation_controller.simulation_running:
             return
             
-        # # Ajustement de la vitesse de la roue gauche
-        # if held_keys['q']:
-        #     self.simulation_controller.robot_controller.increase_left_speed()
-        # if held_keys['a']:
-        #     self.simulation_controller.robot_controller.decrease_left_speed()
+        rc = self.simulation_controller.robot_controller
+        if held_keys['q']:
+            rc.increase_left_speed()
+        if held_keys['a']:
+            rc.decrease_left_speed()
+        if held_keys['e']:
+            rc.increase_right_speed()
+        if held_keys['d']:
+            rc.decrease_right_speed()
+        if held_keys['w']:
+            rc.move_forward()
+        if held_keys['s']:
+            rc.move_backward()
 
-        # # Ajustement de la vitesse de la roue droit
-        # if held_keys['e']:
-        #     self.simulation_controller.robot_controller.increase_right_speed()
-        # if held_keys['d']:
-        #     self.simulation_controller.robot_controller.decrease_right_speed()
-
-        # # Avancer et reculer
-        # if held_keys['w']:
-        #     self.simulation_controller.robot_controller.move_forward()
-        # if held_keys['s']:
-        #     self.simulation_controller.robot_controller.move_backward()
-
-        #Synchronisation dynamique du mode Follow Balise
         if isinstance(self.control_panel.current_strategy, FollowBeaconByImageStrategy):
             end = self.simulation_controller.map_model.end_position
             if self.control_panel.end_box:
@@ -81,21 +147,7 @@ class UrsinaView(Entity):
                     self.trail_entity.model.vertices = self.trail_points
                     self.trail_entity.model.generate()
 
-    def input(self, key):
-        if self.simulation_controller.simulation_running:
-            if key == 'w':
-                self.simulation_controller.robot_controller.move_forward()
-            elif key == 's':
-                self.simulation_controller.robot_controller.move_backward()
-            elif key == 'q':
-                self.simulation_controller.robot_controller.increase_left_speed()
-            elif key == 'a':
-                self.simulation_controller.robot_controller.decrease_left_speed()
-            elif key == 'e':
-                self.simulation_controller.robot_controller.increase_right_speed()
-            elif key == 'd':
-                self.simulation_controller.robot_controller.decrease_right_speed()
-    
+
     def handle_floor_click(self):
         pos = mouse.world_point
         x = (pos.x + 40) * 100
@@ -107,20 +159,27 @@ class UrsinaView(Entity):
                 cp.start_box.disable()
             cp.start_box = Entity(model='cube', color=color.red, scale=0.5, position=(pos.x, 1, pos.z))
             cp.map_model.set_start_position((x, y))
-            self.simulation_controller.reset_simulation()
-            self.reset_ursina_view()
             print(f"✅ Start position set: ({x}, {y})")
 
         elif cp.mode == 'set_end':
             if cp.end_box:
                 cp.end_box.disable()
-            cp.end_box = Entity(model='cube', color=color.blue, scale=0.5, position=(pos.x, 5, pos.z))
+            cp.end_box = Entity(model='cube', color=color.blue, scale=0.5, position=(pos.x, 1, pos.z))
             cp.map_model.set_end_position((x, y))
             print(f"✅ End position set: ({x}, {y})")
 
     def reset_ursina_view(self):
-        self.robot_entity.position = (0, 1, 0)
+        self.simulation_controller.reset_simulation()
         self.trail_points = []
         if self.trail_entity is not None:
             self.trail_entity.disable()
             self.trail_entity = None
+
+        # Supprimer les entités de départ et d’arrivée
+        if self.control_panel.start_box:
+            destroy(self.control_panel.start_box)
+            self.control_panel.start_box = None
+
+        if self.control_panel.end_box:
+            destroy(self.control_panel.end_box)
+            self.control_panel.end_box = None
