@@ -1,9 +1,7 @@
 from ursina import *
 from panda3d.core import Texture, GraphicsOutput, GraphicsPipe, WindowProperties, FrameBufferProperties
-from direct.showbase.ShowBase import ShowBase
 import time
 from controller.StrategyAsync import FollowBeaconByImageStrategy
-from ursina import Mesh
 
 
 class UrsinaView(Entity):
@@ -21,12 +19,11 @@ class UrsinaView(Entity):
 
     def create_scene(self):
         # le sol
-        self.floor = Entity(model='quad', scale=(80, 60), rotation=(90, 0, 0),
-                            color=color.green, collider='box')
+        self.floor = Entity(model='quad', scale=(80, 60), rotation=(90, 0, 0), collider='box', texture='floor')
         self.floor.on_click = self.handle_floor_click
 
         # Créer le conteneur principal du robot
-        self.robot_entity = Entity(model=None, position=(0, 1, 0))
+        self.robot_entity = Entity(model=None, position=(0, 0.4, 0))
 
         # le corps en parallélépipède rectangle
         self.robot_body = Entity(
@@ -67,8 +64,8 @@ class UrsinaView(Entity):
         )
 
         # camera
-        self.camera = EditorCamera(rotation_x=90, rotation_y=0)
-        self.camera.position = (0, 60, 0)
+        self.camera = EditorCamera(rotation_x=60, rotation_y=0)
+        self.camera.position = (0, 30, -15)
 
     def create_robot_camera_window(self):
         props = WindowProperties()
@@ -102,7 +99,7 @@ class UrsinaView(Entity):
         robot_angle = robot_model.direction_angle
 
         # Translation globale du robot
-        self.robot_entity.position = (robot_posx / 100 - 40, 1, robot_posy / 100 - 30)
+        self.robot_entity.position = (robot_posx / 100 - 40, 0.4, robot_posy / 100 - 30)
 
         # Rotation globale du robot
         self.robot_entity.rotation_y = -math.degrees(robot_angle)
@@ -134,7 +131,7 @@ class UrsinaView(Entity):
             if self.control_panel.end_box:
                 self.control_panel.end_box.position = (end[0] / 100 - 40, 1, end[1] / 100 - 30)
                 
-        current_pos = (self.robot_entity.position.x, 1, self.robot_entity.position.z)
+        current_pos = (self.robot_entity.position.x, 0.1, self.robot_entity.position.z)
         if not self.trail_points or self.trail_points[-1] != current_pos:
             self.trail_points.append(current_pos)
             if len(self.trail_points) >= 2:
@@ -157,9 +154,10 @@ class UrsinaView(Entity):
         if cp.mode == 'set_start':
             if cp.start_box:
                 cp.start_box.disable()
-            cp.start_box = Entity(model='cube', color=color.red, scale=0.5, position=(pos.x, 1, pos.z))
+            cp.start_box = Entity(model='cube', color=color.red, scale=0.5, position=(pos.x, 0.25, pos.z))
             cp.map_model.set_start_position((x, y))
             print(f"✅ Start position set: ({x}, {y})")
+            cp.mode = None
 
         elif cp.mode == 'set_end':
             if cp.end_box:
