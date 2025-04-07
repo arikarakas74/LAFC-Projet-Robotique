@@ -8,6 +8,8 @@ class RobotView:
         self.parent = parent
         self.canvas = tk.Canvas(parent, width=800, height=600)
         self.canvas.pack()
+
+        self.dessine1 = True
         
         self.speed_label = tk.Label(parent)
         self.speed_label.pack()
@@ -15,6 +17,12 @@ class RobotView:
         sim_controller.add_state_listener(self.update_display)
         self.last_x = None
         self.last_y = None
+
+    def dessine(self):
+        if self.dessine1:
+            self.dessine1 = False
+        else:
+            self.dessine1 = True
 
     def update_display(self, state):
         self.parent.after(0, self._safe_update, state)
@@ -30,7 +38,8 @@ class RobotView:
         direction_angle = state['angle']
 
         if self.last_x is not None and self.last_y is not None:
-            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
+            if self.dessine1:
+                self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
         
         self.last_x = x
         self.last_y = y
