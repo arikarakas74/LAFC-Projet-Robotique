@@ -58,3 +58,8 @@ class RobotController:
     def move_backward(self):
         self.robot_model.set_motor_speed("left", self.robot_model.motor_speeds["left"] - self.SPEED_STEP)
         self.robot_model.set_motor_speed("right", self.robot_model.motor_speeds["right"] - self.SPEED_STEP)
+    def strategie(self):
+            self.robot_model.x = 0 
+            self.robot_model.y = 600
+            for i in range(10):
+                self.move_forward()
