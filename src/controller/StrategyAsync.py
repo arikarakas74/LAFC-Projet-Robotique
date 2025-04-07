@@ -63,27 +63,46 @@ class Tourner(AsyncCommande):
         self.speed_ratio = 0.5  # Pour créer une différence de vitesse entre les roues
 
     def start(self):
+        # Reset angle calculation before starting
+        self.adapter.last_motor_positions = self.adapter.get_motor_positions()
+        
+        # Directly use the modified decide_turn_direction for in-place rotation
         self.adapter.decide_turn_direction(self.angle_rad, self.base_speed)
+
         self.started = True
         self.logger.info(f"Début virage: {math.degrees(self.angle_rad):.1f}°")
-        print("Commande tourner démarrée.")
+        #print("Commande tourner démarrée.") # Optional debug print
 
     def step(self, delta_time):
-        angle = self.adapter.calcule_angle()
-        error = self.angle_rad - angle
-        tol = math.radians(0.5)  # Tolérance de 0.5°
-        if abs(error) <= tol:
-            self.adapter.set_motor_speed("left", 0)
-            self.adapter.set_motor_speed("right", 0)
+        if not self.started:
+            self.start()
+        
+        current_turned_angle = self.adapter.calcule_angle()
+        angle_error = normalize_angle(self.angle_rad - current_turned_angle)
+        # angle_error_deg = math.degrees(angle_error)
+
+        # --- Add Debug Logging --- 
+        target_deg = math.degrees(self.angle_rad)
+        current_turned_deg = math.degrees(current_turned_angle)
+        error_deg = math.degrees(angle_error)
+        self.logger.debug(f"Tourner Step: Target={target_deg:.1f}, Turned={current_turned_deg:.1f}, Error={error_deg:.1f}")
+        # ------------------------- 
+
+        #print(f"Angle actuel: {math.degrees(current_turned_angle):.1f}°, Erreur: {angle_error_deg:.1f}°") # Optional debug
+
+        # Check if turn is complete within tolerance
+        tolerance_rad = math.radians(1.0) # Tolerance of 1 degree
+        if abs(angle_error) < tolerance_rad:
+            self.adapter.set_motor_speed('left', 0)
+            self.adapter.set_motor_speed('right', 0)
             self.finished = True
-            self.logger.info(f"Virage terminé | Erreur: {math.degrees(error):.2f}°")
+            self.logger.info(f"Virage terminé. Angle final: {math.degrees(current_turned_angle):.1f}°")
             return True
-        # Correction proportionnelle sur la roue lente
-        Kp = 0.8
-        correction = Kp * math.degrees(error)
-        new_slow_speed = self.base_speed * self.speed_ratio + correction
-        new_slow_speed = max(min(new_slow_speed, self.base_speed), 0)
-        self.adapter.slow_speed(new_slow_speed)
+        else:
+            # Since decide_turn_direction now sets opposing speeds,
+            # we just let it run until the angle is met. No speed adjustment needed here.
+            pass
+            
         return False
 
     def is_finished(self):
@@ -244,8 +263,6 @@ class FollowBeaconByImageStrategy(AsyncCommande):
     def is_finished(self):
         return self.finished
 
-
-
 # Commande composite pour regrouper plusieurs commandes asynchrones
 class CommandeComposite(AsyncCommande):
     def __init__(self, adapter):
@@ -273,3 +290,132 @@ class CommandeComposite(AsyncCommande):
 
     def is_finished(self):
         return self.current_index >= len(self.commandes)
+
+class HorizontalUTurnStrategy(AsyncCommande):
+    """ 
+    Simplified strategy using Avancer, Tourner, and Arreter commands.
+    Moves horizontally, stops, makes U-turns at obstacles/walls, loops.
+    """
+
+    def __init__(self, adapter, map_model, vitesse_avance=150, vitesse_rotation=100, proximity_threshold=30, max_turns=10):
+        super().__init__(adapter)
+        if not adapter or not map_model:
+             # Logger might not be ready, print error
+             print("ERROR: Adapter or MapModel not provided to HorizontalUTurnStrategy")
+             self.state = 'FINISHED' # Prevent running
+             self.finished = True
+             return
+             
+        self.map_model = map_model
+        self.vitesse_avance = vitesse_avance
+        self.vitesse_rotation = vitesse_rotation
+        self.proximity_threshold = proximity_threshold
+        self.max_turns = max_turns
+
+        self.turn_count = 0
+        # States: MOVING, TURNING, FINISHED
+        self.state = 'MOVING' 
+        self.current_sub_command = None
+        
+        self.started = False
+        self.finished = False
+        self.logger = logging.getLogger(__name__)
+
+    def start(self):
+        if self.state == 'FINISHED': # Check if init failed
+            return
+            
+        # Assume robot starts facing right (0 radians), adjust in calling code if needed.
+        self.started = True
+        self.state = 'MOVING'
+        self.logger.info(f"Starting HorizontalUTurnStrategy: Target {self.max_turns} turns.")
+        self._start_moving()
+
+    def _start_moving(self):
+        self.logger.debug(f"State: {self.state} -> Starting Avancer")
+        self.current_sub_command = Avancer(float('inf'), self.vitesse_avance, self.adapter)
+        self.current_sub_command.start()
+        self.state = 'MOVING'
+        
+    def _start_turning(self):
+        self.logger.debug(f"State: {self.state} -> Starting Tourner")
+        self.current_sub_command = Tourner(math.pi, self.vitesse_rotation, self.adapter)
+        self.current_sub_command.start()
+        self.state = 'TURNING'
+
+    def is_finished(self):
+        return self.finished
+
+    def step(self, delta_time):
+        if not self.started or self.finished:
+            return True # Indicate finished
+
+        # --- State Machine --- 
+        if self.state == 'MOVING':
+            # 1. Check for collision *before* moving
+            current_x = self.adapter.x
+            current_y = self.adapter.y
+            current_angle = self.adapter.direction_angle
+            half_width = self.adapter.WHEEL_BASE_WIDTH / 2.0
+            probe_dist = self.proximity_threshold
+            
+            perp_angle = current_angle + math.pi / 2 
+            front_center_x = current_x + probe_dist * math.cos(current_angle)
+            front_center_y = current_y + probe_dist * math.sin(current_angle)
+            offset_lx = half_width * math.cos(perp_angle)
+            offset_ly = half_width * math.sin(perp_angle)
+            probe_lx = front_center_x + offset_lx
+            probe_ly = front_center_y + offset_ly
+            offset_rx = -offset_lx 
+            offset_ry = -offset_ly
+            probe_rx = front_center_x + offset_rx
+            probe_ry = front_center_y + offset_ry
+            
+            collision_l = self.map_model.is_collision(probe_lx, probe_ly) or \
+                          self.map_model.is_out_of_bounds(probe_lx, probe_ly)
+            collision_r = self.map_model.is_collision(probe_rx, probe_ry) or \
+                          self.map_model.is_out_of_bounds(probe_rx, probe_ry)
+            collision = collision_l or collision_r
+
+            if collision:
+                # 2. Collision detected: Stop immediately and transition
+                self.logger.info(f"Obstacle/boundary detected. Stopping. Turn count: {self.turn_count + 1}")
+                stop_command = Arreter(self.adapter)
+                stop_command.start() # Instantaneous stop
+                self.current_sub_command = None # Discard Avancer
+
+                self.turn_count += 1
+                if self.turn_count >= self.max_turns:
+                    self.logger.info(f"Max turns ({self.max_turns}) reached. Finishing.")
+                    self.state = 'FINISHED'
+                    self.finished = True
+                else:
+                    # Start turning in the *next* step cycle
+                     self._start_turning()
+                # End step here after detecting collision and initiating stop/turn    
+                return self.finished 
+            else:
+                # 3. No collision: Continue moving
+                if self.current_sub_command:
+                    self.current_sub_command.step(delta_time)
+                else:
+                    # Should not happen normally, but safety start moving again if no command
+                    self.logger.warning("No current command in MOVING state, restarting Avancer.")
+                    self._start_moving()
+                    
+        elif self.state == 'TURNING':
+            # 4. Execute the turn
+            if self.current_sub_command:
+                sub_finished = self.current_sub_command.step(delta_time)
+                if sub_finished:
+                    # 5. Turn finished: Start moving again
+                    self.logger.debug("Tourner finished.")
+                    self._start_moving()
+            else:
+                # Should not happen, safety
+                self.logger.error("In TURNING state but no turning command found!")
+                self._start_turning() # Attempt to recover
+        
+        # Update overall finished status
+        self.finished = (self.state == 'FINISHED')
+        return self.finished

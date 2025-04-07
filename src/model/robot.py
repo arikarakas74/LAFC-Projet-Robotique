@@ -76,32 +76,57 @@ class RobotModel(RobotAdapter):
     
     def resetDistance(self):
         self.distance=0
-    def decide_turn_direction(self,angle_rad,base_speed):
+    def decide_turn_direction(self, angle_rad: float, base_speed: float):
+        """Sets motor speeds for an in-place rotation."""
+        self.last_motor_positions = self.get_motor_positions() # Store initial pos for angle calc
+        
+        # For in-place turn, speeds are equal and opposite
+        turn_speed = base_speed # Use base_speed as the magnitude
 
-        speed_ratio = 0.5
+        if angle_rad < 0: # Turn Left (CCW)
+             # Left wheel backward, Right wheel forward
+             self.set_motor_speed('left', -turn_speed)
+             self.set_motor_speed('right', turn_speed)
+             # Keep track for slow_speed (though it might become redundant)
+             self.fast_wheel = 'right' 
+             self.slow_wheel = 'left'
+        elif angle_rad > 0: # Turn Right (CW)
+             # Left wheel forward, Right wheel backward
+             self.set_motor_speed('left', turn_speed)
+             self.set_motor_speed('right', -turn_speed)
+             # Keep track for slow_speed
+             self.fast_wheel = 'left'
+             self.slow_wheel = 'right'
+        else: # angle_rad is 0
+             # Don't turn, set speeds to 0? Or handle in Tourner strategy?
+             # Let's set to 0 for safety, Tourner should handle 0 angle better now.
+             self.set_motor_speed('left', 0)
+             self.set_motor_speed('right', 0)
+             self.fast_wheel = None
+             self.slow_wheel = None
+        
+        # print(f"Set turn speeds: L={self.motor_speeds['left']}, R={self.motor_speeds['right']}")
+
+    def calcule_angle(self) -> float:
+        """Calculates the angle turned (in radians) based on wheel encoder differences."""
         positions = self.get_motor_positions()
-        self.left_initial = positions["left"]
-        self.right_initial = positions["right"]
+        # Calculate change since the turn started (using last_motor_positions set by decide_turn_direction)
+        delta_left_deg = positions["left"] - self.last_motor_positions["left"]
+        delta_right_deg = positions["right"] - self.last_motor_positions["right"]
 
-        if angle_rad > 0:  # Virage à droite
-            self.fast_wheel = "left"
-            self.slow_wheel = "right"
-        else:  # Virage à gauche
-            self.fast_wheel = "right"
-            self.slow_wheel = "left"
-        self.set_motor_speed(self.fast_wheel,base_speed)
-        self.set_motor_speed(self.slow_wheel, base_speed * speed_ratio)
+        # Convert degrees of wheel rotation to radians
+        delta_left_rad = math.radians(delta_left_deg)
+        delta_right_rad = math.radians(delta_right_deg)
 
+        # Calculate arc length traveled by each wheel
+        arc_left = delta_left_rad * self.WHEEL_RADIUS
+        arc_right = delta_right_rad * self.WHEEL_RADIUS
 
-    def calcule_angle(self):
-        positions = self.get_motor_positions()
-        delta_left = positions["left"] - self.left_initial
-        delta_right = positions["right"] - self.right_initial
-
-        # On suppose que l'adaptateur fournit WHEEL_DIAMETER et WHEEL_BASE_WIDTH
-        wheel_circumference = 2 * math.pi * self.WHEEL_DIAMETER / 2
-        angle = (delta_left - delta_right) * wheel_circumference / (360 * self.WHEEL_BASE_WIDTH)
-        return angle
+        # Calculate the change in robot orientation angle (radians)
+        # Positive angle corresponds to clockwise rotation (right wheel forward, left backward)
+        angle_rad = (arc_right - arc_left) / self.WHEEL_BASE_WIDTH
+        
+        return angle_rad
     
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)

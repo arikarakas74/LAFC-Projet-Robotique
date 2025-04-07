@@ -16,4 +16,12 @@ This file tracks the questions addressed during the SOLO TME and the files modif
     - `src/gui_main.py` (Fixed relative imports)
     - `src/vpython_main.py` (Fixed relative imports)
     - `src/view/control_panel.py` (Fixed relative imports, corrected `FollowBeaconByImageStrategy` usage, imported `time`)
-    - `src/view/vpython_control_panel.py` (Fixed relative imports) 
+    - `src/view/vpython_control_panel.py` (Fixed relative imports)
+
+## Q 1.2: Horizontal U-Turn Strategy
+
+- **Status:** In Progress (Robot turns indefinitely)
+- **Files Modified:**
+    - `tmesolo.py` (Added `q1_2` function, argparse, logging, angle fix for strategy start, initial render fix for Q1.1)
+    - `src/controller/StrategyAsync.py` (Added `HorizontalUTurnStrategy`, refactored, added debug logging)
+    - `src/model/robot.py` (Corrected `decide_turn_direction`, `calcule_angle`) 

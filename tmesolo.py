@@ -1,5 +1,7 @@
 import sys
 import os
+import argparse # Import argparse
+import logging # Import logging
 
 # Add project root to the Python path
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +21,7 @@ from src.view.robot_view import RobotView
 from src.view.map_view import MapView
 from src.view.control_panel import ControlPanel
 from src.gui_main import MainApplication # Assuming gui_main contains the main Tkinter setup
+from src.controller.StrategyAsync import HorizontalUTurnStrategy # Import the new strategy
 
 # --- Question Q1.1 --- 
 
@@ -107,6 +110,10 @@ def q1_1():
     # Register state listener for robot view updates
     sim_controller.add_state_listener(robot_view.update_display)
     
+    # Manually draw the initial robot state since sim loop isn't running
+    initial_robot_state = robot_model.get_state()
+    robot_view._safe_update(initial_robot_state) # Call the internal update method directly
+    
     # Optionally start the simulation loop if needed for visualization
     # sim_controller.run_simulation()
 
@@ -120,8 +127,127 @@ def q1_1():
     # Start the Tkinter main loop
     root.mainloop()
 
+# --- Question Q1.2 --- 
+
+def q1_2():
+    """Run the Horizontal U-Turn strategy."""
+
+    # --- Basic Logging Setup --- 
+    logging.basicConfig(
+        level=logging.DEBUG, # Show DEBUG, INFO, WARNING, ERROR, CRITICAL
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    # Optional: Set higher level for noisy libraries if needed
+    # logging.getLogger("SomeLibrary").setLevel(logging.WARNING)
+    
+    # --- GUI and Model Setup (Similar to q1_1) --- 
+    root = tk.Tk()
+    root.title("SOLO TME - Q1.2 U-Turn Strategy")
+
+    map_model = MapModel()
+    robot_model = RobotModel(map_model=map_model)
+
+    start_pos = (50, 550) # Bottom-left corner
+    map_model.set_start_position(start_pos)
+    robot_model.x, robot_model.y = start_pos
+    robot_model.direction_angle = 0 # Start facing right for HorizontalUTurnStrategy
+
+    center_x, center_y = 400, 300
+    obstacle_size = 50
+    obstacle_half = obstacle_size / 2
+    spacing = 150
+
+    center_obstacle_points = [
+        (center_x - obstacle_half, center_y - obstacle_half),
+        (center_x + obstacle_half, center_y - obstacle_half),
+        (center_x + obstacle_half, center_y + obstacle_half),
+        (center_x - obstacle_half, center_y + obstacle_half)
+    ]
+    map_model.add_obstacle("obs_center", center_obstacle_points, None, [])
+    upper_obstacle_points = [
+        (center_x - obstacle_half, center_y - spacing - obstacle_half),
+        (center_x + obstacle_half, center_y - spacing - obstacle_half),
+        (center_x + obstacle_half, center_y - spacing + obstacle_half),
+        (center_x - obstacle_half, center_y - spacing + obstacle_half)
+    ]
+    map_model.add_obstacle("obs_upper", upper_obstacle_points, None, [])
+    lower_obstacle_points = [
+        (center_x - obstacle_half, center_y + spacing - obstacle_half),
+        (center_x + obstacle_half, center_y + spacing - obstacle_half),
+        (center_x + obstacle_half, center_y + spacing + obstacle_half),
+        (center_x - obstacle_half, center_y + spacing + obstacle_half)
+    ]
+    map_model.add_obstacle("obs_lower", lower_obstacle_points, None, [])
+
+    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model, cli_mode=False)
+
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+    canvas_frame = tk.Frame(main_frame)
+    canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    robot_view = RobotView(canvas_frame, sim_controller)
+    map_view = MapView(canvas_frame, robot_view)
+    map_controller = MapController(map_model, map_view, root)
+
+    map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
+    map_controller.handle_map_event("obstacle_added", obstacle_id="obs_center", points=center_obstacle_points)
+    map_controller.handle_map_event("obstacle_added", obstacle_id="obs_upper", points=upper_obstacle_points)
+    map_controller.handle_map_event("obstacle_added", obstacle_id="obs_lower", points=lower_obstacle_points)
+
+    # --- Strategy Execution --- 
+    # Instantiate the strategy
+    # Note: RobotModel implements the adapter interface needed by the strategy.
+    strategy = HorizontalUTurnStrategy(
+        adapter=robot_model, 
+        map_model=map_model,
+        vitesse_avance=1500,      # Adjust speed as needed
+        vitesse_rotation=90,       # Adjust speed as needed
+        proximity_threshold=200,    # How close to get before turning
+        max_turns=10
+    )
+
+    # Function to run the strategy loop in a thread
+    def run_strategy_loop():
+        print("Starting HorizontalUTurnStrategy loop...")
+        delta_time = sim_controller.update_interval # Use simulation's update interval
+        strategy.start() 
+        while not strategy.is_finished():
+            strategy.step(delta_time) 
+            time.sleep(delta_time) # Important to avoid busy-waiting
+        print("HorizontalUTurnStrategy finished.")
+        # Optionally stop simulation after strategy finishes
+        # sim_controller.stop_simulation()
+
+    # Start the simulation loop (updates physics and notifies views)
+    sim_controller.run_simulation() 
+    
+    # Start the strategy execution in a separate thread
+    strategy_thread = threading.Thread(target=run_strategy_loop, daemon=True)
+    strategy_thread.start()
+
+    print("Q1.2: Running Horizontal U-Turn Strategy...")
+
+    # Start the Tkinter main loop
+    root.mainloop()
+
+
 # --- Entry Point --- 
 
 if __name__ == '__main__':
-    # Example: Run question 1.1
-    q1_1() 
+    parser = argparse.ArgumentParser(description="Run specific questions for the SOLO TME.")
+    parser.add_argument(
+        'question', 
+        choices=['q1.1', 'q1.2'], 
+        help='Specify which question to run (e.g., q1.1 or q1.2)'
+    )
+    args = parser.parse_args()
+
+    if args.question == 'q1.1':
+        print("Running Question 1.1...")
+        q1_1()
+    elif args.question == 'q1.2':
+        print("Running Question 1.2...")
+        q1_2()
+    else:
+        print(f"Unknown question: {args.question}. Please choose 'q1.1' or 'q1.2'.") 
