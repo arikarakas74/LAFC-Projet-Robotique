@@ -31,6 +31,11 @@ class MainApplication(tk.Tk):
         self.robot_model = RobotModel(self.map_model)
         # Pass cli_mode=False to avoid launching the CLI input thread.
         self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
+        # Ajout de chaque obstacle au modèle et à l'affichage via la vue
+        
+        
+        # Exemple d'ajout d'obstacle via le contrôleur de la carte
+        
 
         # Create the views
         self.robot_view = RobotView(canvas_frame, self.sim_controller)
@@ -42,6 +47,16 @@ class MainApplication(tk.Tk):
 
         # Create the map controller
         self.map_controller = MapController(self.map_model, self.map_view, self)
+
+        obstacles = [
+            # Murs extérieurs (bordures de la carte)
+            
+            {"id": "carre ", "points": [((self.map_model.width)/2-50, self.map_model.height/2+50), ((self.map_model.width)/2-50, self.map_model.height/2-50), (450, 250), (450, 350)]},
+            {"id": "mur_bas", "points": [(350, 150), ( 350,50), (450, 50), (450, 150)]},
+            {"id": "mur_bas", "points": [(350, 550), ( 350,450), (450, 450), (450, 550)]}]
+        
+        for obs in obstacles:
+            self.map_model.add_obstacle(obs["id"], obs["points"], "polygon_mur1",[])
 
         # Create a sub-frame to center the control panel
         inner_frame = ttk.Frame(controls_frame)

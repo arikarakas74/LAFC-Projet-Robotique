@@ -19,6 +19,7 @@ class RobotModel(RobotAdapter):
         self.distance=0
         self.fast_wheel = None
         self.slow_wheel=None
+        self.crayon=True
 
     def update_position(self, new_x: float, new_y: float, new_angle: float):
         """Met à jour la position après vérification des collisions"""
@@ -39,7 +40,8 @@ class RobotModel(RobotAdapter):
             'y': self.y,
             'angle': self.direction_angle,
             'left_speed': self.motor_speeds["left"],
-            'right_speed': self.motor_speeds["right"]
+            'right_speed': self.motor_speeds["right"],
+            'dessine':self.crayon
         }
     def update_motors(self, delta_time):
         """Met à jour les positions des moteurs avec le temps écoulé"""
@@ -105,5 +107,12 @@ class RobotModel(RobotAdapter):
     
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)
+
+
+    def dessine(self,b):
+        if b :
+            self.crayon=True
+        else :
+            self.crayon=False
 
     

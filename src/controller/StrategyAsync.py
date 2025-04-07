@@ -273,3 +273,116 @@ class CommandeComposite(AsyncCommande):
 
     def is_finished(self):
         return self.current_index >= len(self.commandes)
+    
+class Reculer(AsyncCommande):
+    def __init__(self, distance_cm, vitesse, adapter):
+        super().__init__(adapter)
+        self.distance_cm = distance_cm     
+        self.vitesse = -abs(vitesse)         
+        self.started = False
+        self.finished = False
+
+
+    def start(self):
+        self.adapter.set_motor_speed("left", self.vitesse)
+        self.adapter.set_motor_speed("right", self.vitesse)
+        self.started = True
+
+
+    def step(self, delta_time):
+        if not self.started:
+            self.start()
+        traveled_distance = self.adapter.calculer_distance_parcourue()
+
+        if abs(traveled_distance) >= self.distance_cm:
+            self.adapter.set_motor_speed("left", 0)
+            self.adapter.set_motor_speed("right", 0)
+            self.finished = True
+            self.adapter.resetDistance()
+        return self.finished
+
+    def is_finished(self):
+        return self.finished
+
+
+
+
+class AvnacePuisRecul(AsyncCommande):
+    def __init__(self, adapter, forward_speed, turn_speed,
+                 safe_distance=30, sensor_max_distance=100, sensor_step=5, recul_distance=10):
+        super().__init__(adapter)
+        self.adapter = adapter
+        self.forward_speed = forward_speed
+        self.turn_speed = turn_speed
+        self.safe_distance = safe_distance
+        self.sensor_max_distance = sensor_max_distance
+        self.sensor_step = sensor_step
+        self.recul_distance = recul_distance
+        self.started = False
+        self.finished = False
+        self.current_composite = None
+        self.last_distance_front = None
+        self.stuck_counter = 0
+        self.stuck_threshold = 3 
+        self.Max=10
+
+    def simulate_front_sensor(self):
+        x, y = self.adapter.x, self.adapter.y
+        angle = self.adapter.direction_angle
+        distance = 0
+        while distance < self.sensor_max_distance:
+            test_x = x + math.cos(angle) * distance
+            test_y = y + math.sin(angle) * distance
+            if self.adapter.map_model.is_collision(test_x, test_y) or self.adapter.map_model.is_out_of_bounds(test_x, test_y):
+                break
+            distance += self.sensor_step
+        return distance
+
+    def start(self):
+        self.started = True
+
+
+    def step(self, delta_time):
+        if not self.started:
+            self.start()
+
+        while True:
+            if self.Max==0 :
+                self.is_finished=True
+            if self.current_composite is not None and not self.current_composite.is_finished():
+                self.current_composite.step(delta_time)
+            else:
+
+                distance_front = self.simulate_front_sensor()
+
+                if self.last_distance_front is not None:
+                    print()
+                    if abs(distance_front - self.last_distance_front) < 5:
+                        self.stuck_counter += 1
+                    else:
+                        self.stuck_counter = 0
+                self.last_distance_front = distance_front
+
+                self.current_composite = CommandeComposite(self.adapter)
+                if distance_front < self.safe_distance:
+                    print(self.stuck_counter)
+                    if self.stuck_counter >= self.stuck_threshold:
+                        self.current_composite.ajouter_commande(Reculer(self.recul_distance * 1.5, self.forward_speed, self.adapter))
+                        self.Max=self.Max-1
+                else:
+
+                    self.current_composite.ajouter_commande(Avancer(self.sensor_step, self.forward_speed, self.adapter))
+                    
+                self.current_composite.start()
+
+            if self.current_composite.is_finished() :
+                break
+
+
+          
+            time.sleep(0.01)
+
+        return False  
+
+    def is_finished(self):
+        return self.finished

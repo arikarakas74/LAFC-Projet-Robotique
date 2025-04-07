@@ -4,9 +4,10 @@ class MapModel:
     """Stocke les données de la carte (obstacles, positions de départ/arrivée)."""
 
     def __init__(self):
-        
+        self.width=800
+        self.height=600
         self.obstacles = {}  # Format: {obstacle_id: points}
-        self.start_position = (0,0)
+        self.start_position = (10,350)
         self.end_position = None
         self.current_shape = None
         self.current_points = []

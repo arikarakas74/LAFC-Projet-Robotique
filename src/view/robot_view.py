@@ -28,9 +28,9 @@ class RobotView:
         self.canvas.delete("robot")
         x, y = state['x'], state['y']
         direction_angle = state['angle']
-
-        if self.last_x is not None and self.last_y is not None:
-            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
+        
+        if self.last_x is not None and self.last_y is not None and state['dessine']:
+            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="blue", width=2, tags="trace")
         
         self.last_x = x
         self.last_y = y
@@ -56,3 +56,4 @@ class RobotView:
 
         if self.speed_label:
             self.speed_label.config(text="")
+
