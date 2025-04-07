@@ -47,4 +47,12 @@ This file tracks the questions addressed during the SOLO TME and the files modif
 - **Status:** Answered
 - **Files Modified:**
     - `src/controller/StrategyAsync.py` (Added `StrategyRed`, `StrategyBlue`, `StrategyInvisible`, refactored `HorizontalUTurnStrategy` state machine)
-    - `tmesolo.py` (Added `q1_5` function, updated argparse) 
+    - `tmesolo.py` (Added `q1_5` function, updated argparse)
+
+## Q 2.1: Add Second Robot (Cat)
+
+- **Status:** Answered
+- **Files Modified:**
+    - `src/controller/simulation_controller.py` (Modified to handle multiple robots/controllers/states)
+    - `src/view/robot_view.py` (Modified to draw multiple robots and paths)
+    - `tmesolo.py` (Added `q2_1` function, updated argparse) 

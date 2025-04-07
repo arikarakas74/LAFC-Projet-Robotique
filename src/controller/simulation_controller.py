@@ -23,40 +23,54 @@ class SimulationController:
     WHEEL_DIAMETER = 5.0     # Diamètre des roues (cm)
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
 
-    def __init__(self, map_model, robot_model, cli_mode=False):
+    def __init__(self, map_model: MapModel, mouse_model: RobotModel, cat_model: RobotModel, cli_mode=False):
         """
         Initialise le contrôleur de simulation.
 
         :param map_model: Modèle de la carte (contenant par exemple la position de départ)
-        :param robot_model: Modèle du robot (position, moteurs, etc.)
+        :param mouse_model: Modèle du robot (position, moteurs, etc.)
+        :param cat_model: Modèle du robot (position, moteurs, etc.)
         """
-        self.robot_model = robot_model
         self.map_model = map_model
-        self.robot_controller = RobotController(self.robot_model, self.map_model, cli_mode)
+        # Store models in a dictionary
+        self.robot_models = {'mouse': mouse_model, 'cat': cat_model}
+        
+        # Create controllers for each robot
+        self.robot_controllers = {
+            'mouse': RobotController(mouse_model, map_model, cli_mode=cli_mode),
+            'cat': RobotController(cat_model, map_model, cli_mode=False) # Cat not controlled by CLI
+        }
+        
         self.simulation_running = False
-        self.listeners: List[Callable[[dict], None]] = []
-        self.update_interval = 0.02  # Intervalle de mise à jour : 50 Hz
+        self.listeners = []
+        self.update_interval = 0.02  # 50 Hz update rate
 
-        # Logger pour la traçabilité des positions du robot
-        self.position_logger = logging.getLogger('traceability.positions')
+        # Logger setup (make sure it's initialized properly)
+        self.position_logger = logging.getLogger("SimulationController")
+        log_file = "traceability_positions.log"
+        handler = logging.FileHandler(log_file)
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        if not self.position_logger.hasHandlers(): # Avoid adding multiple handlers
+             self.position_logger.addHandler(handler)
         self.position_logger.setLevel(logging.INFO)
-        position_handler = logging.FileHandler('traceability_positions.log')
-        position_formatter = logging.Formatter('%(asctime)s - Position: %(message)s')
-        position_handler.setFormatter(position_formatter)
-        self.position_logger.addHandler(position_handler)
-
 
         self.simulation_thread = None
 
     def add_state_listener(self, callback: Callable[[dict], None]):
-        """Ajoute un callback qui sera notifié à chaque mise à jour de l'état du robot."""
+        """Ajoute un listener pour les mises à jour de l'état."""
         self.listeners.append(callback)
 
     def _notify_listeners(self):
-        """Notifie tous les listeners avec l'état actuel du robot."""
-        state = self.robot_model.get_state()
+        """Notifie tous les listeners avec l'état combiné des robots."""
+        # Create a combined state dictionary for all robots
+        combined_state = {}
+        for robot_id, model in self.robot_models.items():
+            combined_state[robot_id] = model.get_state()
+            
         for callback in self.listeners:
-            callback(state)
+            # Pass the combined state dictionary
+            callback(combined_state) 
 
     def run_simulation(self):
         """Démarre la simulation dans un thread séparé."""
@@ -65,8 +79,8 @@ class SimulationController:
 
         # Positionner le robot au point de départ si nécessaire
         start_pos = self.map_model.start_position
-        if (self.robot_model.x, self.robot_model.y) != start_pos:
-            self.robot_model.x, self.robot_model.y = start_pos
+        if (self.robot_models['mouse'].x, self.robot_models['mouse'].y) != start_pos:
+            self.robot_models['mouse'].x, self.robot_models['mouse'].y = start_pos
 
         self.simulation_running = True
         self.simulation_thread = threading.Thread(target=self.run_loop, daemon=True)
@@ -94,8 +108,8 @@ class SimulationController:
             return
 
         # --- Calcul des vitesses à partir des moteurs ---
-        left_speed = self.robot_model.motor_speeds["left"]
-        right_speed = self.robot_model.motor_speeds["right"]
+        left_speed = self.robot_models['mouse'].motor_speeds["left"]
+        right_speed = self.robot_models['mouse'].motor_speeds["right"]
 
         # Conversion des vitesses (degrés/s) en vitesse linéaire (cm/s)
         left_velocity = (left_speed / 360.0) * (2 * math.pi * self.WHEEL_RADIUS)
@@ -111,36 +125,37 @@ class SimulationController:
         # --- Mise à jour de la position en fonction du type de mouvement ---
         if left_velocity == right_velocity:
             # Mouvement en ligne droite
-            new_x = self.robot_model.x + linear_velocity * math.cos(self.robot_model.direction_angle) * effective_delta
-            new_y = self.robot_model.y + linear_velocity * math.sin(self.robot_model.direction_angle) * effective_delta
-            new_angle = self.robot_model.direction_angle
+            new_x = self.robot_models['mouse'].x + linear_velocity * math.cos(self.robot_models['mouse'].direction_angle) * effective_delta
+            new_y = self.robot_models['mouse'].y + linear_velocity * math.sin(self.robot_models['mouse'].direction_angle) * effective_delta
+            new_angle = self.robot_models['mouse'].direction_angle
         else:
             # Mouvement circulaire (arc de cercle)
             delta_theta = angular_velocity * effective_delta
             R = (self.WHEEL_BASE_WIDTH / 2) * (left_velocity + right_velocity) / (left_velocity - right_velocity)
             # Centre de rotation
-            center_x = self.robot_model.x - R * math.sin(self.robot_model.direction_angle)
-            center_y = self.robot_model.y + R * math.cos(self.robot_model.direction_angle)
+            center_x = self.robot_models['mouse'].x - R * math.sin(self.robot_models['mouse'].direction_angle)
+            center_y = self.robot_models['mouse'].y + R * math.cos(self.robot_models['mouse'].direction_angle)
             # Nouvelle position calculée sur l'arc
-            new_x = center_x + R * math.sin(self.robot_model.direction_angle + delta_theta)
-            new_y = center_y - R * math.cos(self.robot_model.direction_angle + delta_theta)
-            new_angle = self.robot_model.direction_angle + delta_theta
+            new_x = center_x + R * math.sin(self.robot_models['mouse'].direction_angle + delta_theta)
+            new_y = center_y - R * math.cos(self.robot_models['mouse'].direction_angle + delta_theta)
+            new_angle = self.robot_models['mouse'].direction_angle + delta_theta
 
         # Mise à jour du modèle du robot
-        self.robot_model.update_position(new_x, new_y, new_angle)
-        self.robot_model.update_motors(delta_time)
+        self.robot_models['mouse'].update_position(new_x, new_y, new_angle)
+        self.robot_models['mouse'].update_motors(delta_time)
         
         
 
         # Enregistrement de la position actuelle pour la traçabilité
         self.position_logger.info(
-            f"x={self.robot_model.x:.2f}, y={self.robot_model.y:.2f}, angle={math.degrees(self.robot_model.direction_angle):.2f}°"
+            f"x={self.robot_models['mouse'].x:.2f}, y={self.robot_models['mouse'].y:.2f}, angle={math.degrees(self.robot_models['mouse'].direction_angle):.2f}°"
         )
 
     def stop_simulation(self):
         """Arrête la simulation et le contrôleur du robot."""
         self.simulation_running = False
-        self.robot_controller.stop()
+        for robot, controller in self.robot_controllers.items():
+            controller.stop()
         if self.simulation_thread:
             self.simulation_thread.join()
 
@@ -150,5 +165,6 @@ class SimulationController:
         à la position de départ.
         """
         self.stop_simulation()
-        self.robot_model.x, self.robot_model.y = self.map_model.start_position
-        self.robot_model.direction_angle = 0.0
+        for robot, model in self.robot_models.items():
+            model.x, model.y = self.map_model.start_position
+            model.direction_angle = 0.0

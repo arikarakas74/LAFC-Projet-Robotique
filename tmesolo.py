@@ -494,13 +494,85 @@ def q1_5():
     print("Q1.5: Running Horizontal U-Turn Strategy with Color...")
     root.mainloop()
 
+# --- Question Q2.1 ---
+
+def q2_1():
+    """Set up simulation with two robots (mouse and cat)."""
+    logging.basicConfig(level=logging.INFO)
+    root = tk.Tk()
+    root.title("SOLO TME - Q2.1 Two Robots")
+
+    # --- Model Setup ---
+    map_model = MapModel()
+    # Create two robot models
+    mouse_model = RobotModel(map_model=map_model)
+    cat_model = RobotModel(map_model=map_model)
+
+    # Define start positions
+    mouse_start_pos = (50, 550)  # Bottom-left
+    cat_start_pos = (750, 50)    # Top-right
+    
+    # Set initial state for mouse
+    map_model.set_start_position(mouse_start_pos) # Set map's primary start if needed
+    mouse_model.x, mouse_model.y = mouse_start_pos
+    mouse_model.direction_angle = 0 # Facing right
+    mouse_model.blue() # Mouse is blue (redundant with view logic but good practice)
+    mouse_model.draw(True) # Mouse leaves a trace
+
+    # Set initial state for cat
+    cat_model.x, cat_model.y = cat_start_pos
+    cat_model.direction_angle = math.pi # Facing left
+    cat_model.red() # Cat is red
+    cat_model.draw(True) # Cat leaves a trace
+
+    # --- Controller Setup ---
+    # Pass both models to the SimulationController
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=mouse_model, 
+        cat_model=cat_model,
+        cli_mode=False 
+    )
+
+    # --- GUI Setup ---
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+    canvas_frame = tk.Frame(main_frame)
+    canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    
+    # RobotView now handles drawing multiple robots based on state updates
+    robot_view = RobotView(canvas_frame, sim_controller) 
+    # MapView setup remains the same
+    map_view = MapView(canvas_frame, robot_view)
+    map_controller = MapController(map_model, map_view, root)
+
+    # Draw map elements if any (e.g., obstacles from q1 could be added here)
+    map_controller.handle_map_event("start_position_changed", position=map_model.start_position) # Draws primary start
+
+    # Manually trigger initial draw for both robots
+    initial_state = {
+        'mouse': mouse_model.get_state(),
+        'cat': cat_model.get_state()
+    }
+    robot_view._safe_update(initial_state) 
+
+    # --- Run Simulation ---
+    # Give cat some initial speed (mouse is controlled by keyboard via RobotController)
+    cat_model.set_motor_speed('left', 100)
+    cat_model.set_motor_speed('right', 100)
+
+    sim_controller.run_simulation() 
+
+    print("Q2.1: Running simulation with Mouse (blue) and Cat (red/orange).")
+    root.mainloop()
+
 # --- Entry Point --- 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run specific questions for the SOLO TME.")
     parser.add_argument(
         'question', 
-        choices=['q1.1', 'q1.2', 'q1.3', 'q1.4', 'q1.5'], # Add q1.5 choice
+        choices=['q1.1', 'q1.2', 'q1.3', 'q1.4', 'q1.5', 'q2.1'], # Corrected choices list
         help='Specify which question to run'
     )
     args = parser.parse_args()
@@ -517,8 +589,11 @@ if __name__ == '__main__':
     elif args.question == 'q1.4':
         print("Running Question 1.4...")
         q1_4()
-    elif args.question == 'q1.5': # Add q1.5 execution
+    elif args.question == 'q1.5': 
         print("Running Question 1.5...")
         q1_5()
+    elif args.question == 'q2.1': # Add q2.1 execution
+        print("Running Question 2.1...")
+        q2_1()
     else:
         print(f"Unknown question: {args.question}. Please choose from available options.") 
