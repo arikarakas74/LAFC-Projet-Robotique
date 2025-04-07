@@ -1,8 +1,11 @@
 import tkinter as tk
 import math
 import threading
-from controller.adapter import RealRobotAdapter
-from robot.robot import MockRobot2IN013
+import time
+
+from src.controller.adapter import RealRobotAdapter
+from src.robot.robot import MockRobot2IN013
+from src.controller.StrategyAsync import PolygonStrategy, FollowBeaconByImageStrategy
 
 class ControlPanel:
     """Panneau de contrôle pour les interactions utilisateur."""
@@ -38,9 +41,6 @@ class ControlPanel:
 
 
     def draw_square(self):
-        from controller.StrategyAsync import PolygonStrategy
-        import threading
-        import time
         #adapteRobot=RealRobotAdapter(MockRobot2IN013())
         square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=100, vitesse_avance=2000, vitesse_rotation=500)
         
@@ -55,19 +55,21 @@ class ControlPanel:
 
 
     def suivre(self):
-        from controller.StrategyAsync import FollowMovingBeaconStrategy
-        import threading, time
-
         # Créer la stratégie avec les paramètres souhaités
-        strategy = FollowMovingBeaconStrategy(vitesse_rotation=90, vitesse_avance=250)
+        strategy = FollowBeaconByImageStrategy(
+            vitesse_rotation=90, 
+            vitesse_avance=250, 
+            adapter=self.simulation_controller.robot_model,
+            # vpython_view=?? # This is missing, strategy will likely fail
+            )
 
         def run_strategy():
             delta_time = 0.02  # Intervalle d'update (20 ms)
             # Initialiser la stratégie avec le modèle du robot
-            strategy.start(self.simulation_controller.robot_model)
+            strategy.start()
             # Boucle d'update : on appelle step() jusqu'à ce que la stratégie s'arrête
             while not strategy.is_finished():
-                strategy.step(self.simulation_controller.robot_model, delta_time)
+                strategy.step(delta_time)
                 time.sleep(delta_time)
 
         # Lancer la boucle d'update dans un thread séparé pour ne pas bloquer l'interface

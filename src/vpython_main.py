@@ -1,12 +1,11 @@
 import time
-from controller.simulation_controller import SimulationController
-from model.map_model import MapModel
-from controller.map_controller import MapController
-from model.map_model import MapModel
-from model.robot import RobotModel
-from view.vpython_view import VpythonView
-from view.vpython_control_panel import VPythonControlPanel
-from vpython import *
+from src.controller.simulation_controller import SimulationController
+from src.model.map_model import MapModel
+from src.controller.map_controller import MapController
+from src.model.robot import RobotModel
+from src.view.vpython_view import VpythonView
+from src.view.vpython_control_panel import VPythonControlPanel
+import vpython
 
 class MainApplication:
     def __init__(self):

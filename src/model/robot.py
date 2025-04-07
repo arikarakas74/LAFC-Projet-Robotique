@@ -1,7 +1,7 @@
 import math
-from model.map_model import MapModel
-from utils.geometry import normalize_angle
-from controller.adapter import RobotAdapter
+from src.model.map_model import MapModel
+from src.utils.geometry import normalize_angle
+from src.controller.adapter import RobotAdapter
 
 class RobotModel(RobotAdapter):
     WHEEL_BASE_WIDTH = 20.0  # cm

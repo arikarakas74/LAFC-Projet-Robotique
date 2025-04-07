@@ -1,6 +1,6 @@
 from vpython import *
-from model.map_model import MapModel
-from view.vpython_view import VpythonView
+from src.model.map_model import MapModel
+from src.view.vpython_view import VpythonView
 import threading
 import time
 
@@ -79,7 +79,7 @@ class VPythonControlPanel:
     
     def draw_square(self):
         """ exécution de la stratégie de dessin de carré par le robot """
-        from controller.StrategyAsync import PolygonStrategy
+        from src.controller.StrategyAsync import PolygonStrategy
         
         square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=100, vitesse_avance=350, vitesse_rotation=260)
         
@@ -93,7 +93,7 @@ class VPythonControlPanel:
 
     def suivre(self):
         """Permet au robot de suivre la balise en utilisant l'analyse d'image."""
-        from controller.StrategyAsync import FollowBeaconByImageStrategy
+        from src.controller.StrategyAsync import FollowBeaconByImageStrategy
         import time, threading
 
         # Récupérer le modèle de robot et la vue depuis le contrôleur de simulation.

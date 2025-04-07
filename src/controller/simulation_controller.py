@@ -3,9 +3,11 @@ import threading
 import time
 import math
 import logging
-from typing import Callable, List
-from model.robot import RobotModel
-from controller.robot_controller import RobotController
+from typing import List, Callable, Dict
+
+from src.model.robot import RobotModel
+from src.controller.robot_controller import RobotController
+from src.model.map_model import MapModel
 
 # Multiplicateur pour accélérer la simulation
 SPEED_MULTIPLIER = 8.0

@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
-from controller.map_controller import MapController
-from view.robot_view import RobotView
-from view.map_view import MapView
-from view.control_panel import ControlPanel
-from model.map_model import MapModel
-from model.robot import RobotModel
-from controller.simulation_controller import SimulationController
+
+from src.controller.map_controller import MapController
+from src.view.robot_view import RobotView
+from src.view.map_view import MapView
+from src.view.control_panel import ControlPanel
+from src.model.map_model import MapModel
+from src.model.robot import RobotModel
+from src.controller.simulation_controller import SimulationController
 
 class MainApplication(tk.Tk):
     def __init__(self):

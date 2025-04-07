@@ -1,7 +1,7 @@
-from model.map_model import MapModel
-from view.map_view import MapView
-from utils.geometry import point_in_polygon  # Import point_in_polygon
-from model.robot import RobotModel
+from src.model.map_model import MapModel
+from src.view.map_view import MapView
+from src.utils.geometry import point_in_polygon
+from src.model.robot import RobotModel
 
 class MapController:
     """Handles user input and updates the map model and view."""

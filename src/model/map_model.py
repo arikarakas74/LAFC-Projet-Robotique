@@ -1,4 +1,4 @@
-from utils.geometry import point_in_polygon
+from src.utils.geometry import point_in_polygon
 
 class MapModel:
     """Stocke les données de la carte (obstacles, positions de départ/arrivée)."""

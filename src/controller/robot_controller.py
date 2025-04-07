@@ -1,5 +1,7 @@
 import math
 import threading
+from src.model.robot import RobotModel
+from src.model.map_model import MapModel
 
 
 class RobotController:
