@@ -30,7 +30,7 @@ class RobotView:
         direction_angle = state['angle']
 
         if self.last_x is not None and self.last_y is not None:
-            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
+            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="blue", width=2, tags="trace")
         
         self.last_x = x
         self.last_y = y

@@ -7,17 +7,57 @@ from view.control_panel import ControlPanel
 from model.map_model import MapModel
 from model.robot import RobotModel
 from controller.simulation_controller import SimulationController
+import threading
+import math
+import time
 
 #Exercice1
 class Exercice1:
-    def __init__(self, robot_view):
-        self.robot_view = robot_view
-        self.map_model = MapModel()
-        self.robot = RobotModel(map_model=self.map_model)
+    def __init__(self, parent, sim_controller):
+        self.parent = parent
+        self.canvas = tk.Canvas(parent, width=800, height=600)
+        self.canvas.pack()
+        
+        self.speed_label = tk.Label(parent)
+        self.speed_label.pack()
+        self.WHEEL_BASE_WIDTH = sim_controller.robot_model.WHEEL_BASE_WIDTH
+        sim_controller.add_state_listener(self.update_display)
+        self.last_x = None
+        self.last_y = None
 
-        self.robot_view.canvas.create_rectangle(395,295,405,305,fill='blue')
-        self.robot_view.canvas.create_rectangle(395,590,405,600,fill='green')
-        self.robot_view.canvas.create_rectangle(395,0,405,10,fill='red')
+        self.dessine = True
+
+        self.canvas.create_rectangle(395,295,405,305,fill='blue')
+        self.canvas.create_rectangle(395,590,405,600,fill='green')
+        self.canvas.create_rectangle(395,0,405,10,fill='red')
+
+    def update_display(self, state):
+        self.parent.after(0, self._safe_update, state)
+
+    def _safe_update(self, state):
+        self._draw_robot(state)
+
+    def _draw_robot(self, state):
+        """Dessiner le robot avec self.x et self.y"""
+        self.canvas.delete("robot")
+        x, y = state['x'], state['y']
+        direction_angle = state['angle']
+
+        if self.last_x is not None and self.last_y is not None and self.dessine==True:
+            self.canvas.create_line(self.last_x, self.last_y, x, y, fill="blue", width=2, tags="trace")
+        
+        self.last_x = x
+        self.last_y = y
+        
+        size = 30
+        front = (x + size * math.cos(direction_angle),y + size * math.sin(direction_angle))
+        left = (x + (self.WHEEL_BASE_WIDTH / 2) * math.cos(direction_angle + math.pi / 2), y + (self.WHEEL_BASE_WIDTH / 2) * math.sin(direction_angle + math.pi / 2))
+        right = (x + (self.WHEEL_BASE_WIDTH / 2) * math.cos(direction_angle - math.pi / 2), y + (self.WHEEL_BASE_WIDTH / 2) * math.sin(direction_angle - math.pi / 2))
+        
+        self.canvas.create_polygon(front, left, right, fill="blue", tags="robot")
+
+    def q13(self, state):
+        self.dessine = False
 
 class MainApplication(tk.Tk):
     def __init__(self):
@@ -44,14 +84,13 @@ class MainApplication(tk.Tk):
         self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
 
         # Create the views
-        self.robot_view = RobotView(canvas_frame, self.sim_controller)
+        self.ex1 = Exercice1(canvas_frame, self.sim_controller)
         self.map_view = MapView(
             parent=canvas_frame,
-            robot_view=self.robot_view
+            robot_view=self.ex1
         )
-        self.robot_view.canvas.pack(fill="both", expand=True)
+        self.ex1.canvas.pack(fill="both", expand=True)
 
-        self.ex1 = Exercice1(self.robot_view)
 
         # Create the map controller
         self.map_controller = MapController(self.map_model, self.map_view, self)
