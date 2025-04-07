@@ -20,7 +20,7 @@ from src.controller.map_controller import MapController
 from src.view.robot_view import RobotView
 from src.view.map_view import MapView
 from src.view.control_panel import ControlPanel
-from src.controller.StrategyAsync import HorizontalUTurnStrategy, Avancer, Tourner, Arreter, CommandeComposite, AsyncCommande # Import the new strategy and commands
+from src.controller.StrategyAsync import HorizontalUTurnStrategy, Avancer, Tourner, Arreter, CommandeComposite, AsyncCommande, PolygonStrategy # Import the new strategy and commands
 
 # --- Helper Command for Pen --- 
 class SetPen(AsyncCommande):
@@ -117,7 +117,12 @@ def q1_1():
     map_model.add_obstacle("obs_lower", lower_obstacle_points, None, [])
 
     # Initialize Simulation Controller (ensure cli_mode=False if using GUI parts)
-    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model, cli_mode=False)
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=robot_model, 
+        cat_model=robot_model, # Pass same model for both
+        cli_mode=False
+    )
 
     # --- Setting up the GUI --- 
     # Create main frames for layout (similar to gui_main)
@@ -149,9 +154,13 @@ def q1_1():
     # Register state listener for robot view updates
     sim_controller.add_state_listener(robot_view.update_display)
     
-    # Manually draw the initial robot state since sim loop isn't running
-    initial_robot_state = robot_model.get_state()
-    robot_view._safe_update(initial_robot_state) # Call the internal update method directly
+    # Manually draw the initial robot state in the correct format
+    initial_single_state = robot_model.get_state()
+    initial_combined_state = {
+        'mouse': initial_single_state,
+        'cat': initial_single_state # Use same state for the placeholder cat
+    }
+    robot_view._safe_update(initial_combined_state) 
     
     # Optionally start the simulation loop if needed for visualization
     # sim_controller.run_simulation()
@@ -173,16 +182,14 @@ def q1_2():
 
     # --- Basic Logging Setup --- 
     logging.basicConfig(
-        level=logging.DEBUG, # Show DEBUG, INFO, WARNING, ERROR, CRITICAL
+        level=logging.INFO, # Set back to INFO, use DEBUG if needed
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    # Optional: Set higher level for noisy libraries if needed
-    # logging.getLogger("SomeLibrary").setLevel(logging.WARNING)
     
-    # --- GUI and Model Setup (Similar to q1_1) --- 
+    # --- GUI and Model Setup --- 
     root = tk.Tk()
     root.title("SOLO TME - Q1.2 U-Turn Strategy")
-
+    
     map_model = MapModel()
     robot_model = RobotModel(map_model=map_model)
 
@@ -191,83 +198,75 @@ def q1_2():
     robot_model.x, robot_model.y = start_pos
     robot_model.direction_angle = 0 # Start facing right for HorizontalUTurnStrategy
 
+    # Add obstacles back
     center_x, center_y = 400, 300
     obstacle_size = 50
     obstacle_half = obstacle_size / 2
     spacing = 150
-
-    center_obstacle_points = [
-        (center_x - obstacle_half, center_y - obstacle_half),
-        (center_x + obstacle_half, center_y - obstacle_half),
-        (center_x + obstacle_half, center_y + obstacle_half),
-        (center_x - obstacle_half, center_y + obstacle_half)
-    ]
+    center_obstacle_points = [(center_x - obstacle_half, center_y - obstacle_half),(center_x + obstacle_half, center_y - obstacle_half),(center_x + obstacle_half, center_y + obstacle_half),(center_x - obstacle_half, center_y + obstacle_half)]
     map_model.add_obstacle("obs_center", center_obstacle_points, None, [])
-    upper_obstacle_points = [
-        (center_x - obstacle_half, center_y - spacing - obstacle_half),
-        (center_x + obstacle_half, center_y - spacing - obstacle_half),
-        (center_x + obstacle_half, center_y - spacing + obstacle_half),
-        (center_x - obstacle_half, center_y - spacing + obstacle_half)
-    ]
+    upper_obstacle_points = [(center_x - obstacle_half, center_y - spacing - obstacle_half),(center_x + obstacle_half, center_y - spacing - obstacle_half),(center_x + obstacle_half, center_y - spacing + obstacle_half),(center_x - obstacle_half, center_y - spacing + obstacle_half)]
     map_model.add_obstacle("obs_upper", upper_obstacle_points, None, [])
-    lower_obstacle_points = [
-        (center_x - obstacle_half, center_y + spacing - obstacle_half),
-        (center_x + obstacle_half, center_y + spacing - obstacle_half),
-        (center_x + obstacle_half, center_y + spacing + obstacle_half),
-        (center_x - obstacle_half, center_y + spacing + obstacle_half)
-    ]
+    lower_obstacle_points = [(center_x - obstacle_half, center_y + spacing - obstacle_half),(center_x + obstacle_half, center_y + spacing - obstacle_half),(center_x + obstacle_half, center_y + spacing + obstacle_half),(center_x - obstacle_half, center_y + spacing + obstacle_half)]
     map_model.add_obstacle("obs_lower", lower_obstacle_points, None, [])
-
-    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model, cli_mode=False)
-
+    
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=robot_model, 
+        cat_model=robot_model,   
+        cli_mode=False
+    )
+    
+    # ... (GUI setup remains the same) ...
     main_frame = tk.Frame(root)
     main_frame.pack(fill=tk.BOTH, expand=True)
     canvas_frame = tk.Frame(main_frame)
     canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
     robot_view = RobotView(canvas_frame, sim_controller)
     map_view = MapView(canvas_frame, robot_view)
     map_controller = MapController(map_model, map_view, root)
 
+    # Draw map elements
     map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
     map_controller.handle_map_event("obstacle_added", obstacle_id="obs_center", points=center_obstacle_points)
     map_controller.handle_map_event("obstacle_added", obstacle_id="obs_upper", points=upper_obstacle_points)
     map_controller.handle_map_event("obstacle_added", obstacle_id="obs_lower", points=lower_obstacle_points)
 
     # --- Strategy Execution --- 
-    # Instantiate the strategy
-    # Note: RobotModel implements the adapter interface needed by the strategy.
+    # Instantiate the restored strategy
     strategy = HorizontalUTurnStrategy(
         adapter=robot_model, 
-        map_model=map_model,
-        vitesse_avance=1500,      # Adjust speed as needed
-        vitesse_rotation=90,       # Adjust speed as needed
-        proximity_threshold=200,    # How close to get before turning
-        max_turns=10
+        map_model=map_model,           
+        vitesse_avance=1500,           # Moderate speed 
+        vitesse_rotation=1000,          # Moderate speed
+        proximity_threshold=40,       # Adjusted based on previous debugging
+        max_turns=4                     # Limit number of turns
     )
 
     # Function to run the strategy loop in a thread
     def run_strategy_loop():
-        print("Starting HorizontalUTurnStrategy loop...")
-        delta_time = sim_controller.update_interval # Use simulation's update interval
+        print("Starting HorizontalUTurnStrategy Q1.2 loop...")
+        # Draw initial state in the correct format
+        initial_single_state = robot_model.get_state()
+        initial_combined_state = {
+            'mouse': initial_single_state,
+            'cat': initial_single_state 
+        }
+        robot_view._safe_update(initial_combined_state) 
+        time.sleep(0.1) # Pause for view
+
+        delta_time = sim_controller.update_interval 
         strategy.start() 
         while not strategy.is_finished():
             strategy.step(delta_time) 
-            time.sleep(delta_time) # Important to avoid busy-waiting
-        print("HorizontalUTurnStrategy finished.")
-        # Optionally stop simulation after strategy finishes
-        # sim_controller.stop_simulation()
-
-    # Start the simulation loop (updates physics and notifies views)
+            time.sleep(delta_time) 
+        print("HorizontalUTurnStrategy Q1.2 finished.")
+        
     sim_controller.run_simulation() 
-    
-    # Start the strategy execution in a separate thread
     strategy_thread = threading.Thread(target=run_strategy_loop, daemon=True)
     strategy_thread.start()
 
     print("Q1.2: Running Horizontal U-Turn Strategy...")
-
-    # Start the Tkinter main loop
     root.mainloop()
 
 # --- Question Q1.3 --- 
@@ -286,7 +285,12 @@ def q1_3():
     map_model.set_start_position(start_pos)
     robot_model.x, robot_model.y = start_pos
     robot_model.direction_angle = 0 # Start facing right
-    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model)
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=robot_model, 
+        cat_model=robot_model, # Pass same model for both
+        cli_mode=False # Assuming q1.3 runs in GUI mode
+    )
 
     main_frame = tk.Frame(root)
     main_frame.pack(fill=tk.BOTH, expand=True)
@@ -299,9 +303,13 @@ def q1_3():
 
     map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
     
-    # Manually draw initial robot state
-    initial_robot_state = robot_model.get_state()
-    robot_view._safe_update(initial_robot_state)
+    # Manually draw initial robot state in the correct format
+    initial_single_state = robot_model.get_state()
+    initial_combined_state = {
+        'mouse': initial_single_state,
+        'cat': initial_single_state 
+    }
+    robot_view._safe_update(initial_combined_state)
 
     # --- Define Pen Up/Down Commands --- 
     # SetPen class is now defined at the top level
@@ -354,7 +362,12 @@ def q1_4():
     map_model.set_start_position(start_pos)
     robot_model.x, robot_model.y = start_pos
     robot_model.direction_angle = 0 # Start facing right
-    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model)
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=robot_model, 
+        cat_model=robot_model, # Pass same model for both
+        cli_mode=False # Assuming q1.4 runs in GUI mode
+    )
 
     main_frame = tk.Frame(root)
     main_frame.pack(fill=tk.BOTH, expand=True)
@@ -364,8 +377,14 @@ def q1_4():
     map_view = MapView(canvas_frame, robot_view)
     map_controller = MapController(map_model, map_view, root)
     map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
-    initial_robot_state = robot_model.get_state()
-    robot_view._safe_update(initial_robot_state)
+    
+    # Manually draw initial robot state in the correct format
+    initial_single_state = robot_model.get_state()
+    initial_combined_state = {
+        'mouse': initial_single_state,
+        'cat': initial_single_state 
+    }
+    robot_view._safe_update(initial_combined_state)
 
     # --- Create Sequence of Commands --- 
     sequence = CommandeComposite(robot_model)
@@ -448,7 +467,13 @@ def q1_5():
     lower_obstacle_points = [(center_x - obstacle_half, center_y + spacing - obstacle_half),(center_x + obstacle_half, center_y + spacing - obstacle_half),(center_x + obstacle_half, center_y + spacing + obstacle_half),(center_x - obstacle_half, center_y + spacing + obstacle_half)]
     map_model.add_obstacle("obs_lower", lower_obstacle_points, None, [])
 
-    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model, cli_mode=False)
+    # Corrected SimulationController initialization 
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=robot_model, # Pass the single robot as mouse
+        cat_model=robot_model,   # Pass the single robot as cat
+        cli_mode=False
+    )
 
     main_frame = tk.Frame(root)
     main_frame.pack(fill=tk.BOTH, expand=True)
@@ -463,12 +488,16 @@ def q1_5():
     map_controller.handle_map_event("obstacle_added", obstacle_id="obs_upper", points=upper_obstacle_points)
     map_controller.handle_map_event("obstacle_added", obstacle_id="obs_lower", points=lower_obstacle_points)
     
-    # Manually draw initial robot state
-    initial_robot_state = robot_model.get_state()
-    robot_view._safe_update(initial_robot_state)
+    # Manually draw initial robot state in the correct format
+    initial_single_state = robot_model.get_state()
+    initial_combined_state = {
+        'mouse': initial_single_state,
+        'cat': initial_single_state
+    }
+    robot_view._safe_update(initial_combined_state)
 
     # --- Strategy Execution --- 
-    # Use the modified HorizontalUTurnStrategy (ensure it's the latest version)
+    # Instantiate the Q1.5 version of HorizontalUTurnStrategy
     strategy = HorizontalUTurnStrategy(
         adapter=robot_model, 
         map_model=map_model,
@@ -566,13 +595,120 @@ def q2_1():
     print("Q2.1: Running simulation with Mouse (blue) and Cat (red/orange).")
     root.mainloop()
 
+# --- Question Q2.2 --- 
+def q2_2():
+    """Mouse draws square, Cat moves up/down."""
+    logging.basicConfig(level=logging.INFO)
+    root = tk.Tk()
+    root.title("SOLO TME - Q2.2 Mouse Square, Cat Patrol")
+
+    # --- Model Setup --- 
+    map_model = MapModel()
+    mouse_model = RobotModel(map_model=map_model)
+    cat_model = RobotModel(map_model=map_model)
+
+    # Initial states
+    mouse_start_pos = (100, 500) # Bottom-left area
+    cat_start_pos = (700, 100)   # Top-right area
+    
+    mouse_model.x, mouse_model.y = mouse_start_pos
+    mouse_model.direction_angle = 0 # Facing right for square
+    mouse_model.blue()
+    mouse_model.draw(True) # Pen down
+
+    cat_model.x, cat_model.y = cat_start_pos
+    cat_model.direction_angle = -math.pi / 2 # Facing up
+    cat_model.red()
+    cat_model.draw(True) # Pen down
+
+    # --- Controller Setup --- 
+    sim_controller = SimulationController(
+        map_model=map_model, 
+        mouse_model=mouse_model, 
+        cat_model=cat_model,
+        cli_mode=False 
+    )
+
+    # --- GUI Setup --- 
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+    canvas_frame = tk.Frame(main_frame)
+    canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    robot_view = RobotView(canvas_frame, sim_controller)
+    map_view = MapView(canvas_frame, robot_view)
+    map_controller = MapController(map_model, map_view, root)
+    # No specific map elements needed, but draw start pos marker if desired
+    map_model.set_start_position(mouse_start_pos)
+    map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
+
+    # --- Strategies Definition --- 
+    
+    # Mouse Strategy: Draw a square
+    mouse_strategy = PolygonStrategy(
+        n=4, 
+        adapter=mouse_model, 
+        side_length_cm=150, 
+        vitesse_avance=150, 
+        vitesse_rotation=100
+    )
+
+    # Cat Strategy: Move up and down
+    cat_strategy = CommandeComposite(adapter=cat_model)
+    cat_move_dist = 400
+    cat_v_avance = 100
+    cat_v_rot = 100
+    for _ in range(3): # Do 3 up/down cycles
+        cat_strategy.ajouter_commande(Avancer(cat_move_dist, cat_v_avance, cat_model))
+        cat_strategy.ajouter_commande(Tourner(math.pi, cat_v_rot, cat_model)) # Turn 180
+    cat_strategy.ajouter_commande(Arreter(cat_model))
+
+    # --- Strategy Execution Functions --- 
+    def run_mouse_strategy():
+        print("Starting Mouse Strategy (Square)...")
+        delta_time = sim_controller.update_interval 
+        mouse_strategy.start() 
+        while not mouse_strategy.is_finished():
+            mouse_strategy.step(delta_time) 
+            time.sleep(delta_time) 
+        print("Mouse Strategy finished.")
+
+    def run_cat_strategy():
+        print("Starting Cat Strategy (Up/Down)...")
+        delta_time = sim_controller.update_interval 
+        cat_strategy.start() 
+        while not cat_strategy.is_finished():
+            cat_strategy.step(delta_time) 
+            time.sleep(delta_time) 
+        print("Cat Strategy finished.")
+
+    # --- Run Simulation and Strategies --- 
+    # Draw initial state first
+    initial_state = {
+        'mouse': mouse_model.get_state(),
+        'cat': cat_model.get_state()
+    }
+    robot_view._safe_update(initial_state)
+    time.sleep(0.1)
+    
+    sim_controller.run_simulation() 
+    
+    # Start each strategy in its own thread
+    mouse_thread = threading.Thread(target=run_mouse_strategy, daemon=True)
+    cat_thread = threading.Thread(target=run_cat_strategy, daemon=True)
+    
+    mouse_thread.start()
+    cat_thread.start()
+
+    print("Q2.2: Running Mouse (Square) and Cat (Patrol) strategies...")
+    root.mainloop()
+
 # --- Entry Point --- 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run specific questions for the SOLO TME.")
     parser.add_argument(
         'question', 
-        choices=['q1.1', 'q1.2', 'q1.3', 'q1.4', 'q1.5', 'q2.1'], # Corrected choices list
+        choices=['q1.1', 'q1.2', 'q1.3', 'q1.4', 'q1.5', 'q2.1', 'q2.2'], # Add q2.2 choice
         help='Specify which question to run'
     )
     args = parser.parse_args()
@@ -595,5 +731,8 @@ if __name__ == '__main__':
     elif args.question == 'q2.1': # Add q2.1 execution
         print("Running Question 2.1...")
         q2_1()
+    elif args.question == 'q2.2': # Add q2.2 execution
+        print("Running Question 2.2...")
+        q2_2()
     else:
         print(f"Unknown question: {args.question}. Please choose from available options.") 

@@ -55,4 +55,10 @@ This file tracks the questions addressed during the SOLO TME and the files modif
 - **Files Modified:**
     - `src/controller/simulation_controller.py` (Modified to handle multiple robots/controllers/states)
     - `src/view/robot_view.py` (Modified to draw multiple robots and paths)
-    - `tmesolo.py` (Added `q2_1` function, updated argparse) 
+    - `tmesolo.py` (Added `q2_1` function, updated argparse)
+
+## Q 2.2: Concurrent Robot Strategies (Mouse Square, Cat Patrol)
+
+- **Status:** Answered
+- **Files Modified:**
+    - `tmesolo.py` (Added `q2_2` function, strategies for mouse/cat, threading, updated argparse) 
