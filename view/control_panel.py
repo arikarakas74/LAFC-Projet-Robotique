@@ -67,9 +67,10 @@ class ControlPanel:
         self.q1_5_active = False
         self.q1_5_turn_count = 0
         self.q1_5_state = 'stopped'
-        # Optionally disable drawing on reset
-        if hasattr(self.simulation_controller, 'robot_model'):
-             self.StrategieInvisible()
+        # Optionally disable drawing on reset for the mouse
+        mouse_model = self.simulation_controller.get_robot_model(0)
+        if mouse_model and hasattr(self, 'StrategieInvisible'): # Check if method exists on self
+             self.StrategieInvisible() # This method already targets the mouse
         print("Application reset.")
 
     # --- Color Strategies (Q1.5) ---

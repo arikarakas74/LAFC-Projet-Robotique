@@ -158,14 +158,10 @@ def q2_2():
             print(f"Démarrage du thread pour la stratégie: {name}")
             delta_time = 0.02  # Intervalle de mise à jour
             strategy.start()
+            # We need to call step() here for the strategy to progress
             while not strategy.is_finished() and app.sim_controller.simulation_running:
-                # Le step de la stratégie déclenche les commandes moteurs
-                # La boucle principale de SimulationController met à jour la physique
-                # Nous n'appelons pas strategy.step() ici car la boucle principale s'en charge via le control panel (si configuré) 
-                # ou directement si on modifiait sim_controller pour gérer plusieurs stratégies. 
-                # Pour un contrôle direct SANS passer par control_panel:
-                # strategy.step(delta_time) 
-                time.sleep(delta_time * 2) # Dormir un peu pour éviter de surcharger
+                strategy.step(delta_time) # Call step directly
+                time.sleep(delta_time) # Adjust sleep if needed
             print(f"Thread terminé pour la stratégie: {name}")
 
         # Lancer la simulation principale si elle n'est pas déjà active
@@ -195,13 +191,34 @@ def q2_2():
 # --- Exécution ---
 
 if __name__ == "__main__":
-    pass # Add pass to fix indentation error
-    # print("Fichier tmesolo.py exécuté.")
-    # print("Pour exécuter une question spécifique, appelez sa fonction, par exemple :")
-    # print("import tmesolo")
-    # print("tmesolo.q2_1()")
-    # Ou, décommentez la ligne suivante pour lancer une fonction par défaut:
+    # Instructions: Pour tester une fonction, décommentez la ligne correspondante
+    # ci-dessous et exécutez le script: python tmesolo.py
+    # Assurez-vous de fermer la fenêtre de simulation avant de tester la suivante.
+    
+    print("--- Prêt à tester les fonctions de tmesolo.py ---")
+
+    # print("\n Test de q1_1 - Lance la GUI simple")
+    # q1_1()
+
+    # print("\n Test de q1_2 - Stratégie Mur (Souris)")
+    # q1_2()
+
+    # print("\n Test de q1_3 - Activation Dessin Bleu (Souris)")
+    # q1_3()
+
+    # print("\n Test de q1_4 - Activation Dessin Rouge (Souris)")
+    # q1_4()
+
+    # print("\n Test de q1_5 - Stratégie Mur Couleur (Souris)")
+    # q1_5()
+
+    # print("\n Test de q2_1 - Deux Robots Contrôle Manuel")
     # q2_1()
+
+    # print("\n Test de q2_2 - Deux Robots Stratégies Concurrentes")
+    # q2_2()
+
+    print("\n--- Fin des tests (décommentez les lignes ci-dessus pour exécuter) ---")
 
 
 
