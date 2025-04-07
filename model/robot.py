@@ -8,17 +8,20 @@ class RobotModel(RobotAdapter):
     WHEEL_DIAMETER = 5.0     # cm
     WHEEL_RADIUS = WHEEL_DIAMETER / 2
 
-    def __init__(self, map_model: MapModel):
-        print("init robot")
+    def __init__(self, map_model: MapModel, start_pos: tuple, name: str, initial_color: str = "blue"):
+        print(f"Initializing robot: {name}")
         self.map_model = map_model
-        self.x, self.y = map_model.start_position 
+        self.x, self.y = start_pos
+        self.name = name
         self.direction_angle = 0.0
         self.motor_speeds = {"left": 0, "right": 0}
         self.motor_positions = {"left": 0, "right": 0}
         self.last_motor_positions = self.motor_positions.copy()
-        self.distance=0
+        self.distance = 0
         self.fast_wheel = None
-        self.slow_wheel=None
+        self.slow_wheel = None
+        self.drawing_active = False
+        self.drawing_color = initial_color  # Set color at init
 
     def update_position(self, new_x: float, new_y: float, new_angle: float):
         """Met à jour la position après vérification des collisions"""
@@ -35,11 +38,14 @@ class RobotModel(RobotAdapter):
     def get_state(self) -> dict:
         """Retourne un snapshot de l'état courant"""
         return {
+            'name': self.name,
             'x': self.x,
             'y': self.y,
             'angle': self.direction_angle,
             'left_speed': self.motor_speeds["left"],
-            'right_speed': self.motor_speeds["right"]
+            'right_speed': self.motor_speeds["right"],
+            'drawing_active': self.drawing_active,
+            'drawing_color': self.drawing_color
         }
     def update_motors(self, delta_time):
         """Met à jour les positions des moteurs avec le temps écoulé"""
@@ -105,5 +111,20 @@ class RobotModel(RobotAdapter):
     
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)
+#Q1.3
+    def dessine(self, activate: bool):
+        """Active ou désactive le mode dessin du robot."""
+        self.drawing_active = activate
+        print(f"Robot drawing mode set to: {self.drawing_active}")
+#Q1.4
+    def rouge(self):
+        """Sets the drawing color to red."""
+        self.drawing_color = "red"
+        print(f"Robot \'{self.name}\' drawing color set to: red")
+#Q1.4
+    def bleu(self):
+        """Sets the drawing color to blue."""
+        self.drawing_color = "blue"
+        print(f"Robot \'{self.name}\' drawing color set to: blue")
 
     

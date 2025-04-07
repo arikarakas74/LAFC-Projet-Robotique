@@ -5,8 +5,40 @@ class MapModel:
 
     def __init__(self):
         
-        self.obstacles = {}  # Format: {obstacle_id: points}
-        self.start_position = (0,0)
+        self.obstacles = {}  # Format: {obstacle_id: (points, polygon_id, line_ids)}
+        
+        # --- Obstacles for q1.1 ---
+        # Assuming canvas size around 800x600
+        obs_size = 40  # Size of square obstacles
+        center_x, center_y = 400, 300
+        top_y = 550
+        bottom_y = 50
+        
+        half_size = obs_size / 2
+        
+        # Center Obstacle
+        center_obs_pts = [
+            (center_x - half_size, center_y - half_size), (center_x + half_size, center_y - half_size),
+            (center_x + half_size, center_y + half_size), (center_x - half_size, center_y + half_size)
+        ]
+        self.obstacles["obs_center"] = (center_obs_pts, None, []) # polygon_id=None, line_ids=[] initially
+
+        # Top-Middle Obstacle
+        top_obs_pts = [
+            (center_x - half_size, top_y - half_size), (center_x + half_size, top_y - half_size),
+            (center_x + half_size, top_y + half_size), (center_x - half_size, top_y + half_size)
+        ]
+        self.obstacles["obs_top"] = (top_obs_pts, None, [])
+
+        # Bottom-Middle Obstacle
+        bottom_obs_pts = [
+            (center_x - half_size, bottom_y - half_size), (center_x + half_size, bottom_y - half_size),
+            (center_x + half_size, bottom_y + half_size), (center_x - half_size, bottom_y + half_size)
+        ]
+        self.obstacles["obs_bottom"] = (bottom_obs_pts, None, [])
+        # --- End Obstacles for q1.1 ---
+
+        self.start_position = (0,0) # Default start, will be overridden in gui_main for q1.1
         self.end_position = None
         self.current_shape = None
         self.current_points = []

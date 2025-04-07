@@ -5,7 +5,7 @@
       "includePath": [
         "${workspaceFolder}/**"
       ],
-      "compilerPath": "C:/MinGW/bin/gcc.exe",
+      "compilerPath": "/usr/bin/gcc", // J'UTILISE MAC DONC IL FAUT CHANGER LE COMPILER PATH POUR VOUS-MÊME
       "cStandard": "${default}",
       "cppStandard": "${default}",
       "intelliSenseMode": "windows-gcc-x86",

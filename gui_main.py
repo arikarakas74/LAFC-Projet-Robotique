@@ -28,11 +28,21 @@ class MainApplication(tk.Tk):
 
         # Initialize models and simulation controller
         self.map_model = MapModel()
-        self.robot_model = RobotModel(self.map_model)
-        # Pass cli_mode=False to avoid launching the CLI input thread.
-        self.sim_controller = SimulationController(self.map_model, self.robot_model, False)
+        # --- Set start position for q1.1 ---
+        # Assuming canvas size around 800x600, place near bottom-left
+        mouse_start_pos = (50, 50)
+        cat_start_pos = (100, 100) # Different start for the cat
+        self.map_model.set_start_position(mouse_start_pos) # Keep original start for compatibility?
 
-        # Create the views
+        # Create multiple robot models
+        self.mouse_model = RobotModel(self.map_model, mouse_start_pos, name="mouse", initial_color="blue")
+        self.cat_model = RobotModel(self.map_model, cat_start_pos, name="cat", initial_color="red")
+        self.robot_models = [self.mouse_model, self.cat_model]
+
+        # Pass the LIST of models to SimulationController
+        self.sim_controller = SimulationController(self.map_model, self.robot_models, False)
+
+        # Create the views (RobotView now handles multiple robots)
         self.robot_view = RobotView(canvas_frame, self.sim_controller)
         self.map_view = MapView(
             parent=canvas_frame,
@@ -53,14 +63,29 @@ class MainApplication(tk.Tk):
 
         # Optionally add a listener to update GUI elements in real time
         self.sim_controller.add_state_listener(self.on_state_update)
+        
+        # --- Give SimulationController a reference to ControlPanel ---
+        self.sim_controller.set_control_panel(self.control_panel)
+        # --- End reference passing ---
 
-        # Bind keyboard events to robot control actions
-        self.bind("<q>", lambda event: self.sim_controller.robot_controller.increase_left_speed())
-        self.bind("<a>", lambda event: self.sim_controller.robot_controller.decrease_left_speed())
-        self.bind("<e>", lambda event: self.sim_controller.robot_controller.increase_right_speed())
-        self.bind("<d>", lambda event: self.sim_controller.robot_controller.decrease_right_speed())
-        self.bind("<w>", lambda event: self.sim_controller.robot_controller.move_forward())
-        self.bind("<s>", lambda event: self.sim_controller.robot_controller.move_backward())
+        # Bind keyboard events to robot control actions (Now targets the first robot - mouse)
+        # Consider adding keys for the second robot (cat) if needed
+        mouse_controller = self.sim_controller.get_robot_controller(0)
+        if mouse_controller:
+            self.bind("<q>", lambda event: mouse_controller.increase_left_speed())
+            self.bind("<a>", lambda event: mouse_controller.decrease_left_speed())
+            self.bind("<e>", lambda event: mouse_controller.increase_right_speed())
+            self.bind("<d>", lambda event: mouse_controller.decrease_right_speed())
+            self.bind("<w>", lambda event: mouse_controller.move_forward())
+            self.bind("<s>", lambda event: mouse_controller.move_backward())
+        
+        # Example bindings for second robot (cat) - using arrow keys
+        cat_controller = self.sim_controller.get_robot_controller(1)
+        if cat_controller:
+            self.bind("<Left>", lambda event: cat_controller.turn_left())
+            self.bind("<Right>", lambda event: cat_controller.turn_right())
+            self.bind("<Up>", lambda event: cat_controller.move_forward())
+            self.bind("<Down>", lambda event: cat_controller.move_backward())
 
     def _create_menu(self):
         menubar = tk.Menu(self)
@@ -75,7 +100,10 @@ class MainApplication(tk.Tk):
 
 def run_gui():
     app = MainApplication()
-    app.mainloop()
+    
+    return app
 
 if __name__ == "__main__":
-    run_gui()
+    # run_gui() # Don't run directly when script is main
+    app = run_gui()
+    app.mainloop() # Start loop only if run as main script
