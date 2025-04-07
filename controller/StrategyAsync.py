@@ -273,3 +273,65 @@ class CommandeComposite(AsyncCommande):
 
     def is_finished(self):
         return self.current_index >= len(self.commandes)
+
+# Stratégie pour un aller-retour vertical
+class UpDownStrategy(AsyncCommande):
+    def __init__(self, adapter, distance_cm, vitesse_avance, vitesse_rotation):
+        super().__init__(adapter)
+        self.distance_cm = distance_cm
+        self.vitesse_avance = vitesse_avance
+        self.vitesse_rotation = vitesse_rotation
+        self.logger = logging.getLogger("strategy.UpDownStrategy")
+        
+        # Define the sequence of commands for one up-down cycle
+        turn_180 = math.radians(180)
+        self.commands = [
+            Avancer(distance_cm, vitesse_avance, adapter), # Move up
+            Tourner(turn_180, vitesse_rotation, adapter), # Turn around
+            Avancer(distance_cm, vitesse_avance, adapter), # Move down
+            Tourner(turn_180, vitesse_rotation, adapter), # Turn back to original orientation
+            Arreter(adapter) # Stop at the end
+        ]
+        self.current_index = 0
+        self.finished = False
+        self.started = False
+        self.logger.info("UpDownStrategy initialized.")
+
+    def start(self):
+        if not self.started and self.commands:
+            self.started = True
+            self.commands[0].start()
+            self.logger.info("UpDownStrategy started.")
+
+    def step(self, delta_time):
+        if not self.started:
+            self.start()
+            return False # Started but didn't finish a step yet
+            
+        if self.finished:
+            return True
+            
+        if self.current_index < len(self.commands):
+            cmd = self.commands[self.current_index]
+            # Step the current command. If it finishes in this step, move to the next.
+            if cmd.step(delta_time): # step returns True when finished
+                self.logger.info(f"Command {type(cmd).__name__} finished.")
+                self.current_index += 1
+                if self.current_index < len(self.commands):
+                    next_cmd = self.commands[self.current_index]
+                    next_cmd.start() # Start the next command immediately
+                    self.logger.info(f"Starting next command: {type(next_cmd).__name__}")
+                else:
+                    # All commands finished
+                    self.finished = True
+                    self.logger.info("UpDownStrategy finished.")
+                    return True # Strategy finished
+        else:
+            # Should not happen if logic is correct, but handle anyway
+            self.finished = True
+            return True
+            
+        return False # Strategy still running
+
+    def is_finished(self):
+        return self.finished

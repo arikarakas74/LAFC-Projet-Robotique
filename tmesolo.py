@@ -114,6 +114,82 @@ def q2_1():
     except Exception as e:
         print(f"Une erreur est survenue lors de l'exécution de q2_1 : {e}")
 
+def q2_2():
+    """
+    Lance la simulation avec deux robots exécutant des stratégies distinctes:
+    - Souris (bleue): Dessine un carré sur le côté gauche.
+    - Chat (rouge): Fait un aller-retour vertical sur le côté droit.
+    """
+    print("Lancement de la simulation avec stratégies Q2.2...")
+    try:
+        app = run_gui() 
+        
+        # Importer les stratégies nécessaires
+        from controller.StrategyAsync import PolygonStrategy, UpDownStrategy
+        import threading
+        import time
+
+        # Obtenir les modèles des robots
+        mouse_model = app.sim_controller.get_robot_model(0)
+        cat_model = app.sim_controller.get_robot_model(1)
+
+        if not mouse_model or not cat_model:
+            print("Erreur: Impossible de trouver les modèles de la souris et/ou du chat.")
+            return
+
+        # -- Configuration de la stratégie de la souris (Carré) --
+        # S'assurer que la souris commence dans une position et orientation adéquate
+        mouse_start_pos = (100, 100) # Exemple: coin supérieur gauche
+        mouse_model.x, mouse_model.y = mouse_start_pos
+        mouse_model.direction_angle = 0 # Orienté vers la droite
+        mouse_model.dessine(True) # Activer le dessin pour la souris
+        square_strategy = PolygonStrategy(n=4, adapter=mouse_model, side_length_cm=150, vitesse_avance=50, vitesse_rotation=90)
+        
+        # -- Configuration de la stratégie du chat (Aller-retour) --
+        # S'assurer que le chat commence dans une position et orientation adéquate
+        cat_start_pos = (700, 500) # Exemple: coin inférieur droit
+        cat_model.x, cat_model.y = cat_start_pos
+        cat_model.direction_angle = -90 # Orienté vers le haut
+        cat_model.dessine(True) # Activer le dessin pour le chat
+        up_down_strategy = UpDownStrategy(adapter=cat_model, distance_cm=400, vitesse_avance=60, vitesse_rotation=100)
+
+        # Fonction pour exécuter une stratégie dans un thread
+        def run_strategy_in_thread(strategy, name):
+            print(f"Démarrage du thread pour la stratégie: {name}")
+            delta_time = 0.02  # Intervalle de mise à jour
+            strategy.start()
+            while not strategy.is_finished() and app.sim_controller.simulation_running:
+                # Le step de la stratégie déclenche les commandes moteurs
+                # La boucle principale de SimulationController met à jour la physique
+                # Nous n'appelons pas strategy.step() ici car la boucle principale s'en charge via le control panel (si configuré) 
+                # ou directement si on modifiait sim_controller pour gérer plusieurs stratégies. 
+                # Pour un contrôle direct SANS passer par control_panel:
+                # strategy.step(delta_time) 
+                time.sleep(delta_time * 2) # Dormir un peu pour éviter de surcharger
+            print(f"Thread terminé pour la stratégie: {name}")
+
+        # Lancer la simulation principale si elle n'est pas déjà active
+        if not app.sim_controller.simulation_running:
+            app.sim_controller.run_simulation()
+
+        # Créer et démarrer les threads pour chaque stratégie
+        mouse_thread = threading.Thread(target=run_strategy_in_thread, args=(square_strategy, "Souris Carré"), daemon=True)
+        cat_thread = threading.Thread(target=run_strategy_in_thread, args=(up_down_strategy, "Chat AllerRetour"), daemon=True)
+        
+        mouse_thread.start()
+        cat_thread.start()
+        
+        print("Stratégies lancées dans des threads séparés.")
+        # Laisser la boucle principale Tkinter (ou run_gui) gérer l'application
+        # app.mainloop() # Ne pas démarrer ici si run_gui ou autre le fait
+
+    except ImportError as ie:
+         print(f"Erreur d'importation pour les stratégies: {ie}. Assurez-vous que controller/StrategyAsync.py existe et contient les classes.")
+    except Exception as e:
+        print(f"Une erreur est survenue lors de l'exécution de q2_2 : {e}")
+        import traceback
+        traceback.print_exc()
+
 # --- Fin des fonctions restaurées/ajoutées ---
 
 # --- Exécution ---
