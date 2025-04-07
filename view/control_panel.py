@@ -24,11 +24,7 @@ class ControlPanel:
     def _create_buttons(self):
         buttons = [
             ("Set Start", self.map_controller.set_start_mode),
-            ("Set Obstacles", self.map_controller.set_obstacles_mode),
             ("Run Simulation", self.simulation_controller.run_simulation),
-            ("Draw Square", self.draw_square),
-            ("set balise", self.map_controller.set_end_mode),
-            ("suivre balise", self.suivre),
             ("Reset", self.reset_all)
         ]
         
