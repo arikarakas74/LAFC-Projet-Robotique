@@ -1,3 +1,27 @@
-# Ignore all .pyc files
-*.pyc
+# Python byte-compiled / optimized files
+*.py[cod]
+*$py.class
 __pycache__/
+*/__pycache__/
+**/__pycache__/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual Environment
+venv/
+env/
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific files
+traceability_positions.log
+traceability_square.log
+**/traceability_positions.log
+**/traceability_square.log

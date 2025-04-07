@@ -1,6 +1,6 @@
 # LAFC-Projet-Robotique - LU2IN013
 
-A robot simulation program that allows users to control and simulate a robot in both graphical (GUI) and command-line (CLI) modes. The robot can navigate through an environment while providing real-time position and angle information.
+A robot simulation program that allows users to control and simulate a robot using different interfaces. The project provides a Tkinter-based GUI, a VPython 3D simulation environment, and a command-line (CLI) mode. The robot can navigate through an environment while providing real-time position and angle information.
 
 ## Project Structure
 
@@ -8,22 +8,29 @@ The project follows an MVC (Model-View-Controller) architecture:
 
 ```
 src/
-├── controller/     # Contains simulation control logic
-├── model/         # Contains robot and map models
-├── utils/         # Utility functions
-├── view/          # GUI and visualization components
-└── main.py        # Main entry point
+├── controller/     # Contains simulation control logic and strategies
+├── model/          # Contains robot and map models
+├── robot/          # Robot implementations
+├── utils/          # Utility functions
+├── view/           # GUI and visualization components
+├── cli_main.py     # CLI entry point
+├── gui_main.py     # Tkinter GUI entry point
+├── vpython_main.py # VPython 3D interface entry point
+└── main.py         # Main entry point
 ```
 
 ## Requirements
+
 - Python 3.x
-- Required Python packages (will be added automatically)
+- Tkinter (for GUI mode)
+- VPython (for 3D simulation mode)
+- Other dependencies will be installed automatically
 
 ## Installation
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/arikarakas74/LAFC-Projet-Robotique.git
+    git clone https://github.com/yourusername/LAFC-Projet-Robotique.git
     ```
 
 2. Navigate to the project directory:
@@ -31,60 +38,113 @@ src/
     cd LAFC-Projet-Robotique
     ```
 
+3. (Optional) Create and activate a virtual environment:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+
+4. Install dependencies:
+    ```bash
+    pip install vpython  # Required for 3D simulation
+    ```
+
 ## Running the Program
 
-The program can be run in two modes:
+The program can be run in three different modes:
 
-### 1. GUI Mode (Graphical Interface)
-This is the default mode that provides a visual interface for robot simulation:
+### 1. Tkinter GUI Mode
+
+To run the simulation with the Tkinter graphical interface:
 
 ```bash
-python3 src/main.py
+python3 src/gui_main.py
 ```
-or explicitly:
+
+This will open a window with:
+- A canvas displaying the robot
+- Control buttons for moving the robot and setting waypoints
+- Real-time information about the robot's position and orientation
+
+### 2. VPython 3D Simulation Mode
+
+To run the simulation with the VPython 3D interface:
+
 ```bash
-python3 src/main.py --gui
+python3 src/vpython_main.py
 ```
 
-In GUI mode, you can control the robot using:
-- W key: Move forward
-- S key: Move backward
-- (Additional controls may be available)
+This will open a web browser with:
+- A 3D visualization of the robot and environment
+- Control buttons in the interface
+- The ability to set start and end positions by clicking in the 3D environment
 
-The simulation will display real-time updates of the robot's position and angle.
+### 3. CLI Mode (Command Line Interface)
 
-### 2. CLI Mode (Command Line Interface)
 For command-line operation without graphical interface:
 
 ```bash
-python3 src/main.py --cli
+python3 src/cli_main.py
 ```
 
 In CLI mode:
-1. You'll be prompted to enter start position coordinates (X: 0-800, Y: 0-600)
+1. You'll be prompted to enter commands
 2. The simulation will run and display robot position updates in the terminal
 
-## Features
-- Real-time position and angle tracking
-- Multiple operation modes (GUI/CLI)
-- Interactive robot control in GUI mode
-- Coordinate-based positioning system
-- Robot movement simulation with precise angle calculations
+### Main Entry Point
 
-## Development
+You can also use the main entry point which supports selecting the interface:
 
-The project uses Git for version control. Main branches:
-- `main`: Primary development branch
-- `src2`: Alternative development branch
-
-To switch between branches:
 ```bash
-git checkout main  # or src2
+python3 src/main.py          # Defaults to GUI mode
+python3 src/main.py --gui    # Explicit GUI mode
+python3 src/main.py --cli    # CLI mode
+python3 src/main.py --vpython # VPython 3D mode
 ```
+
+## Features
+
+- Multiple interface options (Tkinter GUI, VPython 3D, CLI)
+- Real-time position and angle tracking
+- Interactive robot control
+- Coordinate-based positioning system
+- Path planning and obstacle detection
+- Movement strategies (polygon drawing, beacon following)
+- Image capture and analysis (in VPython mode)
+
+## Interacting with the Simulation
+
+### Tkinter Interface
+- Use the control panel buttons to:
+  - Set start and end positions
+  - Draw a square path
+  - Reset the simulation
+  - Follow a path to the goal
+
+### VPython 3D Interface
+- Use the control panel buttons to:
+  - Set start and beacon positions (click in the 3D view after selecting)
+  - Run the simulation
+  - Draw a square path
+  - Follow the beacon
+  - Reset the simulation
+  - Capture and analyze images
 
 ## Troubleshooting
 
-If you encounter the "python: command not found" error, try using `python3` instead of `python` in all commands.
+If you encounter any of these issues:
+
+1. "python: command not found" - Try using `python3` instead of `python` in all commands.
+2. If VPython doesn't open properly, make sure you have a modern web browser installed.
+3. On macOS, if Tkinter is not available, you may need to install Python with Tkinter support:
+   ```bash
+   brew install python-tk
+   ```
+
+## Documentation
+
+For more detailed documentation, see the `documentation/` directory, especially:
+- `project_documentation.md`: Comprehensive documentation of all components
 
 ## Contributing
 
