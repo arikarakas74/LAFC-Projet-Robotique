@@ -6,7 +6,7 @@ This file tracks the questions addressed during the SOLO TME and the files modif
 
 - **Status:** Answered
 - **Files Modified:**
-    - `tmesolo.py` (Created file, added `q1_1` function)
+    - `tmesolo.py` (Created file, added `q1_1` function, initial render fix)
     - `src/model/map_model.py` (Fixed relative import)
     - `src/model/robot.py` (Fixed relative imports)
     - `src/controller/map_controller.py` (Fixed relative imports)
@@ -15,13 +15,29 @@ This file tracks the questions addressed during the SOLO TME and the files modif
     - `src/controller/StrategyAsync.py` (Fixed relative import)
     - `src/gui_main.py` (Fixed relative imports)
     - `src/vpython_main.py` (Fixed relative imports)
-    - `src/view/control_panel.py` (Fixed relative imports, corrected `FollowBeaconByImageStrategy` usage, imported `time`)
+    - `src/view/control_panel.py` (Fixed relative imports, corrected strategy name, imported `time`)
     - `src/view/vpython_control_panel.py` (Fixed relative imports)
 
 ## Q 1.2: Horizontal U-Turn Strategy
 
 - **Status:** In Progress (Robot turns indefinitely)
 - **Files Modified:**
-    - `tmesolo.py` (Added `q1_2` function, argparse, logging, angle fix for strategy start, initial render fix for Q1.1)
-    - `src/controller/StrategyAsync.py` (Added `HorizontalUTurnStrategy`, refactored, added debug logging)
-    - `src/model/robot.py` (Corrected `decide_turn_direction`, `calcule_angle`) 
+    - `tmesolo.py` (Added `q1_2` function, argparse, logging, angle fix)
+    - `src/controller/StrategyAsync.py` (Added `HorizontalUTurnStrategy`, refactored multiple times, added debug logging)
+    - `src/model/robot.py` (Corrected `decide_turn_direction`, `calcule_angle`)
+
+## Q 1.3: Robot Pen Drawing
+
+- **Status:** Answered
+- **Files Modified:**
+    - `tmesolo.py` (Added `q1_3` function, `SetPen` class, updated imports and argparse)
+    - `src/model/robot.py` (Added `pen_down`, `draw()` method, updated `get_state()`)
+    - `src/view/robot_view.py` (Modified `_draw_robot` logic, updated `clear_robot()`)
+
+## Q 1.4: Pen Color Change (Red/Blue)
+
+- **Status:** Answered
+- **Files Modified:**
+    - `tmesolo.py` (Added `q1_4` function, `SetPenColor` class, updated sequence and argparse)
+    - `src/model/robot.py` (Added `pen_color`, `red()`, `blue()` methods, updated `get_state()`)
+    - `src/view/robot_view.py` (Modified `_draw_robot` to use `pen_color`) 

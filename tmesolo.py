@@ -20,8 +20,47 @@ from src.controller.map_controller import MapController
 from src.view.robot_view import RobotView
 from src.view.map_view import MapView
 from src.view.control_panel import ControlPanel
-from src.gui_main import MainApplication # Assuming gui_main contains the main Tkinter setup
-from src.controller.StrategyAsync import HorizontalUTurnStrategy # Import the new strategy
+from src.controller.StrategyAsync import HorizontalUTurnStrategy, Avancer, Tourner, Arreter, CommandeComposite, AsyncCommande # Import the new strategy and commands
+
+# --- Helper Command for Pen --- 
+class SetPen(AsyncCommande):
+    """Simple command to set the robot's pen state."""
+    def __init__(self, adapter, state: bool):
+        super().__init__(adapter)
+        self.target_state = state
+        self.finished = False
+    def start(self):
+        if hasattr(self.adapter, 'draw'): # Check if adapter has draw method
+            self.adapter.draw(self.target_state)
+        else:
+            print(f"Warning: Adapter {type(self.adapter).__name__} has no draw() method.")
+        self.finished = True
+    def step(self, delta_time):
+        if not self.finished: self.start()
+        return self.finished
+    def is_finished(self):
+        return self.finished
+
+# --- Helper Commands for Pen Color --- 
+class SetPenColor(AsyncCommande):
+    """Simple command to set the robot's pen color."""
+    def __init__(self, adapter, color: str):
+        super().__init__(adapter)
+        self.target_color = color
+        self.finished = False
+    def start(self):
+        if self.target_color == "red" and hasattr(self.adapter, 'red'):
+            self.adapter.red()
+        elif self.target_color == "blue" and hasattr(self.adapter, 'blue'):
+            self.adapter.blue()
+        else:
+            print(f"Warning: Adapter {type(self.adapter).__name__} cannot set color {self.target_color}.")
+        self.finished = True
+    def step(self, delta_time):
+        if not self.finished: self.start()
+        return self.finished
+    def is_finished(self):
+        return self.finished
 
 # --- Question Q1.1 --- 
 
@@ -231,6 +270,154 @@ def q1_2():
     # Start the Tkinter main loop
     root.mainloop()
 
+# --- Question Q1.3 --- 
+
+def q1_3():
+    """Demonstrate robot pen drawing functionality."""
+    # --- Basic Logging Setup --- 
+    logging.basicConfig(level=logging.INFO) # INFO level is sufficient here
+
+    # --- GUI and Model Setup --- 
+    root = tk.Tk()
+    root.title("SOLO TME - Q1.3 Pen Drawing")
+    map_model = MapModel()
+    robot_model = RobotModel(map_model=map_model)
+    start_pos = (100, 100)
+    map_model.set_start_position(start_pos)
+    robot_model.x, robot_model.y = start_pos
+    robot_model.direction_angle = 0 # Start facing right
+    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model)
+
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+    canvas_frame = tk.Frame(main_frame)
+    canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    robot_view = RobotView(canvas_frame, sim_controller)
+    map_view = MapView(canvas_frame, robot_view)
+    map_controller = MapController(map_model, map_view, root)
+
+    map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
+    
+    # Manually draw initial robot state
+    initial_robot_state = robot_model.get_state()
+    robot_view._safe_update(initial_robot_state)
+
+    # --- Define Pen Up/Down Commands --- 
+    # SetPen class is now defined at the top level
+
+    # --- Create Sequence of Commands --- 
+    sequence = CommandeComposite(robot_model) # Robot model acts as adapter
+    v_avance = 1500
+
+    # 1. Move forward a bit with pen UP (default)
+    sequence.ajouter_commande(SetPen(robot_model, True))
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    sequence.ajouter_commande(SetPen(robot_model, False))
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    sequence.ajouter_commande(SetPen(robot_model, True))
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    sequence.ajouter_commande(SetPen(robot_model, False))
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    
+    
+
+    # 4. Stop
+    sequence.ajouter_commande(Arreter(robot_model))
+    
+    # --- Run the Sequence --- 
+    def run_sequence_loop():
+        logging.info("Starting Q1.3 sequence loop...")
+        delta_time = sim_controller.update_interval 
+        sequence.start() 
+        while not sequence.is_finished():
+            sequence.step(delta_time) 
+            time.sleep(delta_time) 
+        logging.info("Q1.3 sequence finished.")
+
+    sim_controller.run_simulation() 
+    sequence_thread = threading.Thread(target=run_sequence_loop, daemon=True)
+    sequence_thread.start()
+
+    logging.info("Q1.3: Running pen drawing sequence...")
+    root.mainloop()
+
+# --- Question Q1.4 --- 
+def q1_4():
+    """Demonstrate robot pen color change functionality."""
+    logging.basicConfig(level=logging.INFO)
+    root = tk.Tk()
+    root.title("SOLO TME - Q1.4 Pen Color")
+    map_model = MapModel()
+    robot_model = RobotModel(map_model=map_model)
+    start_pos = (100, 100)
+    map_model.set_start_position(start_pos)
+    robot_model.x, robot_model.y = start_pos
+    robot_model.direction_angle = 0 # Start facing right
+    sim_controller = SimulationController(map_model=map_model, robot_model=robot_model)
+
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+    canvas_frame = tk.Frame(main_frame)
+    canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    robot_view = RobotView(canvas_frame, sim_controller)
+    map_view = MapView(canvas_frame, robot_view)
+    map_controller = MapController(map_model, map_view, root)
+    map_controller.handle_map_event("start_position_changed", position=map_model.start_position)
+    initial_robot_state = robot_model.get_state()
+    robot_view._safe_update(initial_robot_state)
+
+    # --- Create Sequence of Commands --- 
+    sequence = CommandeComposite(robot_model)
+    v_avance = 1500 # Speed for moving forward
+    # v_rot is not needed for this sequence
+
+    # 1. Move forward with pen UP (default color blue)
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    
+    # 2. Set color RED (pen still up)
+    sequence.ajouter_commande(SetPenColor(robot_model, "red"))
+    
+    # 3. Move forward (pen still up, color now red)
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    
+    # 4. Put pen DOWN (will draw RED)
+    sequence.ajouter_commande(SetPen(robot_model, True))
+    
+    # 5. Move forward (draws RED line)
+    sequence.ajouter_commande(Avancer(100, v_avance, robot_model))
+    
+    # 6. Set color BLUE (pen still down)
+    sequence.ajouter_commande(SetPenColor(robot_model, "blue"))
+    
+    # 7. Move forward (draws BLUE line)
+    sequence.ajouter_commande(Avancer(100, v_avance, robot_model))
+    
+    # 8. Put pen UP
+    sequence.ajouter_commande(SetPen(robot_model, False))
+
+    # 9. Move forward (no trace)
+    sequence.ajouter_commande(Avancer(50, v_avance, robot_model))
+    
+    # 10. Stop
+    sequence.ajouter_commande(Arreter(robot_model))
+    
+    # --- Run the Sequence --- 
+    def run_sequence_loop():
+        logging.info("Starting Q1.4 sequence loop...")
+        delta_time = sim_controller.update_interval 
+        sequence.start() 
+        while not sequence.is_finished():
+            sequence.step(delta_time) 
+            time.sleep(delta_time) 
+        logging.info("Q1.4 sequence finished.")
+
+    sim_controller.run_simulation() 
+    sequence_thread = threading.Thread(target=run_sequence_loop, daemon=True)
+    sequence_thread.start()
+
+    logging.info("Q1.4: Running pen color sequence...")
+    root.mainloop()
 
 # --- Entry Point --- 
 
@@ -238,8 +425,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run specific questions for the SOLO TME.")
     parser.add_argument(
         'question', 
-        choices=['q1.1', 'q1.2'], 
-        help='Specify which question to run (e.g., q1.1 or q1.2)'
+        choices=['q1.1', 'q1.2', 'q1.3', 'q1.4'], # Add q1.4 choice
+        help='Specify which question to run'
     )
     args = parser.parse_args()
 
@@ -249,5 +436,11 @@ if __name__ == '__main__':
     elif args.question == 'q1.2':
         print("Running Question 1.2...")
         q1_2()
+    elif args.question == 'q1.3':
+        print("Running Question 1.3...")
+        q1_3()
+    elif args.question == 'q1.4': # Add q1.4 execution
+        print("Running Question 1.4...")
+        q1_4()
     else:
-        print(f"Unknown question: {args.question}. Please choose 'q1.1' or 'q1.2'.") 
+        print(f"Unknown question: {args.question}. Please choose from available options.") 

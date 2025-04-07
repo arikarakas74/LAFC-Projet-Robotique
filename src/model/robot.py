@@ -19,6 +19,8 @@ class RobotModel(RobotAdapter):
         self.distance=0
         self.fast_wheel = None
         self.slow_wheel=None
+        self.pen_down = False # Initialize pen state
+        self.pen_color = "blue" # Add pen color attribute, default to blue
 
     def update_position(self, new_x: float, new_y: float, new_angle: float):
         """Met à jour la position après vérification des collisions"""
@@ -34,32 +36,29 @@ class RobotModel(RobotAdapter):
 
     def get_state(self) -> dict:
         """Retourne un snapshot de l'état courant"""
-        return {
+        state = {
             'x': self.x,
             'y': self.y,
             'angle': self.direction_angle,
             'left_speed': self.motor_speeds["left"],
-            'right_speed': self.motor_speeds["right"]
+            'right_speed': self.motor_speeds["right"],
+            'pen_down': self.pen_down,
+            'pen_color': self.pen_color # Add pen color to state
         }
+        return state
+
     def update_motors(self, delta_time):
         """Met à jour les positions des moteurs avec le temps écoulé"""
         for motor in ["left", "right"]:
             self.motor_positions[motor] += self.motor_speeds[motor] * delta_time
 
-
-    
     def get_motor_positions(self) -> dict:
         return self.motor_positions
-    
-
     
     def get_distance(self) -> float:
         return 0.0  # À implémenter selon le modèle
     
-
-
     def calculer_distance_parcourue(self) -> float:
-
         old_positions = self.last_motor_positions
         new_positions = self.motor_positions
         delta_left = new_positions["left"] - old_positions["left"]
@@ -76,36 +75,33 @@ class RobotModel(RobotAdapter):
     
     def resetDistance(self):
         self.distance=0
+
     def decide_turn_direction(self, angle_rad: float, base_speed: float):
-        """Sets motor speeds for an in-place rotation."""
+        """Sets motor speeds for an in-place rotation based on standard angle convention."""
         self.last_motor_positions = self.get_motor_positions() # Store initial pos for angle calc
         
-        # For in-place turn, speeds are equal and opposite
         turn_speed = base_speed # Use base_speed as the magnitude
 
-        if angle_rad < 0: # Turn Left (CCW)
-             # Left wheel backward, Right wheel forward
-             self.set_motor_speed('left', -turn_speed)
-             self.set_motor_speed('right', turn_speed)
-             # Keep track for slow_speed (though it might become redundant)
-             self.fast_wheel = 'right' 
-             self.slow_wheel = 'left'
-        elif angle_rad > 0: # Turn Right (CW)
-             # Left wheel forward, Right wheel backward
-             self.set_motor_speed('left', turn_speed)
-             self.set_motor_speed('right', -turn_speed)
-             # Keep track for slow_speed
-             self.fast_wheel = 'left'
-             self.slow_wheel = 'right'
-        else: # angle_rad is 0
-             # Don't turn, set speeds to 0? Or handle in Tourner strategy?
-             # Let's set to 0 for safety, Tourner should handle 0 angle better now.
+        if angle_rad == 0:
+             # Don't turn, set speeds to 0.
              self.set_motor_speed('left', 0)
              self.set_motor_speed('right', 0)
              self.fast_wheel = None
              self.slow_wheel = None
+        elif angle_rad > 0: # Positive Angle -> Turn Left (CCW)
+             # Left wheel backward, Right wheel forward
+             self.set_motor_speed('left', -turn_speed)
+             self.set_motor_speed('right', turn_speed)
+             self.fast_wheel = 'right' 
+             self.slow_wheel = 'left'
+        else: # angle_rad < 0: Negative Angle -> Turn Right (CW)
+             # Left wheel forward, Right wheel backward
+             self.set_motor_speed('left', turn_speed)
+             self.set_motor_speed('right', -turn_speed)
+             self.fast_wheel = 'left'
+             self.slow_wheel = 'right'
         
-        # print(f"Set turn speeds: L={self.motor_speeds['left']}, R={self.motor_speeds['right']}")
+        # print(f"Turn Dir: Angle={math.degrees(angle_rad):.1f}, LSpeed={self.motor_speeds['left']}, RSpeed={self.motor_speeds['right']}")
 
     def calcule_angle(self) -> float:
         """Calculates the angle turned (in radians) based on wheel encoder differences."""
@@ -130,5 +126,21 @@ class RobotModel(RobotAdapter):
     
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)
+
+    def draw(self, pen_state: bool):
+        """Sets the state of the robot's drawing pen."""
+        self.pen_down = bool(pen_state)
+        # In a real robot, this would command the pen servo/actuator
+        # print(f"Pen state set to: {self.pen_down}") # Optional debug
+
+    def red(self):
+        """Sets the pen color to red."""
+        self.pen_color = "red"
+        # print("Pen color set to red") # Optional debug
+        
+    def blue(self):
+        """Sets the pen color to blue."""
+        self.pen_color = "blue"
+        # print("Pen color set to blue") # Optional debug
 
     
