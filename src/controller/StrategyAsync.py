@@ -91,12 +91,12 @@ class Tourner(AsyncCommande):
         #print(f"Angle actuel: {math.degrees(current_turned_angle):.1f}°, Erreur: {angle_error_deg:.1f}°") # Optional debug
 
         # Check if turn is complete within tolerance
-        tolerance_rad = math.radians(1.0) # Tolerance of 1 degree
+        tolerance_rad = math.radians(5.0) # Increased Tolerance to 5 degrees
         if abs(angle_error) < tolerance_rad:
             self.adapter.set_motor_speed('left', 0)
             self.adapter.set_motor_speed('right', 0)
             self.finished = True
-            self.logger.info(f"Virage terminé. Angle final: {math.degrees(current_turned_angle):.1f}°")
+            self.logger.info(f"Virage terminé. Angle final: {math.degrees(current_turned_angle):.1f}° (Error: {angle_error:.2f} rad)")
             return True
         else:
             # Since decide_turn_direction now sets opposing speeds,
@@ -355,16 +355,15 @@ class StrategyInvisible(StrategySetPenState):
     def __init__(self, adapter):
         super().__init__(adapter, False) # Pen up
 
-# --- Modified Horizontal U-Turn Strategy for Q1.5 ---
+# --- Restore and Simplify Horizontal U-Turn Strategy for Q1.2 ---
 
 class HorizontalUTurnStrategy(AsyncCommande):
     """ 
-    Simplified strategy using Avancer, Tourner, Arreter, and Color strategies.
-    Moves horizontally, stops, makes U-turns at obstacles/walls, loops.
-    Draws RED when moving right, BLUE when moving left.
+    Strategy for Q1.2: Moves horizontally, stops, makes U-turns at obstacles/walls, loops.
+    Uses only MOVING, TURNING, FINISHED states.
     """
 
-    def __init__(self, adapter, map_model, vitesse_avance=150, vitesse_rotation=100, proximity_threshold=30, max_turns=10):
+    def __init__(self, adapter, map_model, vitesse_avance=150, vitesse_rotation=100, proximity_threshold=30, max_turns=4):
         super().__init__(adapter)
         if not adapter or not map_model:
              print("ERROR: Adapter or MapModel not provided to HorizontalUTurnStrategy")
@@ -379,10 +378,10 @@ class HorizontalUTurnStrategy(AsyncCommande):
         self.max_turns = max_turns
 
         self.turn_count = 0
-        # States: SETTING_RED, MOVING_RIGHT, STOPPING_R, TURNING_L, 
-        #         SETTING_BLUE, MOVING_LEFT, STOPPING_L, TURNING_R, FINISHED
-        self.state = 'SETTING_RED' 
+        # States: MOVING, TURNING, FINISHED
+        self.state = 'MOVING' 
         self.current_sub_command = None
+        self.angle_before_turn = 0.0 # Add attribute to store angle
         
         self.started = False
         self.finished = False
@@ -391,46 +390,21 @@ class HorizontalUTurnStrategy(AsyncCommande):
     def start(self):
         if self.state == 'FINISHED': return
         self.started = True
-        self.logger.info(f"Starting HorizontalUTurnStrategy Q1.5: Target {self.max_turns} turns.")
-        # Initial state: Set pen to Red and Down
-        self._start_set_color_and_pen("red")
-
-    def _start_set_color_and_pen(self, color):
-        self.logger.debug(f"State: {self.state} -> Starting Strategy{color.capitalize()}")
-        if color == "red":
-            self.current_sub_command = StrategyRed(self.adapter)
-            self.state = 'SETTING_RED'
-        else: # blue
-            self.current_sub_command = StrategyBlue(self.adapter)
-            self.state = 'SETTING_BLUE'
-        self.current_sub_command.start()
+        self.logger.info(f"Starting HorizontalUTurnStrategy Q1.2: Target {self.max_turns} turns.")
+        self._start_moving()
         
     def _start_moving(self):
         self.logger.debug(f"State: {self.state} -> Starting Avancer")
         self.current_sub_command = Avancer(float('inf'), self.vitesse_avance, self.adapter)
-        # State changes after moving starts
-        if self.state == 'SETTING_RED': self.state = 'MOVING_RIGHT'
-        elif self.state == 'SETTING_BLUE': self.state = 'MOVING_LEFT'
+        self.state = 'MOVING' # Ensure state is MOVING
         self.current_sub_command.start()
         
-    def _start_turning(self, direction):
-        self.logger.debug(f"State: {self.state} -> Starting Tourner ({direction})")
-        # For U-turn, always turn pi radians
+    def _start_turning(self):
+        # Store the angle *before* starting the turn command
+        self.angle_before_turn = self.adapter.direction_angle 
+        self.logger.debug(f"State: {self.state} -> Starting Tourner from angle {math.degrees(self.angle_before_turn):.1f}")
         self.current_sub_command = Tourner(math.pi, self.vitesse_rotation, self.adapter)
-        # State changes after turning starts
-        if direction == 'left': self.state = 'TURNING_L'
-        else: self.state = 'TURNING_R' # Assumes turning right after moving left
-        self.current_sub_command.start()
-        
-    def _start_stopping(self, previous_state):
-        self.logger.debug(f"State: {self.state} -> Starting Arreter")
-        # Stop movement and lift pen
-        self.current_sub_command = CommandeComposite(self.adapter)
-        self.current_sub_command.ajouter_commande(Arreter(self.adapter))
-        self.current_sub_command.ajouter_commande(StrategyInvisible(self.adapter))
-        # Set state based on where we were moving
-        if previous_state == 'MOVING_RIGHT': self.state = 'STOPPING_R'
-        else: self.state = 'STOPPING_L'
+        self.state = 'TURNING' # Ensure state is TURNING
         self.current_sub_command.start()
 
     def is_finished(self):
@@ -440,83 +414,80 @@ class HorizontalUTurnStrategy(AsyncCommande):
         if not self.started or self.finished:
             return True # Indicate finished
 
-        # --- Collision Check (only during movement) ---
-        if self.state in ['MOVING_RIGHT', 'MOVING_LEFT']:
-            # ... (Collision detection logic remains the same as before) ...
+        if self.state == 'MOVING':
+            # --- Collision Check --- 
             current_x = self.adapter.x
             current_y = self.adapter.y
             current_angle = self.adapter.direction_angle
-            half_width = self.adapter.WHEEL_BASE_WIDTH / 2.0
+            # Use robot width for probes (safer than just center)
+            half_width = self.adapter.WHEEL_BASE_WIDTH / 2.0 
             probe_dist = self.proximity_threshold
-            perp_angle = current_angle + math.pi / 2 
-            front_center_x = current_x + probe_dist * math.cos(current_angle)
-            front_center_y = current_y + probe_dist * math.sin(current_angle)
-            offset_lx = half_width * math.cos(perp_angle)
-            offset_ly = half_width * math.sin(perp_angle)
-            probe_lx = front_center_x + offset_lx
-            probe_ly = front_center_y + offset_ly
-            offset_rx = -offset_lx 
-            offset_ry = -offset_ly
-            probe_rx = front_center_x + offset_rx
-            probe_ry = front_center_y + offset_ry
+            
+            # Calculate points slightly ahead and to the sides of the robot
+            front_x = current_x + probe_dist * math.cos(current_angle)
+            front_y = current_y + probe_dist * math.sin(current_angle)
+            left_angle = current_angle + math.pi / 2
+            right_angle = current_angle - math.pi / 2
+            probe_lx = front_x + half_width * math.cos(left_angle)
+            probe_ly = front_y + half_width * math.sin(left_angle)
+            probe_rx = front_x + half_width * math.cos(right_angle)
+            probe_ry = front_y + half_width * math.sin(right_angle)
+
+            # Check collision at left, right, and center points ahead
             collision_l = self.map_model.is_collision(probe_lx, probe_ly) or \
                           self.map_model.is_out_of_bounds(probe_lx, probe_ly)
             collision_r = self.map_model.is_collision(probe_rx, probe_ry) or \
                           self.map_model.is_out_of_bounds(probe_rx, probe_ry)
-            collision = collision_l or collision_r
+            collision_c = self.map_model.is_collision(front_x, front_y) or \
+                          self.map_model.is_out_of_bounds(front_x, front_y)
+            
+            collision = collision_l or collision_r or collision_c
             
             if collision:
                  self.logger.info(f"Obstacle/boundary detected ({self.state}). Stopping. Turn count: {self.turn_count + 1}")
-                 self._start_stopping(self.state) # Stop and lift pen
-                 return self.finished # Let the stopping command run in the next step
-
-        # --- Execute Current Sub-command and State Transitions ---
-        if self.current_sub_command:
-            sub_finished = self.current_sub_command.step(delta_time)
-            if sub_finished:
-                self.logger.debug(f"Sub-command {type(self.current_sub_command).__name__} finished in state {self.state}")
-                # State transitions based on which command finished
-                if self.state == 'SETTING_RED':
-                     self._start_moving()
-                elif self.state == 'SETTING_BLUE':
-                     self._start_moving()
-                elif self.state == 'STOPPING_R': # Finished stopping after moving right
-                    self.turn_count += 1
-                    if self.turn_count >= self.max_turns:
-                        self.logger.info(f"Max turns ({self.max_turns}) reached. Finishing.")
-                        self.state = 'FINISHED'
-                        self.finished = True
-                    else:
-                        self._start_turning('left') # Turn left after moving right
-                elif self.state == 'STOPPING_L': # Finished stopping after moving left
-                     self.turn_count += 1 # Count this turn too
-                     if self.turn_count >= self.max_turns:
-                        self.logger.info(f"Max turns ({self.max_turns}) reached. Finishing.")
-                        self.state = 'FINISHED'
-                        self.finished = True
-                     else:
-                        self._start_turning('right') # Turn right after moving left
-                elif self.state == 'TURNING_L': # Finished turning left
-                    self._start_set_color_and_pen("blue") # Set up for moving left
-                elif self.state == 'TURNING_R': # Finished turning right
-                    self._start_set_color_and_pen("red") # Set up for moving right
-                elif self.state in ['MOVING_RIGHT', 'MOVING_LEFT']:
-                     # Avancer(inf) should not finish, only be interrupted by collision
-                     self.logger.warning(f"Avancer command finished unexpectedly in state {self.state}")
-                     self._start_stopping(self.state) # Stop if Avancer somehow finishes
+                 # Stop immediately
+                 stop_command = Arreter(self.adapter)
+                 stop_command.start() # Instantaneous
+                 self.current_sub_command = None # Discard Avancer
+                 
+                 self.turn_count += 1
+                 if self.turn_count >= self.max_turns:
+                     self.logger.info(f"Max turns ({self.max_turns}) reached. Finishing.")
+                     self.state = 'FINISHED'
+                     self.finished = True
+                 else:
+                     # Start turning (angle_before_turn is set inside this method)
+                     self._start_turning()
+                 return self.finished # Return finished status
+            else:
+                # No collision: Continue moving if command exists
+                if self.current_sub_command:
+                    self.current_sub_command.step(delta_time)
                 else:
-                    self.logger.error(f"Unhandled finished sub-command in state {self.state}")
-                    self.state = 'FINISHED'
-                    self.finished = True
-                    
-                # Clear the finished command
-                self.current_sub_command = None 
-                    
-        elif self.state != 'FINISHED':
-            # Safety check: If no command is running but not finished, log error
-            self.logger.error(f"No sub-command running in state {self.state}")
-            # Attempt recovery based on state? Or just finish?
-            self.state = 'FINISHED' # Safer to just finish
-            self.finished = True
+                     self.logger.warning("No Avancer command in MOVING state, restarting.")
+                     self._start_moving()
 
+        elif self.state == 'TURNING':
+            if self.current_sub_command:
+                sub_finished = self.current_sub_command.step(delta_time)
+                if sub_finished:
+                    self.logger.debug("Tourner finished.")
+                    self.current_sub_command = None # Clear finished command
+                    
+                    # --- Explicitly set angle after turn --- 
+                    target_angle = normalize_angle(self.angle_before_turn + math.pi)
+                    self.adapter.direction_angle = target_angle 
+                    self.logger.debug(f"Angle explicitly set to {math.degrees(target_angle):.1f} after turn.")
+                    # -----------------------------------------
+
+                    # Transition back to moving
+                    self._start_moving() 
+            else:
+                # Safety: If no turn command, attempt to start one
+                self.logger.error("In TURNING state but no turning command found!")
+                self._start_turning() 
+        
+        elif self.state == 'FINISHED':
+            self.finished = True
+            
         return self.finished
