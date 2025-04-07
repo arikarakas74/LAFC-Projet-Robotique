@@ -30,6 +30,7 @@ class ControlPanel:
             ("set balise", self.map_controller.set_end_mode),
             ("suivre balise", self.suivre),
             ("Reset", self.reset_all)
+            ("stratégie",self.simulation_controller.robot_controller.strategie)
         ]
         
         for text, cmd in buttons:
