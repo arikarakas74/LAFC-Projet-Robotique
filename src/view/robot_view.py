@@ -10,6 +10,7 @@ class RobotView:
         self.canvas.pack()
 
         self.dessine1 = True
+        self.coul1 = True
         
         self.speed_label = tk.Label(parent)
         self.speed_label.pack()
@@ -17,6 +18,12 @@ class RobotView:
         sim_controller.add_state_listener(self.update_display)
         self.last_x = None
         self.last_y = None
+
+    def coul(self):
+        if self.coul1:
+            self.coul1 = False
+        else:
+            self.coul1 = True
 
     def dessine(self):
         if self.dessine1:
@@ -39,7 +46,10 @@ class RobotView:
 
         if self.last_x is not None and self.last_y is not None:
             if self.dessine1:
-                self.canvas.create_line(self.last_x, self.last_y, x, y, fill="gray", width=2, tags="trace")
+                if self.coul1:
+                    self.canvas.create_line(self.last_x, self.last_y, x, y, fill="red", width=1, tags="trace")
+                else:
+                    self.canvas.create_line(self.last_x, self.last_y, x, y, fill="blue", width=1, tags="trace")
         
         self.last_x = x
         self.last_y = y
