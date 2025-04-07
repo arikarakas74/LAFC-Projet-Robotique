@@ -40,4 +40,11 @@ This file tracks the questions addressed during the SOLO TME and the files modif
 - **Files Modified:**
     - `tmesolo.py` (Added `q1_4` function, `SetPenColor` class, updated sequence and argparse)
     - `src/model/robot.py` (Added `pen_color`, `red()`, `blue()` methods, updated `get_state()`)
-    - `src/view/robot_view.py` (Modified `_draw_robot` to use `pen_color`) 
+    - `src/view/robot_view.py` (Modified `_draw_robot` to use `pen_color`)
+
+## Q 1.5: Color-Changing U-Turn Strategy
+
+- **Status:** Answered
+- **Files Modified:**
+    - `src/controller/StrategyAsync.py` (Added `StrategyRed`, `StrategyBlue`, `StrategyInvisible`, refactored `HorizontalUTurnStrategy` state machine)
+    - `tmesolo.py` (Added `q1_5` function, updated argparse) 
