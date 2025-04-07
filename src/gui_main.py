@@ -62,6 +62,7 @@ class MainApplication(tk.Tk):
         self.bind("<w>", lambda event: self.sim_controller.robot_controller.move_forward())
         self.bind("<s>", lambda event: self.sim_controller.robot_controller.move_backward())
         self.bind("<b>", lambda event: self.robot_view.dessine())
+        self.bind("<c>", lambda event: self.robot_view.coul())
 
     def _create_menu(self):
         menubar = tk.Menu(self)
