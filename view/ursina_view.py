@@ -2,6 +2,8 @@ from ursina import *
 from panda3d.core import Texture, GraphicsOutput, GraphicsPipe, WindowProperties, FrameBufferProperties
 import time
 from controller.StrategyAsync import FollowBeaconByImageStrategy
+import numpy as np
+from PIL import Image
 
 
 class UrsinaView(Entity):
@@ -90,6 +92,37 @@ class UrsinaView(Entity):
         self.robot_cam.setPos(1.0, 0.5, 0.0)
         self.robot_cam.setHpr(-90, 0, 0)
         self.robot_cam_window.addRenderTexture(self.robot_cam_texture, GraphicsOutput.RTMCopyRam)
+    
+    def get_robot_camera_image(self):
+        texture = self.robot_cam_texture
+
+        if texture.hasRamImage():
+            data = texture.getRamImageAs('RGB')
+            width = texture.getXSize()
+            height = texture.getYSize()
+            try:
+                img_array = np.frombuffer(data, dtype=np.uint8)
+                img_array = img_array.reshape((height,width,3))
+            except Exception as e:
+                print("Error while capturing image:",e)
+                return None
+            return img_array
+        else:
+            return None
+    
+    def save_robot_camera_image(self, filename_prefix='robot_camera'):
+        """
+        Converts the image from the texture to PIL Image and saves it to disk
+        """
+        img_array = self.get_robot_camera_image()
+        if img_array is not None:
+            pil_img = Image.fromarray(img_array)
+            pil_img = pil_img.transpose(Image.FLIP_TOP_BOTTOM)
+            filename = f"{filename_prefix}_{int(time.time())}.png"
+            pil_img.save(filename)
+            print(f"Image saved as '{filename}'.")
+        else:
+            print("No image.")
 
     def update(self):
         # Mettre à jour la position de l'entité du robot
@@ -144,6 +177,9 @@ class UrsinaView(Entity):
                     self.trail_entity.model.vertices = self.trail_points
                     self.trail_entity.model.generate()
 
+    def input(self, key):
+        if key == 'p':
+            self.save_robot_camera_image()
 
     def handle_floor_click(self):
         pos = mouse.world_point
