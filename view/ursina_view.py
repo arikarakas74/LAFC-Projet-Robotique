@@ -16,6 +16,8 @@ class UrsinaView(Entity):
         self.trail_points = []
         self.trail_entity = None
         self.create_robot_camera_window()
+        self.frame_counter = 0
+        self.img_array = None
 
         self.speed_label = Text(text='Speed: L=0°/s  R=0°/s\nAngle: 0°', position=(-0.68,-0.45), origin=(0,0), scale=1, color=color.black)
 
@@ -101,24 +103,23 @@ class UrsinaView(Entity):
             width = texture.getXSize()
             height = texture.getYSize()
             try:
-                img_array = np.frombuffer(data, dtype=np.uint8)
-                img_array = img_array.reshape((height,width,3))
+                self.img_array = np.frombuffer(data, dtype=np.uint8)
+                self.img_array = self.img_array.reshape((height,width,3))
             except Exception as e:
                 print("Error while capturing image:",e)
                 return None
-            return img_array
+            return self.img_array
         else:
             return None
     
-    def save_robot_camera_image(self, filename_prefix='robot_camera'):
+    def save_robot_camera_image(self):
         """
         Converts the image from the texture to PIL Image and saves it to disk
         """
-        img_array = self.get_robot_camera_image()
-        if img_array is not None:
-            pil_img = Image.fromarray(img_array)
+        if self.img_array is not None:
+            pil_img = Image.fromarray(self.img_array)
             pil_img = pil_img.transpose(Image.FLIP_TOP_BOTTOM)
-            filename = f"{filename_prefix}_{int(time.time())}.png"
+            filename = f"robot_camera_{self.frame_counter}.png"
             pil_img.save(filename)
             print(f"Image saved as '{filename}'.")
         else:
@@ -141,6 +142,9 @@ class UrsinaView(Entity):
         right_speed = self.simulation_controller.robot_model.motor_speeds.get("right", 0)
         angle_deg = math.degrees(self.simulation_controller.robot_model.direction_angle)
         self.speed_label.text = f"Speed: L={left_speed:.2f}°/s  R={right_speed:.2f}°/s\nAngle: {angle_deg:.1f}°"
+
+        self.frame_counter += 1
+        self.img_array = self.get_robot_camera_image()
 
         if not self.simulation_controller.simulation_running:
             return
