@@ -1,16 +1,20 @@
-
 from vpython import *
 import threading
 import time
 import math
 import base64  # Vous n'aurez plus besoin de base64 ici, mais on peut le laisser
 import os
+# Imports nécessaires pour la capture en mémoire
+from PIL import Image
+import numpy as np 
+import cv2 # Make sure cv2 is imported at the top
 
 class VpythonView:
     def __init__(self, simulation_controller, key_handler):
         """ Initialisation de la vue 3D """
         self.simulation_controller = simulation_controller
-        self.images=[]
+        # self.images stockera maintenant des tableaux NumPy (images OpenCV)
+        self.images=[] 
         self._running = False
         self._lock = threading.Lock()
         self.frame_rate = 30
@@ -92,9 +96,12 @@ class VpythonView:
         while self._running:
             start_time = time.time()
             self.capture_embedded_image()
-            sleep_time = 0.02
-            if sleep_time > 0:
-                time.sleep(sleep_time)
+            # Capturer une image environ toutes les 3 secondes
+            sleep_time = 3.0 
+            time_elapsed = time.time() - start_time
+            actual_sleep = max(0, sleep_time - time_elapsed)
+            if actual_sleep > 0:
+                time.sleep(actual_sleep)
 
 
 
@@ -106,45 +113,125 @@ class VpythonView:
         return None
 
     def capture_embedded_image(self):
+        """ Capture l'image, la sauvegarde, la relit et stocke le tableau NumPy si valide. """
+        image_path = None
+        try:
+            # Définir le chemin de sauvegarde dans un sous-dossier du projet
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            src_dir = os.path.dirname(current_dir)
+            captures_dir = os.path.join(src_dir, "captures")
+
+            if not os.path.exists(captures_dir):
+                os.makedirs(captures_dir)
+
+            # Utiliser un timestamp avec microsecondes pour garantir l'unicité
+            timestamp = time.strftime("%Y%m%d-%H%M%S") + f"-{int(time.time() * 1000000) % 1000000:06d}"
+            # Générer le nom de base SANS .png
+            base_filename = f"embedded_view_{timestamp}"
+            # Construire le chemin complet SANS .png pour VPython capture
+            vpython_capture_path = os.path.join(captures_dir, base_filename)
+
+            # 1. Sauvegarder l'image sur le disque (VPython ajoutera .png)
+            self.embedded_view.capture(vpython_capture_path)
+            # print(f"Attempted to save image via VPython capture with base: {vpython_capture_path}") # Debug
+
+            # 2. Attendre (réduit à 0.1s maintenant que le nom est correct)
+            # print(f"{time.strftime('%H:%M:%S')} - Saved (presumably with mangled name), waiting 0.1s...")
+            time.sleep(0.1) 
+
+            # 3. Prédire le nom de fichier "bizarre" que VPython semble créer
+            # Prendre le chemin absolu de ce que nous avons passé à capture()
+            absolute_vpython_capture_path = os.path.abspath(vpython_capture_path)
+            # Remplacer les séparateurs de chemin par des underscores
+            mangled_base_name = absolute_vpython_capture_path.replace(os.path.sep, '_')
+            # Ajouter .png
+            predicted_actual_filename = mangled_base_name + ".png"
+            # Construire le chemin complet vers ce fichier dans le dossier de captures
+            absolute_mangled_path = os.path.join(captures_dir, predicted_actual_filename)
+
             
-            # Définir le dossier de destination et le créer s'il n'existe pas
-            directory = os.path.join(os.environ["USERPROFILE"], "Downloads")
-            if not os.path.exists(directory):
-                os.makedirs(directory)
+            # --- Debugging File System Visibility ---
+            # Commenté car le problème de nom est résolu
+            # print(f"{time.strftime('%H:%M:%S')} - Checking existence of predicted mangled path: {absolute_mangled_path}")
+            # file_exists = os.path.exists(absolute_mangled_path)
+            # print(f"{time.strftime('%H:%M:%S')} - Predicted mangled file exists? {file_exists}")
+            # if not file_exists:
+            #     try:
+            #         print(f"{time.strftime('%H:%M:%S')} - Listing directory contents of: {captures_dir}")
+            #         dir_contents = os.listdir(captures_dir)
+            #         print(f"{time.strftime('%H:%M:%S')} - Directory contents: {dir_contents}")
+            #     except Exception as list_err:
+            #         print(f"{time.strftime('%H:%M:%S')} - Error listing directory: {list_err}")
+            # --- End Debugging ---
+
+            # print(f"{time.strftime('%H:%M:%S')} - Attempting to read with Pillow: {os.path.basename(absolute_mangled_path)}")
             
-            # Générer un nom de fichier unique (seulement le nom, sans chemin)
-            filename = f"capture_{time.strftime('%Y%m%d-%H%M%S')}"
-            
-            # Capturer l'image en passant uniquement le nom du fichier
-            self.embedded_view.capture(filename)
-            print(directory+"\\"+filename)
-            # Attendre un court instant pour s'assurer que le fichier a été créé
-            time.sleep(0.5)
-            self.images.append(directory+"\\"+filename+".png")
+            opencv_image = None # Initialiser à None
+            try:
+                # Utiliser Pillow pour ouvrir le fichier avec le nom "bizarre"
+                pil_image = Image.open(absolute_mangled_path)
+                pil_image.load() # Forcer le chargement des données
+                # Convertir l'image Pillow (RGB) en tableau NumPy OpenCV (BGR)
+                opencv_image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+                pil_image.close() # Fermer le handle du fichier
+                # print(f"{time.strftime('%H:%M:%S')} - Pillow read successful for {os.path.basename(absolute_mangled_path)}") # Debug
+            except FileNotFoundError:
+                 print(f"[WARN] Pillow Error: File not found at {absolute_mangled_path}. Skipping frame.")
+            except Exception as pil_err:
+                 print(f"[WARN] Pillow Error reading {os.path.basename(absolute_mangled_path)}: {pil_err}. Skipping frame.")
             
 
+            # 4. Valider et stocker si la lecture et conversion ont réussi
+            if opencv_image is not None and opencv_image.size > 0:
+                # Ajouter l'image (tableau NumPy) à la liste de manière thread-safe
+                with self._lock:
+                    self.images.append(opencv_image)
+                    # Limiter la taille si nécessaire
+                    if len(self.images) > 10: # Garder seulement les 10 dernières images
+                        self.images.pop(0)
+                # print(f"Successfully read back and stored image: {os.path.basename(absolute_mangled_path)}") # Debug
+            else:
+                 # Commenté car Pillow gère l'erreur de lecture
+                 # print(f"[WARN] Failed to read back image {os.path.basename(absolute_mangled_path)}. Skipping frame.")
+                 pass # Pillow a déjà loggé l'erreur si nécessaire
+                # Optionnel: Supprimer le fichier potentiellement corrompu/vide
+                # if absolute_mangled_path and os.path.exists(absolute_mangled_path):
+                #     try:
+                #         os.remove(absolute_mangled_path)
+                #     except Exception as remove_err:
+                #         print(f"Error removing problematic file: {remove_err}")
 
-    def analyze_image(self,image):
+
+        except Exception as e:
+             # Garder cette erreur générale au cas où
+             print(f"Error during capture/read-back process for {predicted_actual_filename}: {e}") 
+
+
+    def analyze_image(self, image_data):
         """
-        Charge et analyse une image pour détecter une balise bleue.
+        Analyse une image (fournie comme tableau NumPy) pour détecter une balise bleue.
         Retourne une liste des informations sur les balises détectées (centre et rayon).
         """
         detections = []
-        try:
-            import cv2
-            import numpy as np
-        except ImportError:
-            print("OpenCV et numpy sont nécessaires pour l'analyse d'image.")
-            return detections
+        # Pas besoin d'importer cv2/numpy ici si déjà fait globalement ou dans __init__
+        # Assurez-vous que les imports sont présents au niveau du module.
+        # try:
+        #     import cv2
+        #     import numpy as np
+        # except ImportError:
+        #     print("OpenCV et numpy sont nécessaires pour l'analyse d'image.")
+        #     return detections
 
-        # Charger l'image
-        image = cv2.imread(str(image ))
-        if image is None:
-            print("Erreur lors du chargement de l'image.")
+        # L'image est déjà un tableau NumPy, pas besoin de cv2.imread
+        if image_data is None or image_data.size == 0:
+            print("Erreur: Données d'image invalides fournies à analyze_image.")
             return detections
+        
+        # Utiliser directement image_data
+        image_for_display = image_data.copy() # Copier si on veut dessiner dessus sans affecter l'original
 
         # Convertir en espace HSV pour une meilleure détection de couleur
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        hsv = cv2.cvtColor(image_data, cv2.COLOR_BGR2HSV)
 
         # Définir la plage de couleur pour le bleu
         lower_blue = np.array([100, 150, 0])
@@ -166,11 +253,14 @@ class VpythonView:
                 (x, y), radius = cv2.minEnclosingCircle(cnt)
                 center = (int(x), int(y))
                 radius = int(radius)
-                cv2.circle(image, center, radius, (0, 255, 0), 2)
+                cv2.circle(image_for_display, center, radius, (0, 255, 0), 2)
                 detections.append({"center": center, "radius": radius})
                 print(f"Balise bleue détectée au centre {center} avec un rayon de {radius}")
 
        
+        # Optionnel: Afficher l'image avec les détections pour le débogage
+        # cv2.imshow("Detection", image_for_display)
+        # cv2.waitKey(1) 
 
         return detections
 
