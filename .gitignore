@@ -25,3 +25,6 @@ traceability_positions.log
 traceability_square.log
 **/traceability_positions.log
 **/traceability_square.log
+
+# Captured VPython images
+src/captures/
