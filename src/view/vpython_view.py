@@ -135,9 +135,9 @@ class VpythonView:
             self.embedded_view.capture(vpython_capture_path)
             # print(f"Attempted to save image via VPython capture with base: {vpython_capture_path}") # Debug
 
-            # 2. Attendre 5 secondes (réduit de 10)
-            print(f"{time.strftime('%H:%M:%S')} - Saved (presumably with mangled name), waiting 3s...")
-            time.sleep(3.0) 
+            # 2. Attendre un court instant après la sauvegarde
+            print(f"{time.strftime('%H:%M:%S')} - Saved (presumably with mangled name), waiting 0.1s...")
+            time.sleep(3) 
 
             # 3. Prédire le nom de fichier "bizarre" que VPython semble créer
             # Prendre le chemin absolu de ce que nous avons passé à capture()
