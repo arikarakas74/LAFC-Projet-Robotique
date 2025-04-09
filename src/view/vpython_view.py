@@ -96,8 +96,8 @@ class VpythonView:
         while self._running:
             start_time = time.time()
             self.capture_embedded_image()
-            # Capturer une image environ toutes les 3 secondes
-            sleep_time = 3.0 
+            # Capturer une image environ toutes les secondes
+            sleep_time = 1.0 
             time_elapsed = time.time() - start_time
             actual_sleep = max(0, sleep_time - time_elapsed)
             if actual_sleep > 0:
@@ -135,9 +135,9 @@ class VpythonView:
             self.embedded_view.capture(vpython_capture_path)
             # print(f"Attempted to save image via VPython capture with base: {vpython_capture_path}") # Debug
 
-            # 2. Attendre (réduit à 0.1s maintenant que le nom est correct)
-            # print(f"{time.strftime('%H:%M:%S')} - Saved (presumably with mangled name), waiting 0.1s...")
-            time.sleep(0.1) 
+            # 2. Attendre 5 secondes (réduit de 10)
+            print(f"{time.strftime('%H:%M:%S')} - Saved (presumably with mangled name), waiting 3s...")
+            time.sleep(3.0) 
 
             # 3. Prédire le nom de fichier "bizarre" que VPython semble créer
             # Prendre le chemin absolu de ce que nous avons passé à capture()
@@ -151,20 +151,19 @@ class VpythonView:
 
             
             # --- Debugging File System Visibility ---
-            # Commenté car le problème de nom est résolu
-            # print(f"{time.strftime('%H:%M:%S')} - Checking existence of predicted mangled path: {absolute_mangled_path}")
-            # file_exists = os.path.exists(absolute_mangled_path)
-            # print(f"{time.strftime('%H:%M:%S')} - Predicted mangled file exists? {file_exists}")
-            # if not file_exists:
-            #     try:
-            #         print(f"{time.strftime('%H:%M:%S')} - Listing directory contents of: {captures_dir}")
-            #         dir_contents = os.listdir(captures_dir)
-            #         print(f"{time.strftime('%H:%M:%S')} - Directory contents: {dir_contents}")
-            #     except Exception as list_err:
-            #         print(f"{time.strftime('%H:%M:%S')} - Error listing directory: {list_err}")
+            print(f"{time.strftime('%H:%M:%S')} - Checking existence of predicted mangled path: {absolute_mangled_path}")
+            file_exists = os.path.exists(absolute_mangled_path)
+            print(f"{time.strftime('%H:%M:%S')} - Predicted mangled file exists? {file_exists}")
+            if not file_exists:
+                try:
+                    print(f"{time.strftime('%H:%M:%S')} - Listing directory contents of: {captures_dir}")
+                    dir_contents = os.listdir(captures_dir)
+                    print(f"{time.strftime('%H:%M:%S')} - Directory contents: {dir_contents}")
+                except Exception as list_err:
+                    print(f"{time.strftime('%H:%M:%S')} - Error listing directory: {list_err}")
             # --- End Debugging ---
 
-            # print(f"{time.strftime('%H:%M:%S')} - Attempting to read with Pillow: {os.path.basename(absolute_mangled_path)}")
+            print(f"{time.strftime('%H:%M:%S')} - Attempting to read with Pillow: {os.path.basename(absolute_mangled_path)}")
             
             opencv_image = None # Initialiser à None
             try:
@@ -174,7 +173,7 @@ class VpythonView:
                 # Convertir l'image Pillow (RGB) en tableau NumPy OpenCV (BGR)
                 opencv_image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
                 pil_image.close() # Fermer le handle du fichier
-                # print(f"{time.strftime('%H:%M:%S')} - Pillow read successful for {os.path.basename(absolute_mangled_path)}") # Debug
+                print(f"{time.strftime('%H:%M:%S')} - Pillow read successful for {os.path.basename(absolute_mangled_path)}")
             except FileNotFoundError:
                  print(f"[WARN] Pillow Error: File not found at {absolute_mangled_path}. Skipping frame.")
             except Exception as pil_err:
@@ -191,9 +190,7 @@ class VpythonView:
                         self.images.pop(0)
                 # print(f"Successfully read back and stored image: {os.path.basename(absolute_mangled_path)}") # Debug
             else:
-                 # Commenté car Pillow gère l'erreur de lecture
-                 # print(f"[WARN] Failed to read back image {os.path.basename(absolute_mangled_path)}. Skipping frame.")
-                 pass # Pillow a déjà loggé l'erreur si nécessaire
+                print(f"[WARN] Failed to read back image {os.path.basename(absolute_mangled_path)}. Skipping frame.")
                 # Optionnel: Supprimer le fichier potentiellement corrompu/vide
                 # if absolute_mangled_path and os.path.exists(absolute_mangled_path):
                 #     try:
@@ -203,8 +200,7 @@ class VpythonView:
 
 
         except Exception as e:
-             # Garder cette erreur générale au cas où
-             print(f"Error during capture/read-back process for {predicted_actual_filename}: {e}") 
+            print(f"Error during capture/read-back process for {predicted_actual_filename}: {e}")
 
 
     def analyze_image(self, image_data):

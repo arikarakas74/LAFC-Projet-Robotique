@@ -30,6 +30,7 @@ class Avancer(AsyncCommande):
 
     def start(self):
         self.adapter.set_motor_speed("left", self.vitesse)
+        print("lina")
         self.adapter.set_motor_speed("right", self.vitesse)
         
         self.started = True
@@ -174,7 +175,6 @@ class FollowBeaconByImageStrategy(AsyncCommande):
         self.logger = logging.getLogger("strategy.FollowBeaconByImageStrategy")
         self.started = False
         self.finished = False
-        self.current_sub_command = None # Garder une référence à la sous-commande en cours
 
     def start(self):
         self.started = True
@@ -184,81 +184,67 @@ class FollowBeaconByImageStrategy(AsyncCommande):
         if not self.started:
             self.start()
 
-        # Si une sous-commande est en cours, on la continue
-        if self.current_sub_command:
-            self.current_sub_command.step(delta_time)
-            if self.current_sub_command.is_finished():
-                self.logger.info("Sous-commande terminée.")
-                self.current_sub_command = None # Prêt pour la prochaine décision
-            # Tant qu'une sous-commande tourne, la stratégie principale n'est pas finie et attend
-            return False 
-        
-        # Si aucune sous-commande n'est en cours, analyser l'image et décider
-        # (Ce bloc ne sera atteint que lorsque la commande précédente sera terminée)
-        if self.finished:
+        # Récupérer le chemin de la dernière image capturée
+        latest_image = self.vpython_view.get_latest_image()
+        if latest_image is None:
+            self.logger.error("Aucune image capturée.")
+            return False
+
+        # Analyse de l'image pour détecter la balise bleue
+        detections = self.vpython_view.analyze_image(latest_image)
+        if not detections:
+            self.logger.info("Aucune balise détectée, rotation pour recherche...")
+            # Si aucune balise n'est détectée, tourner d'une petite rotation (ici 10°)
+            turn_angle = math.radians(10)
+            turn_cmd = Tourner(turn_angle, self.vitesse_rotation, self.adapter)
+            turn_cmd.start()
+            turn_cmd.step(delta_time)
+            return False
+
+        # Considérer la première détection comme la balise ciblée
+        detection = detections[0]
+        center_x, _ = detection["center"]
+
+        # Vérifier si le rayon détecté indique que le robot est déjà proche
+        if detection["radius"] >= self.tolerance_radius:
+            self.logger.info("Balise atteinte, arrêt des moteurs.")
+            # Arrêter les moteurs (méthode à implémenter selon votre adapter)
+            self.adapter.set_motor_speed("left", 0)
+            self.adapter.set_motor_speed("right", 0)
+            self.finished = True
             return True
 
-        # 1. Obtenir la dernière image
-        latest_image_data = self.vpython_view.get_latest_image()
-        if latest_image_data is None:
-            self.logger.warn("No image data available this cycle.")
-            return False # Attendre qu'une image soit disponible
+        # Supposons une largeur d'image de 400 pixels (adapter selon votre configuration)
+        image_width = 400  
+        image_center_x = image_width / 2
+        error_x = center_x - image_center_x
+
+        # Calcul de l'angle d'erreur en radians à partir du décalage horizontal et du champ de vision
+        field_of_view = math.radians(60)  # champ de vision de 60°
+        angle_error = (error_x / image_width) * field_of_view
+        angle_error_deg = math.degrees(angle_error)
+        self.logger.info(f"Erreur angulaire calculée : {angle_error_deg:.2f}°")
+
+        # Zone morte : si l'erreur angulaire est inférieure à la tolérance, on considère l'angle comme nul
+        if abs(angle_error_deg) < self.tolerance_angle:
+            angle_error = 0
+
+        # Appliquer une commande corrective en fonction de l'erreur d'orientation
+        if angle_error != 0:
+            turn_cmd = Tourner(angle_error, self.vitesse_rotation, self.adapter)
+            turn_cmd.start()
+            turn_cmd.step(delta_time)
         else:
-            self.logger.debug("Received new image data for analysis.")
+            advance_cmd = Avancer(self.step_distance, self.vitesse_avance, self.adapter)
+            advance_cmd.start()
+            advance_cmd.step(delta_time)
 
-        # 2. Analyser l'image
-        detections = self.vpython_view.analyze_image(latest_image_data)
-        self.logger.debug(f"Image analysis found {len(detections)} detections.")
-
-        # 3. Logique de décision pour choisir la PROCHAINE sous-commande
-        if not detections:
-            # Balise non trouvée: Lancer une recherche
-            self.logger.info("Beacon NOT detected. Initiating SEARCH turn.")
-            search_angle = math.radians(15) # Tourner de 15 degrés pour chercher
-            self.current_sub_command = Tourner(search_angle, self.vitesse_rotation * 0.5, self.adapter)
-            self.current_sub_command.start()
-        else:
-            # Balise trouvée
-            detection = detections[0]
-            center_x, _ = detection["center"]
-            radius = detection["radius"]
-            self.logger.debug(f"Beacon detected at center=({center_x},{_}), radius={radius:.1f}")
-
-            # 4. Vérifier si assez proche
-            if radius >= self.tolerance_radius:
-                self.logger.info(f"Beacon REACHED (radius {radius:.1f} >= {self.tolerance_radius}). Initiating STOP.")
-                self.current_sub_command = Arreter(self.adapter)
-                self.current_sub_command.start()
-                self.finished = True # La stratégie est terminée
-            else:
-                # 5. Calculer l'erreur angulaire
-                image_width = 400 # A AJUSTER SI NÉCESSAIRE
-                center_image_x = image_width / 2
-                error_x = center_x - center_image_x
-                fov_horizontal = 60 # degrés, A AJUSTER SI NÉCESSAIRE
-                angle_error = math.degrees(math.atan((error_x / center_image_x) * math.tan(math.radians(fov_horizontal / 2))))
-                self.logger.debug(f"Calculated angular error: {angle_error:.2f} degrees.")
-
-                # 6. Décider entre Tourner et Avancer
-                if abs(angle_error) >= self.tolerance_angle:
-                    # Non aligné: Lancer commande Tourner
-                    self.logger.info(f"MISALIGNED (error {angle_error:.2f} >= {self.tolerance_angle}). Initiating TURN by {angle_error:.1f} deg.")
-                    # Tourner de l'angle d'erreur calculé
-                    self.current_sub_command = Tourner(math.radians(angle_error), self.vitesse_rotation, self.adapter)
-                    self.current_sub_command.start()
-                else:
-                    # Aligné: Lancer commande Avancer
-                    self.logger.info(f"ALIGNED (error {angle_error:.2f} < {self.tolerance_angle}). Initiating ADVANCE by {self.step_distance}cm.")
-                    # Avancer d'une petite distance fixe
-                    self.current_sub_command = Avancer(self.step_distance, self.vitesse_avance, self.adapter)
-                    self.current_sub_command.start()
-        
-        # La stratégie elle-même n'est pas terminée (sauf si Arreter a été appelée)
-        # Elle retournera False car une sous-commande vient d'être lancée (ou on attend une image)
-        return False 
+        return self.finished
 
     def is_finished(self):
         return self.finished
+
+
 
 # Commande composite pour regrouper plusieurs commandes asynchrones
 class CommandeComposite(AsyncCommande):
