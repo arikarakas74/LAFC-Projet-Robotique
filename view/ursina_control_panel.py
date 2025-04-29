@@ -1,7 +1,7 @@
 from ursina import Button, Text, color
-from controller.StrategyAsync import FollowBeaconByImageStrategy
+from controller.StrategyAsync import FollowBeaconByCommandsStrategy
 import threading
-
+import time 
 
 class UrsinaControlPanel:
     def __init__(self, simulation_controller, map_model):
@@ -43,11 +43,34 @@ class UrsinaControlPanel:
         self.status_text.text = "Mode: Set End"
 
     def suivre(self):
+
+        """ exécution de la stratégie FollowBeaconByCommandsStrategy par le robot """
         if not self.simulation_controller.simulation_running:
             print("⚠️ Veuillez d'abord démarrer la simulation.")
             return
-        self.current_strategy = FollowBeaconByImageStrategy(vitesse_rotation=90, vitesse_avance=250)
-        self.current_strategy.start(self.simulation_controller.robot_model)
+
+        from controller.StrategyAsync import FollowBeaconByCommandsStrategy
+
+        # adapter = ton objet qui gère set_motor_speed… souvent simulation_controller.robot_controller.adapter
+
+        ursina_view = self.ursina_view  # injecté dans __init__ d'UrsinaView
+
+        # instancie la stratégie : avance 10 cm à 60°/s et tourne à 90°/s, FOV 60°
+        beacon_strategy = FollowBeaconByCommandsStrategy(
+            adapter=self.simulation_controller.robot_model,
+            ursina_view=ursina_view
+
+        )
+
+
+        def run_strategy():
+            delta_time = 0.02  # 20 ms entre chaque step (50 Hz)
+            while not beacon_strategy.is_finished():
+                beacon_strategy.step(delta_time)
+                time.sleep(0.02)
+            print("✅ FollowBeaconByCommandsStrategy terminée (ou interrompue).")
+
+        threading.Thread(target=run_strategy, daemon=True).start()
 
     def draw_square(self):
         """ exécution de la stratégie de dessin de carré par le robot """
