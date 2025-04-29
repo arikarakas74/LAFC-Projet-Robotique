@@ -153,97 +153,124 @@ class PolygonStrategy(AsyncCommande):
     def is_finished(self):
         return self.finished
 
-# Stratégie pour suivre une balise mobile
-class FollowBeaconByImageStrategy(AsyncCommande):
-    def __init__(self, vitesse_rotation, vitesse_avance, tolerance_angle=2, tolerance_radius=20, step_distance=5, adapter=None, vpython_view=None):
-        """
-        vitesse_rotation : vitesse de rotation du robot (en degrés ou rad/s, à calibrer)
-        vitesse_avance : vitesse d'avancement du robot
-        tolerance_angle : seuil en degrés pour considérer que la balise est centrée
-        tolerance_radius : seuil sur le rayon détecté indiquant que le robot est proche de la balise
-        step_distance : distance d'avancée par commande
-        adapter : interface de commande (doit disposer de set_motor_speed, etc.)
-        vpython_view : instance de VpythonView qui contient la fonction analyze_image modifiée
-        """
+
+
+
+
+
+
+
+
+class FollowBeaconByCommandsStrategy(AsyncCommande):
+    """
+    Stratégie qui suit une balise BLEUE :
+      1) Recherche (pivot) si perdue.
+      2) Avance droit tant qu’elle est loin (< skip_centering_radius).
+      3) Si dans le cône avant, calcule DISTANCE unique pour Avancer.
+      4) Lance un seul Avancer(dist_cm) et attend sa fin.
+    """
+    def __init__(self, adapter, ursina_view,
+                 target_radius_px: float      = 160.0,
+                 cm_per_px: float             = 0.9,
+                 forward_speed: float         = 2000.0,
+                 turn_speed_deg: float        = 90.0,
+                 skip_centering_radius: float = 4.0,
+                 forward_cone_frac: float     = 0.4):
         super().__init__(adapter)
-        self.vitesse_rotation = vitesse_rotation
-        self.vitesse_avance = vitesse_avance
-        self.tolerance_angle = tolerance_angle  # en degrés
-        self.tolerance_radius = tolerance_radius  # seuil sur le rayon détecté
-        self.step_distance = step_distance
-        self.vpython_view = vpython_view
-        self.logger = logging.getLogger("strategy.FollowBeaconByImageStrategy")
-        self.started = False
-        self.finished = False
+        self.view                   = ursina_view
+        self.target_radius_px       = target_radius_px
+        self.cm_per_px              = cm_per_px
+        self.forward_speed          = forward_speed
+        self.turn_speed_deg         = turn_speed_deg
+        self.skip_centering_radius  = skip_centering_radius
+        self.forward_cone_frac      = forward_cone_frac
+        self.composite              = None
+        self.finished               = False
+        self.logger                 = logging.getLogger("strategy.FollowBeacon")
 
     def start(self):
-        self.started = True
-        self.logger.info("FollowBeaconByImageStrategy started.")
+        print("[FollowBeacon] start() → moteurs à 0")
+        self.adapter.set_motor_speed("left",  0)
+        self.adapter.set_motor_speed("right", 0)
 
     def step(self, delta_time):
-        if not self.started:
-            self.start()
-
-        # Récupérer le chemin de la dernière image capturée
-        latest_image = self.vpython_view.get_latest_image()
-        if latest_image is None:
-            self.logger.error("Aucune image capturée.")
-            return False
-
-        # Analyse de l'image pour détecter la balise bleue
-        detections = self.vpython_view.analyze_image(latest_image)
-        if not detections:
-            self.logger.info("Aucune balise détectée, rotation pour recherche...")
-            # Si aucune balise n'est détectée, tourner d'une petite rotation (ici 10°)
-            turn_angle = math.radians(10)
-            turn_cmd = Tourner(turn_angle, self.vitesse_rotation, self.adapter)
-            turn_cmd.start()
-            turn_cmd.step(delta_time)
-            return False
-
-        # Considérer la première détection comme la balise ciblée
-        detection = detections[0]
-        center_x, _ = detection["center"]
-
-        # Vérifier si le rayon détecté indique que le robot est déjà proche
-        if detection["radius"] >= self.tolerance_radius:
-            self.logger.info("Balise atteinte, arrêt des moteurs.")
-            # Arrêter les moteurs (méthode à implémenter selon votre adapter)
-            self.adapter.set_motor_speed("left", 0)
-            self.adapter.set_motor_speed("right", 0)
-            self.finished = True
+        print("[FollowBeacon] step()")
+        if self.finished:
+            print("  → terminé")
             return True
 
-        # Supposons une largeur d'image de 400 pixels (adapter selon votre configuration)
-        image_width = 400  
-        image_center_x = image_width / 2
-        error_x = center_x - image_center_x
+        # 1) Si un Avancer est en cours, on le poursuit jusqu'à la fin
+        if self.composite and not self.composite.is_finished():
+            print("  → continuation de l’Avancer en cours")
+            running = not self.composite.step(delta_time)
+            print(f"    → still running: {running}")
+            return not running
 
-        # Calcul de l'angle d'erreur en radians à partir du décalage horizontal et du champ de vision
-        field_of_view = math.radians(60)  # champ de vision de 60°
-        angle_error = (error_x / image_width) * field_of_view
-        angle_error_deg = math.degrees(angle_error)
-        self.logger.info(f"Erreur angulaire calculée : {angle_error_deg:.2f}°")
+        # 2) Récupérer l'image et détecter le beacon
+        img = self.view.get_robot_camera_image()
+        if img is None:
+            print("  → pas d'image, arrêt")
+            self.adapter.set_motor_speed("left",  0)
+            self.adapter.set_motor_speed("right", 0)
+            return False
 
-        # Zone morte : si l'erreur angulaire est inférieure à la tolérance, on considère l'angle comme nul
-        if abs(angle_error_deg) < self.tolerance_angle:
-            angle_error = 0
+        beacon = self.view.detect_blue_beacon(img)
+        if beacon is None:
+            print("  → beacon perdu, pivot recherche")
+            self.adapter.set_motor_speed("left",  self.turn_speed_deg)
+            self.adapter.set_motor_speed("right", -self.turn_speed_deg)
+            return False
 
-        # Appliquer une commande corrective en fonction de l'erreur d'orientation
-        if angle_error != 0:
-            turn_cmd = Tourner(angle_error, self.vitesse_rotation, self.adapter)
-            turn_cmd.start()
-            turn_cmd.step(delta_time)
+        radius_px, cx, _ = beacon
+        w = img.shape[1]
+        center_px = w // 2
+        print(f"  → beacon vu: radius={radius_px:.1f}px, cx={cx}")
+
+        # 3) Si très loin, avance droit par un seul Avancer
+        if radius_px < self.skip_centering_radius:
+            dist_cm = (self.target_radius_px - radius_px) * self.cm_per_px
+            print(f"    → loin (radius<{self.skip_centering_radius}), Avancer unique {dist_cm:.1f} cm")
+            self._launch_forward(dist_cm, delta_time)
+            return False
+
+        # 4) Si dans le cône avant, calcule distance unique
+        left_lim  = center_px * (1 - self.forward_cone_frac)
+        right_lim = center_px * (1 + self.forward_cone_frac)
+        if left_lim <= cx <= right_lim:
+            # distance jusqu’à radius cible
+            dist_cm = max(0.0, (self.target_radius_px - radius_px) * self.cm_per_px)
+            print(f"    → dans cône avant, Avancer unique {dist_cm:.1f} cm")
+            # si déjà proche, on termine
+            if dist_cm <= 0:
+                print("    → déjà dans radius cible, fin")
+                self.finished = True
+                return True
+            self._launch_forward(dist_cm, delta_time)
+            return False
+
+        # 5) Sinon, on recentre par pivot avant d’avancer
+        if cx > center_px:
+            print("    → beacon à droite, pivot à DROITE")
+            self.adapter.set_motor_speed("left",  -self.turn_speed_deg)
+            self.adapter.set_motor_speed("right",  self.turn_speed_deg)
         else:
-            advance_cmd = Avancer(self.step_distance, self.vitesse_avance, self.adapter)
-            advance_cmd.start()
-            advance_cmd.step(delta_time)
+            print("    → beacon à gauche, pivot à GAUCHE")
+            self.adapter.set_motor_speed("left",   self.turn_speed_deg)
+            self.adapter.set_motor_speed("right",  -self.turn_speed_deg)
+        return False
 
-        return self.finished
+    def _launch_forward(self, dist_cm, delta_time):
+        """Crée un composite Avancer(dist_cm) et le démarre une fois pour toutes."""
+        print(f"      → création de Avancer({dist_cm:.1f} cm)")
+        self.composite = CommandeComposite(self.adapter)
+        self.composite.ajouter_commande(
+            Avancer(dist_cm, self.forward_speed, self.adapter)
+        )
+        self.composite.start()
+        self.composite.step(delta_time)
 
     def is_finished(self):
         return self.finished
-
 
 
 # Commande composite pour regrouper plusieurs commandes asynchrones
