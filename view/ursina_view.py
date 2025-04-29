@@ -1,9 +1,10 @@
 from ursina import *
 from panda3d.core import Texture, GraphicsOutput, GraphicsPipe, WindowProperties, FrameBufferProperties
 import time
-from controller.StrategyAsync import FollowBeaconByImageStrategy
+from controller.StrategyAsync import FollowBeaconByCommandsStrategy
 import numpy as np
 from PIL import Image
+import cv2
 
 
 class UrsinaView(Entity):
@@ -145,6 +146,9 @@ class UrsinaView(Entity):
 
         self.frame_counter += 1
         self.img_array = self.get_robot_camera_image()
+        beacon_pos = self.detect_blue_beacon()
+        if beacon_pos:
+            print(f"Beacon bleu détecté en pixel : {beacon_pos}")
 
         if not self.simulation_controller.simulation_running:
             return
@@ -163,10 +167,7 @@ class UrsinaView(Entity):
         if held_keys['s']:
             rc.move_backward()
 
-        if isinstance(self.control_panel.current_strategy, FollowBeaconByImageStrategy):
-            end = self.simulation_controller.map_model.end_position
-            if self.control_panel.end_box:
-                self.control_panel.end_box.position = (end[0] / 100 - 40, 1, end[1] / 100 - 30)
+
                 
         current_pos = (self.robot_entity.position.x, 0.1, self.robot_entity.position.z)
         if not self.trail_points or self.trail_points[-1] != current_pos:
@@ -180,6 +181,11 @@ class UrsinaView(Entity):
                 else:
                     self.trail_entity.model.vertices = self.trail_points
                     self.trail_entity.model.generate()
+
+        self.img_array = self.get_robot_camera_image()
+    # 2. Sauvegarder immédiatement, si présence d'image
+        if self.img_array is not None:
+            self.save_robot_camera_image()
 
     def input(self, key):
         if key == 'p':
@@ -221,3 +227,46 @@ class UrsinaView(Entity):
         if self.control_panel.end_box:
             destroy(self.control_panel.end_box)
             self.control_panel.end_box = None
+
+
+    def detect_blue_beacon(self, img_array=None):
+        """
+        Renvoie (radius, cx, cy) du plus grand spot bleu détecté,
+        ou None s'il n'y en a pas.
+        """
+        if img_array is None:
+            img_array = self.img_array
+        if img_array is None:
+            return None
+
+        # Flip vertical si nécessaire
+        frame = np.flipud(img_array)
+
+        # Conversion RGB→BGR puis HSV
+        bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+
+        # Masque pour le bleu
+        lower_blue = np.array([100, 150, 50])
+        upper_blue = np.array([140, 255, 255])
+        mask = cv2.inRange(hsv, lower_blue, upper_blue)
+
+        # Nettoyage du masque
+        kernel = np.ones((5,5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+        # Contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            return None
+
+        # Plus grand contour
+        c = max(contours, key=cv2.contourArea)
+
+        # Cercle minimal englobant
+        (cx, cy), radius = cv2.minEnclosingCircle(c)
+        if radius < 5:    # filtre optionnel des petits bruits
+            return None
+
+        return radius, int(cx), int(cy)
