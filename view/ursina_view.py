@@ -92,9 +92,10 @@ class UrsinaView(Entity):
 
         self.robot_cam = base.makeCamera(self.robot_cam_window)
         self.robot_cam.reparentTo(self.robot_entity)
-        self.robot_cam.setPos(1.0, 0.5, 0.0)
+        self.robot_cam.setPos(0.0, 0.4, 0.0)
         self.robot_cam.setHpr(-90, 0, 0)
         self.robot_cam_window.addRenderTexture(self.robot_cam_texture, GraphicsOutput.RTMCopyRam)
+        self.robot_cam.node().getLens().setFov(50)
     
     def get_robot_camera_image(self):
         texture = self.robot_cam_texture
@@ -183,9 +184,9 @@ class UrsinaView(Entity):
                     self.trail_entity.model.generate()
 
         self.img_array = self.get_robot_camera_image()
-    # 2. Sauvegarder immédiatement, si présence d'image
-        if self.img_array is not None:
-            self.save_robot_camera_image()
+    # 2. Sauvegarder immédiatement, si présence d'image (pas obligatoire comme les images sont conservés dans la mémoire)
+        # if self.img_array is not None:
+        #     self.save_robot_camera_image()
 
     def input(self, key):
         if key == 'p':

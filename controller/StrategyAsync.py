@@ -175,7 +175,7 @@ class FollowBeaconByCommandsStrategy(AsyncCommande):
                  forward_speed: float         = 2000.0,
                  turn_speed_deg: float        = 90.0,
                  skip_centering_radius: float = 4.0,
-                 forward_cone_frac: float     = 0.4):
+                 forward_cone_frac: float     = 0.5):
         super().__init__(adapter)
         self.view                   = ursina_view
         self.target_radius_px       = target_radius_px
@@ -225,6 +225,16 @@ class FollowBeaconByCommandsStrategy(AsyncCommande):
         w = img.shape[1]
         center_px = w // 2
         print(f"  → beacon vu: radius={radius_px:.1f}px, cx={cx}")
+
+        # Si près au beacon, arrete
+        if radius_px >= self.target_radius_px * 0.97:   # %3 tolerance
+            print("    → Seuil de rayon atteint, ARRET.")
+            self.composite = CommandeComposite(self.adapter)
+            self.composite.ajouter_commande(Arreter(self.adapter))
+            self.composite.start()
+            self.composite.step(delta_time)
+            self.finished = True
+            return True
 
         # 3) Si très loin, avance droit par un seul Avancer
         if radius_px < self.skip_centering_radius:
