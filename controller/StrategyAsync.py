@@ -51,7 +51,7 @@ class Avancer(AsyncCommande):
     def is_finished(self):
         return self.finished
 
-# Commande pour tourner d'un angle donné (en radians) avec une vitesse de référence (en degrés/s)
+# Commande pour tourner d'un angle donné avec une vitesse de référence
 class Tourner(AsyncCommande):
     def __init__(self, angle_rad, vitesse_deg_s, adapter):
         super().__init__(adapter)
@@ -64,6 +64,8 @@ class Tourner(AsyncCommande):
 
     def start(self):
         self.adapter.decide_turn_direction(self.angle_rad, self.base_speed)
+        self.fast_wheel = self.adapter.fast_wheel
+        self.slow_wheel = self.adapter.slow_wheel
         self.started = True
         self.logger.info(f"Début virage: {math.degrees(self.angle_rad):.1f}°")
         print("Commande tourner démarrée.")
@@ -71,19 +73,26 @@ class Tourner(AsyncCommande):
     def step(self, delta_time):
         angle = self.adapter.calcule_angle()
         error = self.angle_rad - angle
-        tol = math.radians(0.5)  # Tolérance de 0.5°
+        tol = math.radians(0.3)  # Tolérance de 0.3°
+
+        close  = abs(error) < math.radians(8)
+        coeff  = 0.3 if close else 1.0
+        self.adapter.set_motor_speed(self.fast_wheel, self.base_speed * coeff)
+        
+        # Correction proportionnelle sur la roue lente
+        Kp = 0.6
+        correction = Kp * math.degrees(error)
+        new_slow_speed = self.base_speed * self.speed_ratio * coeff + correction
+        new_slow_speed = max(min(new_slow_speed, self.base_speed * coeff), 0)
+        self.adapter.slow_speed(new_slow_speed)
+
         if abs(error) <= tol:
             self.adapter.set_motor_speed("left", 0)
             self.adapter.set_motor_speed("right", 0)
             self.finished = True
             self.logger.info(f"Virage terminé | Erreur: {math.degrees(error):.2f}°")
             return True
-        # Correction proportionnelle sur la roue lente
-        Kp = 0.8
-        correction = Kp * math.degrees(error)
-        new_slow_speed = self.base_speed * self.speed_ratio + correction
-        new_slow_speed = max(min(new_slow_speed, self.base_speed), 0)
-        self.adapter.slow_speed(new_slow_speed)
+        
         return False
 
     def is_finished(self):

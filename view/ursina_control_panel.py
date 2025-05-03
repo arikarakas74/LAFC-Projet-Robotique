@@ -12,7 +12,9 @@ class UrsinaControlPanel:
         self.mode = None
         self.start_box = None
         self.end_box = None
-        self.ursina_view = None  
+        self.ursina_view = None
+        self.square_thread  = None
+        self.square_strategy = None
 
         self.create_buttons()
 
@@ -77,19 +79,32 @@ class UrsinaControlPanel:
         if not self.simulation_controller.simulation_running:
             print("⚠️ Veuillez d'abord démarrer la simulation.")
             return
+        
+        if self.square_thread and self.square_thread.is_alive():
+            print("⚠️  Carré déjà en cours – ignorer.")
+            return
         from controller.StrategyAsync import PolygonStrategy
         
-        square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=500, vitesse_avance=1050, vitesse_rotation=260)
+        self.square_strategy = PolygonStrategy(4,self.simulation_controller.robot_model, side_length_cm=500, vitesse_avance=1050, vitesse_rotation=260)
         
         def run_strategy():
             delta_time = 0.02  # renouvelement 20 ms par fois
             
-            while not square_strategy.is_finished():
-                square_strategy.step(delta_time)
+            self.square_strategy.start()
+            while (self.simulation_controller.simulation_running and not self.square_strategy.is_finished()):
+                self.square_strategy.step(delta_time)
 
-        threading.Thread(target=run_strategy, daemon=True).start()
+            self.square_thread = None
+            self.square_strategy = None
+
+        self.square_thread = threading.Thread(target=run_strategy, daemon=True)
+        self.square_thread.start()
 
     def reset_simulation(self):
+        if self.square_strategy:
+            self.square_strategy.finished = True
+        if self.square_thread and self.square_thread.is_alive():
+            self.square_thread.join(timeout=0.2)
         self.simulation_controller.reset_simulation()
         self.ursina_view.reset_ursina_view()
         self.running = False
