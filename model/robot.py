@@ -54,7 +54,18 @@ class RobotModel(RobotAdapter):
 
     
     def get_distance(self) -> float:
-        return 0.0  # À implémenter selon le modèle
+        """
+        Retourne la distance de l'obstacle devant le robot.
+        """
+        max_range = 2000
+        step = 5
+        x, y, ang = self.x, self.y, self.direction_angle
+        for d in range(0, max_range, step):
+            px = x + d*math.cos(ang)
+            py = y + d*math.sin(ang)
+            if self.map_model.is_collision(px, py):
+                return d
+        return max_range
     
 
 

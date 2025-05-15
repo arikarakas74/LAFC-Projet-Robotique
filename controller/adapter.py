@@ -10,7 +10,10 @@ class RobotAdapter(ABC):
     def get_motor_positions(self) -> dict:
         pass
     
-  
+    @abstractmethod
+    def get_distance(self) -> float:
+        """Retourne la distance devant le robot."""
+        pass
     
     @abstractmethod
     def calculer_distance_parcourue(self):

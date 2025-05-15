@@ -24,14 +24,18 @@ class UrsinaControlPanel:
                    on_click=self.create_start_box),
             Button(text='Set Balise', color=color.lime, position=(-0.8, 0.35), scale=(0.2, 0.08),
                    on_click=self.create_end_box),
-            Button(text='Run Simulation', color=color.orange, position=(-0.8, 0.25), scale=(0.2, 0.08),
+            Button(text='Add Obstacle', color=color.red, position=(-0.8, 0.25), scale=(0.2, 0.08),
+                   on_click=self.set_obstacle_mode),
+            Button(text='Run Simulation', color=color.orange, position=(-0.8, 0.15), scale=(0.2, 0.08),
                    on_click=self.simulation_controller.run_simulation),
-            Button(text='Follow Balise', color=color.yellow, position=(-0.8, 0.15), scale=(0.2, 0.08),
+            Button(text='Follow Balise', color=color.yellow, position=(-0.8, 0.05), scale=(0.2, 0.08),
                    on_click=self.suivre),
-            Button(text='Draw Square', color=color.cyan, position=(-0.8, 0.05), scale=(0.2, 0.08),
+            Button(text='Draw Square', color=color.cyan, position=(-0.8, -0.05), scale=(0.2, 0.08),
                    on_click=self.draw_square),
-            Button(text='Reset', color=color.red, position=(-0.8, -0.05), scale=(0.2, 0.08),
-                   on_click=self.reset_simulation)
+            Button(text='Reset', color=color.red, position=(-0.8, -0.15), scale=(0.2, 0.08),
+                   on_click=self.reset_simulation),
+            Button(text='Stop Wall', color=color.orange, position=(-0.8, -0.25), scale=(0.2, 0.08),
+                   on_click=self.stop_before_wall)
         ]
 
         self.status_text = Text(text='Mode: None', position=(-0.85, 0.55), origin=(0, 0), scale=1.2)
@@ -44,6 +48,35 @@ class UrsinaControlPanel:
         self.mode = 'set_end'
         self.status_text.text = "Mode: Set End"
 
+    def set_obstacle_mode(self):
+        """Active le mode de placement d'obstacles."""
+        self.mode = 'set_obstacle'
+        self.status_text.text = "Mode: Add Obstacle"
+
+    def stop_before_wall(self):
+        """ exécution de la stratégie StopBeforeWall par le robot """
+        if not self.simulation_controller.simulation_running:
+            print("⚠️ Veuillez d'abord démarrer la simulation.")
+            return
+
+        from controller.StrategyAsync import StopBeforeWall
+
+        # instancie la stratégie : arrêt à 100cm, vitesse 8000 dps
+        wall_strategy = StopBeforeWall(
+            target=100,
+            vitesse_dps=8000,
+            adapter=self.simulation_controller.robot_model
+        )
+
+        def run_strategy():
+            delta_time = 0.02  # 20 ms entre chaque step (50 Hz)
+            while not wall_strategy.is_finished():
+                wall_strategy.step(delta_time)
+                time.sleep(0.02)
+            print("✅ StopBeforeWall terminée.")
+
+        threading.Thread(target=run_strategy, daemon=True).start()
+    
     def suivre(self):
 
         """ exécution de la stratégie FollowBeaconByCommandsStrategy par le robot """
@@ -81,7 +114,7 @@ class UrsinaControlPanel:
             return
         
         if self.square_thread and self.square_thread.is_alive():
-            print("⚠️  Carré déjà en cours – ignorer.")
+            print("⚠️  Carré déjà en cours - ignorer.")
             return
         from controller.StrategyAsync import PolygonStrategy
         

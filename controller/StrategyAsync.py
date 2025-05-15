@@ -164,9 +164,38 @@ class PolygonStrategy(AsyncCommande):
 
 
 
+class StopBeforeWall(AsyncCommande):
+    """
+    Avance à vitesse constante jusqu’à ce que la distance mesurée
+    devienne < target. Puis stop et termine.
+    """
+    def __init__(self, target: float, vitesse_dps: float, adapter):
+        super().__init__(adapter)
+        self.target = target
+        self.vitesse = vitesse_dps
+        self.started = False
+        self.finished = False
 
+    def start(self):
+        self.adapter.set_motor_speed("left",  self.vitesse)
+        self.adapter.set_motor_speed("right", self.vitesse)
+        self.started = True
+        print("[StopBeforeWall] GO !")
 
+    def step(self, dt):
+        if not self.started:
+            self.start()
+        dist = self.adapter.get_distance()
+        print(f"[StopBeforeWall] distance={dist:.0f}")
+        if dist <= self.target:
+            self.adapter.set_motor_speed("left",  0)
+            self.adapter.set_motor_speed("right", 0)
+            self.finished = True
+            print("[StopBeforeWall] Arrêt")
+        return self.finished
 
+    def is_finished(self):
+        return self.finished
 
 
 
@@ -184,7 +213,7 @@ class FollowBeaconByCommandsStrategy(AsyncCommande):
                  forward_speed: float         = 2000.0,
                  turn_speed_deg: float        = 90.0,
                  skip_centering_radius: float = 4.0,
-                 forward_cone_frac: float     = 0.5):
+                 forward_cone_frac: float     = 0.4):
         super().__init__(adapter)
         self.view                   = ursina_view
         self.target_radius_px       = target_radius_px

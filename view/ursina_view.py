@@ -212,6 +212,28 @@ class UrsinaView(Entity):
             cp.end_box = Entity(model='cube', color=color.blue, scale=0.5, position=(pos.x, 1, pos.z))
             cp.map_model.set_end_position((x, y))
             print(f"✅ End position set: ({x}, {y})")
+            
+        elif cp.mode == 'set_obstacle':
+            size_x = 25
+            size_z = 100
+            points = [
+                (x - size_x, y - size_z),
+                (x + size_x, y - size_z),
+                (x + size_x, y + size_z), 
+                (x - size_x, y + size_z)
+            ]
+            
+            obstacle = Entity(
+                model='cube',
+                color=color.black,
+                scale=(0.5, 2, 2), 
+                position=(pos.x, 0.25, pos.z),
+                collider='box'
+            )
+            
+            obstacle_id = f"obstacle_{len(cp.map_model.obstacles)}"
+            cp.map_model.add_obstacle(obstacle_id, points, obstacle, [])
+            print(f"✅ Obstacle added at: ({x}, {y})")
 
     def reset_ursina_view(self):
         self.simulation_controller.reset_simulation()
@@ -229,6 +251,12 @@ class UrsinaView(Entity):
             destroy(self.control_panel.end_box)
             self.control_panel.end_box = None
 
+        # Supprimer les obstacles
+        for obstacle_id in list(self.control_panel.map_model.obstacles.keys()):
+            points, obstacle_entity, line_ids = self.control_panel.map_model.obstacles[obstacle_id]
+            if obstacle_entity:
+                destroy(obstacle_entity)
+            self.control_panel.map_model.remove_obstacle(obstacle_id)
 
     def detect_blue_beacon(self, img_array=None):
         """
