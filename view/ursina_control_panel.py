@@ -15,26 +15,30 @@ class UrsinaControlPanel:
         self.ursina_view = None
         self.square_thread  = None
         self.square_strategy = None
+        self.wall_thread = None
+        self.wall_strategy = None
+        self.beacon_thread = None
+        self.beacon_strategy = None
 
         self.create_buttons()
 
     def create_buttons(self):
         self.buttons = [
-            Button(text='Set Start', color=color.azure, position=(-0.8, 0.45), scale=(0.2, 0.08),
+            Button(text='Set Start', color=color.azure, text_color=color.black, position=(-0.8, 0.45), scale=(0.2, 0.08),
                    on_click=self.create_start_box),
-            Button(text='Set Balise', color=color.lime, position=(-0.8, 0.35), scale=(0.2, 0.08),
+            Button(text='Set Balise', color=color.lime, text_color=color.black, position=(-0.8, 0.35), scale=(0.2, 0.08),
                    on_click=self.create_end_box),
-            Button(text='Add Obstacle', color=color.red, position=(-0.8, 0.25), scale=(0.2, 0.08),
+            Button(text='Add Obstacle', color=color.red, text_color=color.black, position=(-0.8, 0.25), scale=(0.2, 0.08),
                    on_click=self.set_obstacle_mode),
-            Button(text='Run Simulation', color=color.orange, position=(-0.8, 0.15), scale=(0.2, 0.08),
+            Button(text='Run Simulation', color=color.orange, text_color=color.black, position=(-0.8, 0.15), scale=(0.2, 0.08),
                    on_click=self.simulation_controller.run_simulation),
-            Button(text='Follow Balise', color=color.yellow, position=(-0.8, 0.05), scale=(0.2, 0.08),
+            Button(text='Follow Balise', color=color.yellow, text_color=color.black, position=(-0.8, 0.05), scale=(0.2, 0.08),
                    on_click=self.suivre),
-            Button(text='Draw Square', color=color.cyan, position=(-0.8, -0.05), scale=(0.2, 0.08),
+            Button(text='Draw Square', color=color.cyan, text_color=color.black, position=(-0.8, -0.05), scale=(0.2, 0.08),
                    on_click=self.draw_square),
-            Button(text='Reset', color=color.red, position=(-0.8, -0.15), scale=(0.2, 0.08),
+            Button(text='Reset', color=color.red, text_color=color.black, position=(-0.8, -0.15), scale=(0.2, 0.08),
                    on_click=self.reset_simulation),
-            Button(text='Stop Wall', color=color.orange, position=(-0.8, -0.25), scale=(0.2, 0.08),
+            Button(text='Stop Wall', color=color.orange, text_color=color.black, position=(-0.8, -0.25), scale=(0.2, 0.08),
                    on_click=self.stop_before_wall)
         ]
 
@@ -62,7 +66,7 @@ class UrsinaControlPanel:
         from controller.StrategyAsync import StopBeforeWall
 
         # instancie la stratégie : arrêt à 100cm, vitesse 8000 dps
-        wall_strategy = StopBeforeWall(
+        self.wall_strategy = StopBeforeWall(
             target=100,
             vitesse_dps=8000,
             adapter=self.simulation_controller.robot_model
@@ -70,12 +74,16 @@ class UrsinaControlPanel:
 
         def run_strategy():
             delta_time = 0.02  # 20 ms entre chaque step (50 Hz)
-            while not wall_strategy.is_finished():
-                wall_strategy.step(delta_time)
+            self.wall_strategy.start()
+            while (self.simulation_controller.simulation_running and not self.wall_strategy.is_finished()):
+                self.wall_strategy.step(delta_time)
                 time.sleep(0.02)
             print("✅ StopBeforeWall terminée.")
+            self.wall_strategy = None
+            self.wall_thread = None
 
-        threading.Thread(target=run_strategy, daemon=True).start()
+        self.wall_thread = threading.Thread(target=run_strategy, daemon=True)
+        self.wall_thread.start()
     
     def suivre(self):
 
@@ -86,26 +94,27 @@ class UrsinaControlPanel:
 
         from controller.StrategyAsync import FollowBeaconByCommandsStrategy
 
-        # adapter = ton objet qui gère set_motor_speed… souvent simulation_controller.robot_controller.adapter
-
         ursina_view = self.ursina_view  # injecté dans __init__ d'UrsinaView
 
-        # instancie la stratégie : avance 10 cm à 60°/s et tourne à 90°/s, FOV 60°
-        beacon_strategy = FollowBeaconByCommandsStrategy(
+        # instancie la stratégie : avance 10 cm à 60°/s et tourne à 90°/s
+        self.beacon_strategy = FollowBeaconByCommandsStrategy(
             adapter=self.simulation_controller.robot_model,
             ursina_view=ursina_view
 
         )
 
-
         def run_strategy():
             delta_time = 0.02  # 20 ms entre chaque step (50 Hz)
-            while not beacon_strategy.is_finished():
-                beacon_strategy.step(delta_time)
+            self.beacon_strategy.start()
+            while (self.simulation_controller.simulation_running and not self.beacon_strategy.is_finished()):
+                self.beacon_strategy.step(delta_time)
                 time.sleep(0.02)
             print("✅ FollowBeaconByCommandsStrategy terminée (ou interrompue).")
+            self.beacon_thread = None
+            self.beacon_strategy = None
 
-        threading.Thread(target=run_strategy, daemon=True).start()
+        self.beacon_thread = threading.Thread(target=run_strategy, daemon=True)
+        self.beacon_thread.start()
 
     def draw_square(self):
         """ exécution de la stratégie de dessin de carré par le robot """
@@ -138,6 +147,14 @@ class UrsinaControlPanel:
             self.square_strategy.finished = True
         if self.square_thread and self.square_thread.is_alive():
             self.square_thread.join(timeout=0.2)
+        if self.beacon_strategy:
+            self.beacon_strategy.finished = True
+        if self.beacon_thread and self.beacon_thread.is_alive():
+            self.beacon_thread.join(timeout=0.2)
+        if self.wall_strategy:
+            self.wall_strategy.finished = True
+        if self.wall_thread and self.wall_thread.is_alive():
+            self.wall_thread.join(timeout=0.2)
         self.simulation_controller.reset_simulation()
         self.ursina_view.reset_ursina_view()
         self.running = False
