@@ -52,6 +52,7 @@ class Avancer(AsyncCommande):
         return self.finished
 
 # Commande pour tourner d'un angle donné avec une vitesse de référence
+# Commande pour tourner d'un angle donné avec une vitesse de référence
 class Tourner(AsyncCommande):
     def __init__(self, angle_rad, vitesse_deg_s, adapter):
         super().__init__(adapter)
@@ -72,10 +73,11 @@ class Tourner(AsyncCommande):
 
     def step(self, delta_time):
         angle = self.adapter.calcule_angle()
-        error = self.angle_rad - angle
-        tol = math.radians(0.3)  # Tolérance de 0.3°
 
+        error = self.angle_rad - abs(angle)
+        tol =math.radians(0.3)  # Tolérance de 0.3°
         close  = abs(error) < math.radians(8)
+
         coeff  = 0.3 if close else 1.0
         self.adapter.set_motor_speed(self.fast_wheel, self.base_speed * coeff)
         
@@ -85,7 +87,8 @@ class Tourner(AsyncCommande):
         new_slow_speed = self.base_speed * self.speed_ratio * coeff + correction
         new_slow_speed = max(min(new_slow_speed, self.base_speed * coeff), 0)
         self.adapter.slow_speed(new_slow_speed)
-
+        print(abs(error))
+        print(tol)
         if abs(error) <= tol:
             self.adapter.set_motor_speed("left", 0)
             self.adapter.set_motor_speed("right", 0)
@@ -101,6 +104,7 @@ class Tourner(AsyncCommande):
     def calculer_angle_par_encodages(self, pos_init_l, pos_init_r, pos_l, pos_r, rayon, entraxe):
         """Version simplifiée du calcul d'angle à partir des encodeurs."""
         return ((pos_l - pos_init_l) - (pos_r - pos_init_r)) * (math.pi * rayon) / (180 * entraxe)
+
 
 # Commande pour arrêter immédiatement le robot
 class Arreter(AsyncCommande):

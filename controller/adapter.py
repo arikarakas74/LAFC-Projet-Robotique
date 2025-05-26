@@ -10,10 +10,7 @@ class RobotAdapter(ABC):
     def get_motor_positions(self) -> dict:
         pass
     
-    @abstractmethod
-    def get_distance(self) -> float:
-        """Retourne la distance devant le robot."""
-        pass
+  
     
     @abstractmethod
     def calculer_distance_parcourue(self):
@@ -39,7 +36,7 @@ class RealRobotAdapter(RobotAdapter):
         self.distance=0
     
     def set_motor_speed(self, motor: str, speed: float):
-        port = "MOTOR_LEFT" if motor == "left" else "MOTOR_RIGHT"
+        port = 1 if motor == "left" else 2
         self.robot.set_motor_dps(port, speed)
     
     def get_motor_positions(self) -> dict:
@@ -89,17 +86,19 @@ class RealRobotAdapter(RobotAdapter):
         else:  # Virage à gauche
             self.fast_wheel = "MOTOR_RIGHT"
             self.slow_wheel = "MOTOR_LEFT"
-        self.robot.set_motor_dps(self.fast_wheel,base_speed)
-        self.robot.set_motor_dps(self.slow_wheel, base_speed * speed_ratio)
+        self.set_motor_speed(self.fast_wheel,base_speed)
+        self.set_motor_speed(self.slow_wheel, base_speed * speed_ratio)
 
     def calcule_angle(self):
         positions = self.get_motor_positions()
+        print("positions :" + str(positions["left"]) + str(positions["right"]))
         delta_left = positions["left"] - self.left_initial
         delta_right = positions["right"] - self.right_initial
 
         # On suppose que l'adaptateur fournit WHEEL_DIAMETER et WHEEL_BASE_WIDTH
         wheel_circumference = 2 * math.pi * self.robot.WHEEL_DIAMETER / 2
         angle = (delta_left - delta_right) * wheel_circumference / (360 * self.robot.WHEEL_BASE_WIDTH)
+
         return angle
     
     def slow_speed(self,new_slow_speed):
