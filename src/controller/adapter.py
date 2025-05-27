@@ -29,6 +29,10 @@ class RobotAdapter(ABC):
     @abstractmethod
     def calcule_angle(self):
         pass
+    @abstractmethod
+    def get_distance(self):
+        """Retourne la lecture du capteur de distance (en mm)."""
+        pass
 
 # Adaptateur pour le robot réel
 class RealRobotAdapter(RobotAdapter):
