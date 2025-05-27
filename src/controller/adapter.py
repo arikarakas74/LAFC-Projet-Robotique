@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 import math
+import cv2
+import numpy as np
+from PIL import Image
+import cv2
 # Interface d'adaptateur abstraite
 class RobotAdapter(ABC):
     @abstractmethod
@@ -9,7 +13,8 @@ class RobotAdapter(ABC):
     @abstractmethod
     def get_motor_positions(self) -> dict:
         pass
-    
+    def get_robot_camera_image(self):
+        pass
   
     
     @abstractmethod
@@ -103,4 +108,66 @@ class RealRobotAdapter(RobotAdapter):
     
     def slow_speed(self,new_slow_speed):
         self.set_motor_speed(self.slow_wheel, new_slow_speed)
+    def detect_multicolor_beacon(self, img_array=None):
+        """
+        Détecte les balises rouge, vert, bleu, jaune dans l'image.
+        Retourne un dictionnaire : {couleur: (radius, cx, cy)}
+        """
+        if img_array is None:
+            img_array = self.img_array
+        if img_array is None:
+            return {}
+
+        # Flip vertical si nécessaire
+        frame = np.flipud(img_array)
+
+        # Conversion RGB → BGR → HSV
+        bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+
+        # Définir les plages HSV pour chaque couleur
+        color_ranges = {
+            "blue":   ((100, 150, 50), (140, 255, 255)),
+            "red1":   ((0, 150, 50),   (10, 255, 255)),    # bas du rouge
+            "red2":   ((170, 150, 50), (180, 255, 255)),   # haut du rouge
+            "green":  ((40, 100, 50),  (80, 255, 255)),
+            "yellow": ((20, 100, 100), (35, 255, 255))
+        }
+
+        detected = {}
+
+        for color in ["blue", "green", "yellow"]:
+            lower, upper = color_ranges[color]
+            mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+
+            # Nettoyage
+            kernel = np.ones((5,5), np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  kernel)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                c = max(contours, key=cv2.contourArea)
+                (cx, cy), radius = cv2.minEnclosingCircle(c)
+                if radius > 5:
+                    detected[color] = (radius, int(cx), int(cy))
+
+        # Gestion spéciale du rouge (deux plages HSV à fusionner)
+        mask_red1 = cv2.inRange(hsv, np.array(color_ranges["red1"][0]), np.array(color_ranges["red1"][1]))
+        mask_red2 = cv2.inRange(hsv, np.array(color_ranges["red2"][0]), np.array(color_ranges["red2"][1]))
+        mask_red = cv2.bitwise_or(mask_red1, mask_red2)
+
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_OPEN,  kernel)
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_CLOSE, kernel)
+
+        contours, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            c = max(contours, key=cv2.contourArea)
+            (cx, cy), radius = cv2.minEnclosingCircle(c)
+            if radius > 5:
+                detected["red"] = (radius, int(cx), int(cy))
+
+        return detected
     
+    def get_robot_camera_image(self):
+        return self.get_image()
