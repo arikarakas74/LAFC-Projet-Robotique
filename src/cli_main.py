@@ -1,43 +1,40 @@
+#!/usr/bin/env python3
 import time
 import math
-from controller.simulation_controller import SimulationController
-from model.map_model import MapModel
-from model.robot import RobotModel
-
-class HeadlessSimulation:
-    """Class for running the simulation in CLI mode (without a GUI)."""
-    def __init__(self):
-        self.map_model = MapModel()
-        self.robot_model = RobotModel(self.map_model)
-        # By default, RobotController in SimulationController will launch its CLI input thread.
-        self.sim_controller = SimulationController(self.map_model, self.robot_model, True)
-        self.sim_controller.add_state_listener(self.print_state)
-    
-    def print_state(self, state):
-        """Print the robot state to the console."""
-        print(f"Position: ({state['x']:.1f}, {state['y']:.1f}) | "
-              f"Angle: {math.degrees(state['angle']):.1f}° | "
-              f"Speeds: L={state['left_speed']}°/s R={state['right_speed']}°/s")
-    
-    def run(self):
-        """Run the simulation in CLI mode."""
-        print("Starting simulation (Ctrl+C to stop)")
-        self.sim_controller.run_simulation()
-        
-        # Example of an automatic command
-        self.sim_controller.robot_model.set_motor_speed("left", 0)
-        self.sim_controller.robot_model.set_motor_speed("right", 0)
-        
-        try:
-            while True:
-                time.sleep(0.1)
-        except KeyboardInterrupt:
-            self.sim_controller.stop_simulation()
-            print("\nSimulation stopped")
+from robot.robot import MockRobot2IN013            # ← bibliothèque matérielle
+from controller.adapter import RealRobotAdapter
+from controller.StrategyAsync import PolygonStrategy
 
 def run_cli():
-    simulation = HeadlessSimulation()
-    simulation.run()
+    # 1) Création de l’objet matériel
+    gpg3 = MockRobot2IN013()                         # ou EasyGoPiGo() selon votre version
+
+    # 2) Wrapper hardware → adapter
+    robot_adapter = RealRobotAdapter(gpg3)
+
+    # 3) Instanciation de la stratégie « carré »
+    square = PolygonStrategy(
+        n=4,
+        adapter=robot_adapter,
+        side_length_cm=50,        # longueur du côté en cm
+        vitesse_avance=200,       # vitesse en dps
+        vitesse_rotation=100      # vitesse de rotation en dps
+    )
+    square.start()
+
+    # 4) Boucle d’exécution CLI sur le vrai robot
+    dt = 0.02  # 20 ms entre chaque step()
+    try:
+        while not square.is_finished():
+            square.step(dt)
+            time.sleep(dt)
+    except KeyboardInterrupt:
+        print("\n🛑 Arrêt manuel, stoppage immédiat.")
+    finally:
+        # 5) Assurez-vous d’arrêter les moteurs
+        robot_adapter.robot.set_motor_dps("MOTOR_LEFT",  0)
+        robot_adapter.robot.set_motor_dps("MOTOR_RIGHT", 0)
+        print("✅ Moteurs coupés, fin du programme.")
 
 if __name__ == "__main__":
     run_cli()
